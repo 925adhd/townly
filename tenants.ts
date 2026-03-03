@@ -5,6 +5,7 @@ export interface TenantConfig {
   tagline: string;     // hero heading
   region: string;      // full region string, e.g. 'Grayson County, Kentucky'
   towns: string[];     // town names for dropdowns
+  contactEmail: string; // admin contact email for claims/updates
 }
 
 export const TENANTS: Record<string, TenantConfig> = {
@@ -15,6 +16,7 @@ export const TENANTS: Record<string, TenantConfig> = {
     tagline: "Grayson County's Digital Front Porch",
     region: 'Grayson County, Kentucky',
     towns: ['Leitchfield', 'Clarkson', 'Caneyville', 'Big Clifty', 'Wax'],
+    contactEmail: 'kara@925adhd.com',
   },
   // Add new counties here, e.g.:
   // hardincounty: {

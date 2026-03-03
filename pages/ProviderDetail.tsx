@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Provider, Review, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, submitClaim, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
 
@@ -58,53 +58,19 @@ function providerImage(provider: Provider): string | null {
 
 interface ClaimModalProps {
   provider: Provider;
-  user: { id: string; name: string; email?: string };
   onClose: () => void;
-  onSuccess: () => void;
 }
 
-const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSuccess }) => {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [method, setMethod] = useState<'email' | 'phone' | 'manual'>('email');
-  const [detail, setDetail] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const methodLabels = {
-    email: 'Business email address (same domain as the business)',
-    phone: 'Business phone number listed publicly',
-    manual: 'Submit for manual review by our team',
-  };
-
-  const handleSubmit = async () => {
-    if (step === 1) { setStep(2); return; }
-    if (!detail.trim() && method !== 'manual') {
-      setError('Please provide your verification detail.');
-      return;
-    }
-    setSubmitting(true);
-    setError('');
-    try {
-      await submitClaim(
-        provider.id,
-        provider.name,
-        user.id,
-        user.name,
-        user.email ?? '',
-        method,
-        detail.trim()
-      );
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit claim. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+const ClaimModal: React.FC<ClaimModalProps> = ({ provider, onClose }) => {
+  const contactEmail = getCurrentTenant().contactEmail;
+  const subject = encodeURIComponent(`Business Claim: ${provider.name}`);
+  const body = encodeURIComponent(
+    `Hi,\n\nI am the owner of "${provider.name}" and would like to claim this listing.\n\nPlease find attached my official business photo and any updates I'd like made to the listing.\n\nThanks!`
+  );
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full space-y-5">
+      <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-5">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Claim This Business</h2>
@@ -113,93 +79,29 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSucc
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
         </div>
 
-        {/* Step indicators */}
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <div className={`px-2.5 py-1 rounded-full ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>1. Account</div>
-          <div className="flex-1 h-px bg-slate-200"></div>
-          <div className={`px-2.5 py-1 rounded-full ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>2. Verify</div>
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center gap-2 text-blue-700 font-semibold text-sm">
+            <i className="fas fa-envelope"></i>
+            <span>Email us to get started</span>
+          </div>
+          <p className="text-slate-600 text-sm leading-relaxed">
+            Send us an email from your <strong>official business email address</strong> and include:
+          </p>
+          <ul className="text-slate-600 text-sm space-y-1 pl-1">
+            <li className="flex items-start gap-2"><i className="fas fa-check text-blue-400 mt-0.5 text-xs"></i>Your business photo or logo</li>
+            <li className="flex items-start gap-2"><i className="fas fa-check text-blue-400 mt-0.5 text-xs"></i>Any info you'd like updated on your listing</li>
+          </ul>
         </div>
 
-        {step === 1 && (
-          <div className="space-y-3">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-3">
-              <i className="fas fa-circle-check text-emerald-500"></i>
-              <div>
-                <div className="text-sm font-bold text-slate-900">Signed in as {user.name}</div>
-                <div className="text-xs text-slate-500">{user.email ?? 'Account verified'}</div>
-              </div>
-            </div>
-            <p className="text-slate-600 text-sm leading-relaxed">
-              Claiming is <strong>free</strong>. Once approved, you can edit your listing details, respond to reviews, and manage your presence.
-            </p>
-          </div>
-        )}
+        <a
+          href={`mailto:${contactEmail}?subject=${subject}&body=${body}`}
+          className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm"
+        >
+          <i className="fas fa-envelope"></i>
+          Email {contactEmail}
+        </a>
 
-        {step === 2 && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Verification Method</label>
-              <div className="space-y-2">
-                {(['email', 'phone', 'manual'] as const).map(m => (
-                  <label key={m} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${method === m ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
-                    <input type="radio" name="method" value={m} checked={method === m} onChange={() => setMethod(m)} className="mt-0.5 accent-blue-600" />
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900 capitalize">{m === 'manual' ? 'Manual review' : m === 'email' ? 'Email domain' : 'Phone'}</div>
-                      <div className="text-xs text-slate-500">{methodLabels[m]}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {method !== 'manual' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  {method === 'email' ? 'Your business email' : 'Business phone number'}
-                </label>
-                <input
-                  type={method === 'email' ? 'email' : 'tel'}
-                  value={detail}
-                  onChange={e => setDetail(e.target.value)}
-                  placeholder={method === 'email' ? 'you@yourbusiness.com' : '(270) 555-0100'}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-            )}
-            {method === 'manual' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Additional context (optional)</label>
-                <textarea
-                  value={detail}
-                  onChange={e => setDetail(e.target.value)}
-                  placeholder="Tell us how you're connected to this business..."
-                  rows={3}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
-
-        <div className="flex gap-3 pt-1">
-          {step === 2 && (
-            <button onClick={() => setStep(1)} className="bg-slate-100 text-slate-700 font-bold px-5 py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
-              Back
-            </button>
-          )}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="flex-1 bg-blue-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60 text-sm"
-          >
-            {submitting ? 'Submitting...' : step === 1 ? 'Continue' : 'Submit Claim'}
-          </button>
-        </div>
-
-        <p className="text-center text-xs text-slate-400">
-          Claiming is free. Upgrades are optional and only for added visibility.
-        </p>
+        <p className="text-center text-xs text-slate-400">Claiming is always free.</p>
       </div>
     </div>
   );
@@ -980,12 +882,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       </div>
 
       {/* Modals */}
-      {showClaimModal && user && (
+      {showClaimModal && (
         <ClaimModal
           provider={provider}
-          user={user}
           onClose={() => setShowClaimModal(false)}
-          onSuccess={() => { setShowClaimModal(false); setClaimSubmitted(true); }}
         />
       )}
 
