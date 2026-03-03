@@ -65,18 +65,18 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto pt-10">
-      <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-8">
-           <img src="/images/chair-icon.png" alt={tenant.displayName} className="w-32 h-32 mx-auto mb-3 object-contain animate-rock" />
+    <div className="max-w-md mx-auto pt-3 sm:pt-10">
+      <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
+        <div className="text-center mb-4 sm:mb-8">
+           <img src="/images/chair-icon.png" alt={tenant.displayName} className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-2 sm:mb-3 object-contain animate-rock" />
            <h1 className="text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : 'Join Your Neighbors'}</h1>
            <p className="text-orange-600 font-semibold text-sm mt-1">{tenant.displayName}</p>
-           <p className="text-slate-500 text-sm mt-2">
+           <p className="text-slate-500 text-sm mt-1 hidden sm:block">
              Sign in to leave reviews and help the community stay safe and connected.
            </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {!isLogin && (
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Full Name</label>
@@ -165,13 +165,13 @@ const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-orange-500 transition-colors transform active:scale-[0.98] disabled:opacity-60"
+            className="w-full bg-orange-600 text-white font-bold py-3 sm:py-4 rounded-xl shadow-lg hover:bg-orange-500 transition-colors transform active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+        <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-slate-100 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setError(''); setConfirmPassword(''); setShowPassword(false); setShowConfirmPassword(false); }}
             className="text-sm font-semibold text-orange-600"
