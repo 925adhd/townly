@@ -9,8 +9,8 @@ export interface TenantConfig {
 }
 
 export const TENANTS: Record<string, TenantConfig> = {
-  grayscounty: {
-    id: 'grayscounty',
+  grayson: {
+    id: 'grayson',
     name: 'Grayson County',
     displayName: 'Grayson County Townly',
     tagline: "Grayson County's Digital Front Porch",
@@ -39,7 +39,7 @@ function resolveTenantId(): string {
   if (TENANTS[subdomain]) return subdomain;
 
   // 3. Default
-  return 'grayscounty';
+  return 'grayson';
 }
 
 export function getCurrentTenant(): TenantConfig {

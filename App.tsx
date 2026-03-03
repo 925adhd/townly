@@ -90,7 +90,7 @@ const App: React.FC = () => {
                   }}
                 />
               </div>
-              <span className="hidden md:inline font-bold text-slate-900 text-lg">Home</span>
+              <span className="hidden md:inline font-bold text-slate-900 text-lg">{tenant.name}</span>
               <div className="fallback-text hidden flex flex-col -space-y-3">
                 <span className="font-porch text-orange-600 text-2xl drop-shadow-sm">Front</span>
                 <span className="font-talk text-slate-900 text-lg tracking-wider">PORCH</span>

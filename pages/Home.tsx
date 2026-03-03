@@ -39,80 +39,68 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
 
       {/* Hero Section */}
-      <section className="text-center md:text-left relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#102a43] via-slate-800 to-orange-900 text-white px-4 py-4 md:px-10 md:py-10">
+      <section
+        className="text-center md:text-left relative overflow-hidden rounded-3xl text-white px-4 py-8 md:px-10 md:py-14"
+        style={{ backgroundImage: "url('/images/lakebackground.png')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
+      >
+        {/* Dark overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(to right, rgba(10, 25, 50, 0.85), rgba(10, 25, 50, 0.60))' }}
+        />
+
+        {/* Content */}
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:gap-10">
 
           {/* Logo */}
-          <div className="flex-shrink-0 mb-2 md:mb-0 max-w-[170px] md:max-w-[320px] mx-auto md:mx-0">
-            <img
-              src="/images/logo.png"
-              alt={tenant.displayName}
-              className="w-full h-auto drop-shadow-2xl"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement?.querySelector('.hero-fallback-text')?.classList.remove('hidden');
-              }}
-            />
-            <div className="hero-fallback-text hidden text-center mb-2">
-              <span className="font-porch text-4xl text-orange-400 drop-shadow-lg block mb-1">Front</span>
-              <span className="font-talk text-2xl text-white">PORCH</span>
-            </div>
+          <div className="flex-shrink-0 mb-4 md:mb-0 max-w-[187px] md:max-w-[360px] mx-auto md:mx-0">
+            <img src="/images/townly.png" alt={tenant.displayName} className="w-full h-auto drop-shadow-2xl" />
           </div>
 
-          {/* Identity + Buttons + Search */}
-          <div className="flex-1 flex flex-col items-center md:items-start">
-            <h1 className="order-1 md:order-none text-base md:text-4xl font-bold text-white mb-1 leading-tight">
-              {tenant.tagline}
-            </h1>
-            <p className="order-2 md:order-none text-white/75 text-xs md:text-base mt-2 md:mt-0 mb-1 font-medium leading-relaxed max-w-md md:max-w-none md:text-slate-300">
-              See what's happening. Find trusted local pros. Help your neighbors thrive.
-            </p>
-            <p className="order-5 md:order-none hidden md:block text-slate-400 text-sm mb-3 leading-relaxed">
-              One place for what's actually happening in {tenant.region}.
-            </p>
+          <div className="flex flex-col items-center md:items-start max-w-2xl">
+          <h1 className="text-xl md:text-4xl font-bold text-white mb-2 leading-tight">
+            What's happening in your town?
+          </h1>
+          <p className="text-white/75 text-sm md:text-base mb-6 font-medium leading-relaxed">
+            Find trusted local pros. See community updates. Stay connected.
+          </p>
 
-            {/* CTA Buttons */}
-            <div className="hidden md:flex md:flex-row md:items-start md:gap-3 md:mb-4">
-              <Link
-                to="/spotlights"
-                className="flex items-center gap-1.5 text-white/80 text-xs font-semibold md:w-auto md:bg-blue-800 md:text-white md:px-5 md:py-2 md:rounded-xl md:font-semibold md:text-sm md:shadow md:hover:bg-blue-700 md:transition-all md:hover:scale-105 md:active:scale-95"
-              >
-                Explore What's Happening
-                <i className="fas fa-arrow-right text-[10px] md:hidden"></i>
-              </Link>
-              <Link
-                to="/directory"
-                className="flex items-center gap-1.5 text-white/75 text-xs font-semibold md:bg-white/[0.06] md:backdrop-blur-sm md:border md:border-white/[0.15] md:text-white/80 md:px-5 md:py-2 md:rounded-xl md:font-medium md:text-sm md:hover:bg-white/[0.12] md:transition-all md:hover:scale-105 md:active:scale-95"
-              >
-                Find a Local Pro
-                <i className="fas fa-arrow-right text-[10px] md:hidden"></i>
-              </Link>
-            </div>
+          {/* CTA Buttons */}
+          <div className="hidden md:flex flex-row items-start gap-3 mb-6">
+            <Link
+              to="/spotlights"
+              className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-5 py-2 rounded-xl font-semibold text-sm shadow transition-all hover:scale-105 active:scale-95"
+            >
+              Browse Events
+            </Link>
+            <Link
+              to="/directory"
+              className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white/85 px-5 py-2 rounded-xl font-medium text-sm transition-all hover:scale-105 active:scale-95"
+            >
+              Find a Local Pro
+            </Link>
+          </div>
 
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="order-3 md:order-none w-full relative mt-2 md:mt-3 mb-2 md:mb-0">
-              <input
-                type="text"
-                name="search"
-                placeholder="Search local pros..."
-                className="w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
-                Search
-              </button>
-            </form>
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="w-full relative mt-3 md:mt-0">
+            <input
+              type="text"
+              name="search"
+              placeholder="Search local pros..."
+              className="w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
+              Search
+            </button>
+          </form>
           </div>
         </div>
-
-        {/* Decorative blobs */}
-        <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-96 h-96 bg-orange-500/20 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full pointer-events-none"></div>
       </section>
 
-      {/* What's Happening Now */}
+      {/* Community Highlights */}
       <section>
         <div className="flex items-center justify-between mb-2 px-1">
           <div className="flex items-center space-x-2">
@@ -120,7 +108,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
             </span>
-            <h2 className="text-base font-semibold text-slate-900">What's Happening</h2>
+            <h2 className="text-base font-semibold text-slate-900">Around Town</h2>
           </div>
           <Link to="/spotlights" className="text-amber-600 font-normal text-[10px] whitespace-nowrap hover:underline flex-shrink-0">See all spotlights</Link>
         </div>
@@ -131,7 +119,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
           <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-6 py-7 md:px-8 md:py-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 flex flex-col md:flex-row md:items-center md:gap-10">
             <div className="flex flex-col flex-1">
               <span className="text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-amber-500 text-white self-start mb-3">
-                Local Spotlight
+                Around Town
               </span>
               <h3 className="font-extrabold text-slate-900 text-[19px] leading-tight mb-1">Disaster Preparedness Summit</h3>
               <p className="text-slate-500 text-xs flex items-center gap-1 mb-3">
