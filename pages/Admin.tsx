@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import { Provider, ContentReport, ReportContentType, ListingClaim } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim } from '../lib/api';
+import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent } from '../types';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -22,7 +22,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
 };
 
 const Admin: React.FC<AdminProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events'>('pending');
 
   // Pending providers
   const [pending, setPending] = useState<Provider[]>([]);
@@ -42,6 +42,13 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
   const [claimsLoaded, setClaimsLoaded] = useState(false);
   const [actingClaim, setActingClaim] = useState<string | null>(null);
   const [claimsError, setClaimsError] = useState('');
+
+  // Community events
+  const [pendingEvents, setPendingEvents] = useState<CommunityEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+  const [actingEvent, setActingEvent] = useState<string | null>(null);
+  const [eventsError, setEventsError] = useState('');
 
   useEffect(() => {
     fetchPendingProviders()
@@ -69,6 +76,16 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
         .finally(() => setLoadingClaims(false));
     }
   }, [activeTab, claimsLoaded]);
+
+  useEffect(() => {
+    if (activeTab === 'events' && !eventsLoaded) {
+      setLoadingEvents(true);
+      fetchPendingCommunityEvents()
+        .then(data => { setPendingEvents(data); setEventsLoaded(true); })
+        .catch(console.error)
+        .finally(() => setLoadingEvents(false));
+    }
+  }, [activeTab, eventsLoaded]);
 
   if (!user || user.role !== 'admin') {
     return (
@@ -140,6 +157,32 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
     }
   };
 
+  const handleApproveEvent = async (id: string) => {
+    setActingEvent(id);
+    setEventsError('');
+    try {
+      await approveCommunityEvent(id);
+      setPendingEvents(prev => prev.filter(e => e.id !== id));
+    } catch (e: any) {
+      setEventsError(e.message || 'Failed to approve event.');
+    } finally {
+      setActingEvent(null);
+    }
+  };
+
+  const handleRejectEvent = async (id: string) => {
+    setActingEvent(id);
+    setEventsError('');
+    try {
+      await rejectCommunityEvent(id);
+      setPendingEvents(prev => prev.filter(e => e.id !== id));
+    } catch (e: any) {
+      setEventsError(e.message || 'Failed to reject event.');
+    } finally {
+      setActingEvent(null);
+    }
+  };
+
   const handleRemoveContent = async (report: ContentReport) => {
     setActingReport(report.id);
     try {
@@ -174,6 +217,11 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
           {claims.length > 0 && (
             <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
               {claims.length} claims
+            </span>
+          )}
+          {pendingEvents.length > 0 && (
+            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">
+              {pendingEvents.length} events
             </span>
           )}
         </div>
@@ -221,6 +269,20 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
           Claims
           {claims.length > 0 && (
             <span className="ml-2 bg-blue-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{claims.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('events')}
+          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
+            activeTab === 'events'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <i className="fas fa-calendar mr-2"></i>
+          Events
+          {pendingEvents.length > 0 && (
+            <span className="ml-2 bg-purple-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{pendingEvents.length}</span>
           )}
         </button>
       </div>
@@ -320,6 +382,61 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
                       <button
                         onClick={() => handleRejectClaim(claim.id)}
                         disabled={actingClaim === claim.id}
+                        className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Community Events Tab */}
+      {activeTab === 'events' && (
+        <>
+          {eventsError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl flex items-center justify-between">
+              <span>{eventsError}</span>
+              <button onClick={() => setEventsError('')} className="ml-4 font-bold text-lg leading-none">&times;</button>
+            </div>
+          )}
+          {loadingEvents ? (
+            <div className="text-center py-20 text-slate-400 text-sm">Loading...</div>
+          ) : pendingEvents.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <i className="fas fa-calendar-check text-emerald-400 text-3xl mb-3"></i>
+              <p className="text-slate-500 font-medium">No pending community events.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendingEvents.map(ev => (
+                <div key={ev.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <h2 className="font-bold text-slate-900 text-base">{ev.title}</h2>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span className="flex items-center gap-1"><i className="fas fa-calendar text-purple-400"></i> {ev.eventDate}</span>
+                        <span className="flex items-center gap-1"><i className="fas fa-map-marker-alt text-orange-400"></i> {ev.location}</span>
+                        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{ev.town}</span>
+                      </div>
+                      <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">{ev.description}</p>
+                      <p className="text-slate-400 text-xs">Submitted by {ev.userName} · {new Date(ev.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleApproveEvent(ev.id)}
+                        disabled={actingEvent === ev.id}
+                        className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRejectEvent(ev.id)}
+                        disabled={actingEvent === ev.id}
                         className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
                       >
                         Reject

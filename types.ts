@@ -26,7 +26,7 @@ export interface Provider {
   status: 'pending' | 'approved' | 'rejected';
   claimStatus: 'unclaimed' | 'claimed';
   claimedBy?: string;
-  listingTier: 'none' | 'standard' | 'spotlight';
+  listingTier: 'none' | 'standard' | 'featured' | 'spotlight';
 }
 
 export interface ListingClaim {
@@ -53,6 +53,16 @@ export interface Review {
   costRange: CostRange;
   reviewText: string;
   serviceDate: string;
+  createdAt: string;
+}
+
+export interface ReviewReply {
+  id: string;
+  reviewId: string;
+  providerId: string;
+  ownerId: string;
+  ownerName: string;
+  replyText: string;
   createdAt: string;
 }
 
@@ -93,6 +103,20 @@ export interface RecommendationResponse {
   userName: string;
   recommendation: string;
   voteCount: number;
+  createdAt: string;
+}
+
+export interface CommunityEvent {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  description: string;
+  eventDate: string;
+  location: string;
+  town: Town;
+  photoUrl?: string;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
 

@@ -122,6 +122,15 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       ) : true;
       return matchCat && matchTown && matchQuery;
     }).sort((a, b) => {
+      // Paid placements always float above organic results
+      const aFeatured = a.listingTier === 'featured' ? 1 : 0;
+      const bFeatured = b.listingTier === 'featured' ? 1 : 0;
+      if (bFeatured !== aFeatured) return bFeatured - aFeatured;
+
+      // Non-featured listings are always alphabetical
+      if (!aFeatured && !bFeatured) return a.name.localeCompare(b.name);
+
+      // Featured listings sorted among themselves by the selected sort
       if (sortBy === 'rating') {
         const diff = b.averageRating - a.averageRating;
         return diff !== 0 ? diff : a.name.localeCompare(b.name);
@@ -130,7 +139,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
         const diff = b.reviewCount - a.reviewCount;
         return diff !== 0 ? diff : a.name.localeCompare(b.name);
       }
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return a.name.localeCompare(b.name);
     });
   }, [providers, category, town, sortBy, query]);
 
@@ -224,9 +233,9 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               <Link
                 to={`/provider/${p.id}`}
                 onClick={handleProviderClick}
-                className={`group bg-white p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all flex flex-col sm:flex-row items-start sm:items-center gap-4 ${reportingId === p.id ? 'rounded-t-2xl' : 'rounded-2xl'}`}
+                className={`group p-4 border shadow-sm [@media(hover:hover)]:hover:shadow-md transition-all flex flex-row items-center gap-4 ${reportingId === p.id ? 'rounded-t-2xl' : 'rounded-2xl'} ${p.listingTier === 'featured' ? 'bg-amber-50 border-amber-300 [@media(hover:hover)]:hover:border-amber-400 border-l-4' : 'bg-white border-slate-100 [@media(hover:hover)]:hover:border-blue-200'}`}
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
+                <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
                   {img
                     ? <img src={img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     : <i className={`fas ${icon} text-2xl ${iconColor}`}></i>
@@ -240,8 +249,13 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                       <span className="text-[10px] font-semibold text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-md">Unclaimed</span>
                     )}
                     {p.claimStatus === 'claimed' && (
-                      <span className="text-[10px] font-semibold text-emerald-600 px-1.5 py-0.5 bg-emerald-50 rounded-md">
-                        <i className="fas fa-check mr-0.5 text-[8px]"></i>Claimed
+                      <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                        <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>Verified Business
+                      </span>
+                    )}
+                    {p.listingTier === 'featured' && (
+                      <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200">
+                        Sponsored
                       </span>
                     )}
                     {p.listingTier === 'spotlight' && (

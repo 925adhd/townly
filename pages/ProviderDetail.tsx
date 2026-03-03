@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Provider, Review, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest } from '../lib/api';
+import { Provider, Review, ReviewReply, Category, Town } from '../types';
+import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
 
@@ -58,15 +58,39 @@ function providerImage(provider: Provider): string | null {
 
 interface ClaimModalProps {
   provider: Provider;
+  user: { id: string; name: string; email?: string };
   onClose: () => void;
+  onSubmitted: () => void;
 }
 
-const ClaimModal: React.FC<ClaimModalProps> = ({ provider, onClose }) => {
-  const contactEmail = getCurrentTenant().contactEmail;
-  const subject = encodeURIComponent(`Business Claim: ${provider.name}`);
-  const body = encodeURIComponent(
-    `Hi,\n\nI am the owner of "${provider.name}" and would like to claim this listing.\n\nPlease find attached my official business photo and any updates I'd like made to the listing.\n\nThanks!`
-  );
+const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubmitted }) => {
+  const [method, setMethod] = useState<'email' | 'phone' | 'manual'>('email');
+  const [detail, setDetail] = useState(user.email ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!detail.trim()) { setError('Please provide your verification details.'); return; }
+    setSubmitting(true);
+    setError('');
+    try {
+      await submitClaim(
+        provider.id,
+        provider.name,
+        user.id,
+        user.name,
+        user.email ?? '',
+        method,
+        detail.trim()
+      );
+      onSubmitted();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit claim. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -79,29 +103,73 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, onClose }) => {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
         </div>
 
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-2">
-          <div className="flex items-center gap-2 text-blue-700 font-semibold text-sm">
-            <i className="fas fa-envelope"></i>
-            <span>Email us to get started</span>
-          </div>
-          <p className="text-slate-600 text-sm leading-relaxed">
-            Send us an email from your <strong>official business email address</strong> and include:
-          </p>
-          <ul className="text-slate-600 text-sm space-y-1 pl-1">
-            <li className="flex items-start gap-2"><i className="fas fa-check text-blue-400 mt-0.5 text-xs"></i>Your business photo or logo</li>
-            <li className="flex items-start gap-2"><i className="fas fa-check text-blue-400 mt-0.5 text-xs"></i>Any info you'd like updated on your listing</li>
-          </ul>
+        <p className="text-slate-600 text-sm">How can we verify you own or manage this business?</p>
+
+        <div className="space-y-2">
+          {([
+            { value: 'email', label: 'I manage the business email' },
+            { value: 'phone', label: 'I can be reached by phone' },
+            { value: 'manual', label: "Other — I'll explain below" },
+          ] as const).map(opt => (
+            <label
+              key={opt.value}
+              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${method === opt.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+            >
+              <input
+                type="radio"
+                name="method"
+                value={opt.value}
+                checked={method === opt.value}
+                onChange={() => {
+                  setMethod(opt.value);
+                  setDetail(opt.value === 'email' ? (user.email ?? '') : '');
+                }}
+                className="text-blue-600"
+              />
+              <span className="text-sm font-medium text-slate-700">{opt.label}</span>
+            </label>
+          ))}
         </div>
 
-        <a
-          href={`mailto:${contactEmail}?subject=${subject}&body=${body}`}
-          className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm"
-        >
-          <i className="fas fa-envelope"></i>
-          Email {contactEmail}
-        </a>
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+            {method === 'email' ? 'Business email address' : method === 'phone' ? 'Phone number' : 'Details'}
+          </label>
+          {method === 'manual' ? (
+            <textarea
+              value={detail}
+              onChange={e => setDetail(e.target.value)}
+              rows={3}
+              placeholder="Describe how you can verify ownership..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+            />
+          ) : (
+            <input
+              type={method === 'email' ? 'email' : 'tel'}
+              value={detail}
+              onChange={e => setDetail(e.target.value)}
+              placeholder={method === 'email' ? 'owner@yourbusiness.com' : '(270) 555-0100'}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          )}
+        </div>
 
-        <p className="text-center text-xs text-slate-400">Claiming is always free.</p>
+        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
+
+        <div className="flex gap-3">
+          <button onClick={onClose} className="bg-slate-100 text-slate-700 font-bold px-5 py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="flex-1 bg-blue-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60 text-sm"
+          >
+            {submitting ? 'Submitting...' : 'Submit Claim'}
+          </button>
+        </div>
+
+        <p className="text-center text-xs text-slate-400">Claiming is always free. We'll review within 1–2 business days.</p>
       </div>
     </div>
   );
@@ -210,6 +278,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [featuredSlots, setFeaturedSlots] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchFeaturedCount(provider.category, provider.town).then(count => setFeaturedSlots(count));
+  }, [provider.category, provider.town]);
 
   const [eDesc, setEDesc] = useState(provider.description ?? '');
   const [ePhone, setEPhone] = useState(provider.phone ?? '');
@@ -378,7 +451,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
           {/* Visibility upgrade */}
           <div className="border-t border-emerald-200 pt-4 space-y-3">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Visibility Upgrades</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 text-sm">Standard Listing</span>
@@ -386,6 +459,22 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 </div>
                 <p className="text-xs text-slate-500">Appears in category, searchable, normal display.</p>
                 <p className="text-[10px] text-slate-400 italic">Founding Business Rate</p>
+              </div>
+              <div className={`border rounded-2xl p-4 space-y-1 ${provider.listingTier === 'featured' ? 'bg-amber-100 border-amber-400' : featuredSlots !== null && featuredSlots >= 3 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-amber-50 border-amber-300'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 text-sm flex items-center gap-1">
+                    <i className="fas fa-bolt text-amber-500 text-xs"></i>Featured Listing
+                  </span>
+                  <span className="text-sm font-bold text-amber-700">$9.99<span className="text-xs font-medium text-amber-500">/mo</span></span>
+                </div>
+                <p className="text-xs text-slate-600">Highlighted card, floats above standard listings in your category.</p>
+                {provider.listingTier === 'featured' ? (
+                  <p className="text-[10px] font-bold text-amber-700">✓ Active</p>
+                ) : featuredSlots !== null && featuredSlots >= 3 ? (
+                  <p className="text-[10px] font-semibold text-slate-500">All 3 slots filled — check back soon</p>
+                ) : (
+                  <p className="text-[10px] text-amber-700 font-semibold">{featuredSlots !== null ? 3 - featuredSlots : '?'} of 3 slots available</p>
+                )}
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
                 <div className="flex items-center justify-between">
@@ -396,7 +485,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 <p className="text-[10px] text-slate-400 italic">Founding Business Rate</p>
               </div>
             </div>
-            <p className="text-xs text-slate-400">Upgrades are for visibility only. Claiming your listing is always free.</p>
+            <p className="text-xs text-slate-400">Contact us to upgrade. Claiming your listing is always free.</p>
           </div>
         </form>
       )}
@@ -421,6 +510,20 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimSubmitted, setClaimSubmitted] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [ownerWelcomeSeen, setOwnerWelcomeSeen] = useState(() => !!localStorage.getItem(`owner-welcome-${id ?? ''}`));
+  const [replies, setReplies] = useState<Record<string, ReviewReply>>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchReviewReplies(id).then(data => {
+      const map: Record<string, ReviewReply> = {};
+      data.forEach(r => { map[r.reviewId] = r; });
+      setReplies(map);
+    }).catch(console.error);
+  }, [id]);
 
   const [eName, setEName] = useState('');
   const [eCat, setECat] = useState<Category>('Home Services');
@@ -492,6 +595,30 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
     }
   };
 
+  const handleSubmitReply = async (reviewId: string) => {
+    if (!replyText.trim() || !user) return;
+    setSubmittingReply(true);
+    try {
+      const reply = await submitReviewReply(reviewId, provider!.id, user.id, user.name, replyText.trim());
+      setReplies(prev => ({ ...prev, [reviewId]: reply }));
+      setReplyingTo(null);
+      setReplyText('');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const handleDeleteReply = async (replyId: string, reviewId: string) => {
+    try {
+      await deleteReviewReply(replyId);
+      setReplies(prev => { const next = { ...prev }; delete next[reviewId]; return next; });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Link to="/directory" className="inline-flex items-center text-slate-500 hover:text-blue-600 font-medium text-sm transition-colors">
@@ -516,8 +643,13 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                 <span className="text-[10px] font-semibold text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-md">Unclaimed Listing</span>
               )}
               {provider.claimStatus === 'claimed' && (
-                <span className="text-[10px] font-semibold text-emerald-600 px-1.5 py-0.5 bg-emerald-50 rounded-md">
-                  <i className="fas fa-check mr-0.5 text-[8px]"></i>Claimed
+                <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                  <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>Verified Business
+                </span>
+              )}
+              {provider.listingTier === 'featured' && (
+                <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200">
+                  Sponsored
                 </span>
               )}
               {provider.listingTier === 'spotlight' && (
@@ -618,6 +750,25 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex items-center gap-3">
           <i className="fas fa-circle-check text-emerald-500"></i>
           <p className="text-emerald-700 text-sm font-semibold">Claim request submitted. Our team will review it and notify you.</p>
+        </div>
+      )}
+
+      {/* Owner welcome banner — shown once after claim is approved */}
+      {isOwner && !ownerWelcomeSeen && (
+        <div className="bg-emerald-600 text-white rounded-2xl px-5 py-4 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <i className="fas fa-circle-check text-emerald-200 text-lg mt-0.5"></i>
+            <div>
+              <p className="font-bold text-sm">Your listing is now claimed!</p>
+              <p className="text-emerald-100 text-xs mt-0.5">Open the Owner Dashboard below to update your info, add photos, and manage your listing.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { localStorage.setItem(`owner-welcome-${id}`, '1'); setOwnerWelcomeSeen(true); }}
+            className="text-emerald-200 hover:text-white text-lg leading-none flex-shrink-0 mt-0.5"
+          >
+            &times;
+          </button>
         </div>
       )}
 
@@ -858,6 +1009,61 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                   </div>
                 )}
               </div>
+
+              {/* Owner reply */}
+              {replies[review.id] ? (
+                <div className="mt-3 ml-4 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-emerald-700">
+                      <i className="fas fa-store mr-1.5 text-[10px]"></i>Owner Response
+                    </span>
+                    {isOwner && (
+                      <button
+                        onClick={() => handleDeleteReply(replies[review.id].id, review.id)}
+                        className="text-slate-300 hover:text-red-400 text-xs transition-colors"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed">{replies[review.id].replyText}</p>
+                </div>
+              ) : isOwner && (
+                replyingTo === review.id ? (
+                  <div className="mt-3 ml-4 space-y-2">
+                    <textarea
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      rows={3}
+                      placeholder="Write a professional response to this review..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setReplyingTo(null); setReplyText(''); }}
+                        className="text-xs font-semibold text-slate-500 bg-slate-100 px-4 py-2 rounded-xl hover:bg-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleSubmitReply(review.id)}
+                        disabled={submittingReply || !replyText.trim()}
+                        className="text-xs font-bold text-white bg-emerald-600 px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                      >
+                        {submittingReply ? 'Posting...' : 'Post Response'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setReplyingTo(review.id); setReplyText(''); }}
+                    className="mt-3 text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 transition-colors"
+                  >
+                    <i className="fas fa-reply text-[10px]"></i>
+                    Reply as Owner
+                  </button>
+                )
+              )}
             </div>
           ))}
           {providerReviews.length === 0 && (
@@ -871,21 +1077,25 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {/* Transparency + update request */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-2 border-t border-slate-100">
         <p className="text-slate-400 text-xs">
-          Business information sourced from publicly available data. Owners may claim or request updates.
+          Business information sourced from publicly available data. Owners must claim their business to request updates or removal.
         </p>
-        <button
-          onClick={() => setShowUpdateModal(true)}
-          className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors shrink-0"
-        >
-          Request updates or removal
-        </button>
+        {isOwner && provider.claimStatus === 'claimed' && (
+          <button
+            onClick={() => setShowUpdateModal(true)}
+            className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors shrink-0"
+          >
+            Request updates or removal
+          </button>
+        )}
       </div>
 
       {/* Modals */}
       {showClaimModal && (
         <ClaimModal
           provider={provider}
+          user={user!}
           onClose={() => setShowClaimModal(false)}
+          onSubmitted={() => setClaimSubmitted(true)}
         />
       )}
 

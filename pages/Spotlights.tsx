@@ -1,14 +1,65 @@
 
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { CommunityEvent } from '../types';
+import { fetchApprovedCommunityEvents, submitCommunityEvent } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
-const Spotlights: React.FC = () => {
+interface SpotlightsProps {
+  user: { id: string; name: string; email?: string } | null;
+}
+
+const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const [flyerOpen, setFlyerOpen] = useState(false);
   const [upsOpen, setUpsOpen] = useState(false);
   const [entrepreneurOpen, setEntrepreneurOpen] = useState(false);
+
+  // Community events
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+
+  // Submit form
+  const [showForm, setShowForm] = useState(false);
+  const [eTitle, setETitle] = useState('');
+  const [eDesc, setEDesc] = useState('');
+  const [eDate, setEDate] = useState('');
+  const [eLocation, setELocation] = useState('');
+  const [eTown, setETown] = useState(tenant.towns[0] ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    fetchApprovedCommunityEvents()
+      .then(setEvents)
+      .catch(console.error)
+      .finally(() => setLoadingEvents(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      await submitCommunityEvent(user.id, user.name, eTitle, eDesc, eDate, eLocation, eTown);
+      setSubmitted(true);
+      setShowForm(false);
+      setETitle(''); setEDesc(''); setEDate(''); setELocation(''); setETown(tenant.towns[0] ?? '');
+    } catch (err: any) {
+      setSubmitError(err.message || 'Failed to submit. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  function formatEventDate(dateStr: string) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
 
   return (
     <div className="space-y-10 pb-10 -mt-6 md:mt-0">
@@ -147,6 +198,66 @@ const Spotlights: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Community Events ── */}
+      <div>
+        <div className="flex items-center justify-between mb-1 px-1">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
+            <p className="text-slate-400 text-xs mt-0.5">Free events posted by your neighbors — pending admin review.</p>
+          </div>
+          {user ? (
+            <button
+              onClick={() => { setShowForm(true); setSubmitted(false); }}
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors"
+            >
+              <i className="fas fa-plus text-[10px]"></i> Post an Event
+            </button>
+          ) : (
+            <Link
+              to="/auth?signup=true"
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors"
+            >
+              <i className="fas fa-plus text-[10px]"></i> Post an Event
+            </Link>
+          )}
+        </div>
+
+        {submitted && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
+            <i className="fas fa-check-circle"></i>
+            Event submitted! It will appear here once approved.
+          </div>
+        )}
+
+        {loadingEvents ? (
+          <div className="text-center py-8 text-slate-400 text-sm">Loading events...</div>
+        ) : events.length === 0 ? (
+          <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
+            <i className="fas fa-calendar-plus text-2xl mb-3 block text-slate-200"></i>
+            No community events yet. Be the first to post one!
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {events.map(ev => (
+              <div key={ev.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">Community Event</span>
+                  <span className="text-slate-400 text-xs">{formatEventDate(ev.eventDate)}</span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm leading-tight">{ev.title}</h3>
+                <p className="text-slate-500 text-xs flex items-center gap-1">
+                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {ev.location}
+                  {ev.town && <span className="text-slate-300 mx-1">·</span>}
+                  {ev.town}
+                </p>
+                <p className="text-slate-500 text-xs leading-relaxed">{ev.description}</p>
+                <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Pricing tiers */}
       <div>
         <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Share Something With Your Community</h2>
@@ -186,8 +297,6 @@ const Spotlights: React.FC = () => {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3 px-1">Other Featured Listings</p>
             <div className="grid md:grid-cols-2 gap-4">
-
-              {/* Featured Listing — slot 1 */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
                 <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
                   <i className="fas fa-store text-slate-400 text-base"></i>
@@ -213,8 +322,6 @@ const Spotlights: React.FC = () => {
                   Get a Featured Listing
                 </a>
               </div>
-
-              {/* Featured Listing — slot 2 */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
                 <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
                   <i className="fas fa-store text-slate-400 text-base"></i>
@@ -240,87 +347,124 @@ const Spotlights: React.FC = () => {
                   Get a Featured Listing
                 </a>
               </div>
-
             </div>
           </div>
 
         </div>
       </div>
 
+      {/* Submit Event Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Post a Community Event</h3>
+              <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">Free to post. Events are reviewed before going live.</p>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Title</label>
+                <input
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="e.g. Community Clean-Up Day"
+                  value={eTitle}
+                  onChange={e => setETitle(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Date</label>
+                  <input
+                    required
+                    type="date"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={eDate}
+                    onChange={e => setEDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+                  <select
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={eTown}
+                    onChange={e => setETown(e.target.value)}
+                  >
+                    {tenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue</label>
+                <input
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="e.g. Courthouse Square, Leitchfield"
+                  value={eLocation}
+                  onChange={e => setELocation(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Description</label>
+                <textarea
+                  required
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  placeholder="What's happening? Who should come?"
+                  value={eDesc}
+                  onChange={e => setEDesc(e.target.value)}
+                />
+              </div>
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2.5 rounded-xl">{submitError}</div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors disabled:opacity-60 text-sm"
+              >
+                {submitting ? 'Submitting...' : 'Submit for Review'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Flyer modal */}
       {flyerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setFlyerOpen(false)}
-        >
-          <div
-            className="relative max-w-lg w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setFlyerOpen(false)}
-              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10"
-              aria-label="Close flyer"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setFlyerOpen(false)}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setFlyerOpen(false)} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10" aria-label="Close flyer">
               <i className="fas fa-times text-sm"></i>
             </button>
-            <img
-              src="/images/disastersummit.jpg"
-              alt="Grayson County Disaster Preparedness Summit flyer"
-              className="w-full rounded-2xl shadow-2xl"
-            />
+            <img src="/images/disastersummit.jpg" alt="Grayson County Disaster Preparedness Summit flyer" className="w-full rounded-2xl shadow-2xl" />
           </div>
         </div>
       )}
 
       {/* Kids Entrepreneur Fair modal */}
       {entrepreneurOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setEntrepreneurOpen(false)}
-        >
-          <div
-            className="relative max-w-lg w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setEntrepreneurOpen(false)}
-              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10"
-              aria-label="Close image"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setEntrepreneurOpen(false)}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setEntrepreneurOpen(false)} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10" aria-label="Close image">
               <i className="fas fa-times text-sm"></i>
             </button>
-            <img
-              src="/images/entrepreneur.jpg"
-              alt="2nd Annual Kids Entrepreneur Fair"
-              className="w-full rounded-2xl shadow-2xl"
-            />
+            <img src="/images/entrepreneur.jpg" alt="2nd Annual Kids Entrepreneur Fair" className="w-full rounded-2xl shadow-2xl" />
           </div>
         </div>
       )}
 
       {/* UPS Store modal */}
       {upsOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setUpsOpen(false)}
-        >
-          <div
-            className="relative max-w-lg w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setUpsOpen(false)}
-              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10"
-              aria-label="Close image"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setUpsOpen(false)}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setUpsOpen(false)} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10" aria-label="Close image">
               <i className="fas fa-times text-sm"></i>
             </button>
-            <img
-              src="/images/ups.jpg"
-              alt="Ribbon Cutting – The UPS Store Leitchfield"
-              className="w-full rounded-2xl shadow-2xl"
-            />
+            <img src="/images/ups.jpg" alt="Ribbon Cutting – The UPS Store Leitchfield" className="w-full rounded-2xl shadow-2xl" />
           </div>
         </div>
       )}

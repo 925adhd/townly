@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Provider, Review, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim } from '../types';
+import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ function mapProvider(row: any): Provider {
     status: (row.status ?? 'approved') as 'pending' | 'approved' | 'rejected',
     claimStatus: (row.claim_status ?? 'unclaimed') as 'unclaimed' | 'claimed',
     claimedBy: row.claimed_by ?? undefined,
-    listingTier: (row.listing_tier ?? 'none') as 'none' | 'standard' | 'spotlight',
+    listingTier: (row.listing_tier ?? 'none') as 'none' | 'standard' | 'featured' | 'spotlight',
   };
 }
 
@@ -707,7 +707,63 @@ export async function uploadOwnerPhoto(providerId: string, userId: string, file:
   return data.publicUrl;
 }
 
+// ── Review Replies ─────────────────────────────────────────────────────────────
+
+function mapReviewReply(row: any): ReviewReply {
+  return {
+    id: row.id,
+    reviewId: row.review_id,
+    providerId: row.provider_id,
+    ownerId: row.owner_id,
+    ownerName: row.owner_name,
+    replyText: row.reply_text,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchReviewReplies(providerId: string): Promise<ReviewReply[]> {
+  const { data, error } = await supabase
+    .from('review_replies')
+    .select('*')
+    .eq('provider_id', providerId);
+  if (error) throw error;
+  return (data ?? []).map(mapReviewReply);
+}
+
+export async function submitReviewReply(
+  reviewId: string,
+  providerId: string,
+  ownerId: string,
+  ownerName: string,
+  replyText: string
+): Promise<ReviewReply> {
+  const { data, error } = await supabase
+    .from('review_replies')
+    .insert({ review_id: reviewId, provider_id: providerId, owner_id: ownerId, owner_name: ownerName, reply_text: replyText, tenant_id: getCurrentTenant().id })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapReviewReply(data);
+}
+
+export async function deleteReviewReply(replyId: string): Promise<void> {
+  const { error } = await supabase.from('review_replies').delete().eq('id', replyId);
+  if (error) throw error;
+}
+
 // ── Update / Removal Request ───────────────────────────────────────────────────
+
+export async function fetchFeaturedCount(category: string, town: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('providers')
+    .select('id', { count: 'exact', head: true })
+    .eq('category', category)
+    .eq('town', town)
+    .eq('listing_tier', 'featured')
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw error;
+  return count ?? 0;
+}
 
 export async function submitUpdateRequest(
   providerId: string,
@@ -726,5 +782,83 @@ export async function submitUpdateRequest(
     reason: `[${requestType.toUpperCase()} REQUEST] ${message}`,
     tenant_id: getCurrentTenant().id,
   });
+  if (error) throw error;
+}
+
+// ── Community Events ──────────────────────────────────────────────────────────
+
+function mapCommunityEvent(row: any): CommunityEvent {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userName: row.user_name,
+    title: row.title,
+    description: row.description,
+    eventDate: row.event_date,
+    location: row.location,
+    town: row.town,
+    photoUrl: row.photo_url ?? undefined,
+    status: row.status as 'pending' | 'approved' | 'rejected',
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchApprovedCommunityEvents(): Promise<CommunityEvent[]> {
+  const { data, error } = await supabase
+    .from('community_events')
+    .select('*')
+    .eq('status', 'approved')
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('event_date', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapCommunityEvent);
+}
+
+export async function fetchPendingCommunityEvents(): Promise<CommunityEvent[]> {
+  const { data, error } = await supabase
+    .from('community_events')
+    .select('*')
+    .eq('status', 'pending')
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapCommunityEvent);
+}
+
+export async function submitCommunityEvent(
+  userId: string,
+  userName: string,
+  title: string,
+  description: string,
+  eventDate: string,
+  location: string,
+  town: string,
+): Promise<void> {
+  const { error } = await supabase.from('community_events').insert({
+    user_id: userId,
+    user_name: userName,
+    title,
+    description,
+    event_date: eventDate,
+    location,
+    town,
+    tenant_id: getCurrentTenant().id,
+  });
+  if (error) throw error;
+}
+
+export async function approveCommunityEvent(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('community_events')
+    .update({ status: 'approved' })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function rejectCommunityEvent(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('community_events')
+    .update({ status: 'rejected' })
+    .eq('id', id);
   if (error) throw error;
 }

@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { signIn, signUp } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
 const Auth: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const [isLogin, setIsLogin] = useState(!new URLSearchParams(location.search).has('signup'));
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -176,7 +177,7 @@ const Auth: React.FC = () => {
             onClick={() => { setIsLogin(!isLogin); setError(''); setConfirmPassword(''); setShowPassword(false); setShowConfirmPassword(false); }}
             className="text-sm font-semibold text-orange-600"
           >
-            {isLogin ? "Don't have an account? Join now" : "Already have an account? Sign in"}
+            {isLogin ? "Don't have an account? Join for free" : "Already have an account? Sign in"}
           </button>
         </div>
       </div>

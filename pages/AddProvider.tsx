@@ -37,9 +37,18 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
   const towns: Town[] = tenant.towns;
 
   if (!user) return (
-    <div className="text-center py-20 bg-white rounded-3xl border shadow-sm">
-      <h2 className="text-xl font-bold mb-4">Please log in to add a business</h2>
-      <Link to="/auth" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Log In</Link>
+    <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-white rounded-3xl border border-slate-100 shadow-sm max-w-md mx-auto">
+      <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
+        <i className="fas fa-store text-orange-500 text-2xl"></i>
+      </div>
+      <h2 className="text-xl font-bold text-slate-900 mb-2">Add your business to {tenant.name}</h2>
+      <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to list your business and connect with your community.</p>
+      <Link to="/auth?signup=true" className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
+        Create Free Account
+      </Link>
+      <Link to="/auth" className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+        Already have an account? Sign in
+      </Link>
     </div>
   );
 

@@ -1,6 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
 import { getCurrentTenant } from './tenants';
 import Home from './pages/Home';
 import Directory from './pages/Directory';
@@ -45,22 +51,23 @@ const App: React.FC = () => {
 
   // Sync auth session
   useEffect(() => {
+    const loadUser = async (supabaseUser: { id: string; user_metadata?: any; email?: string }) => {
+      const name = supabaseUser.user_metadata?.name || supabaseUser.email || 'Neighbor';
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', supabaseUser.id)
+        .single();
+      setUser({ id: supabaseUser.id, name, email: supabaseUser.email ?? undefined, role: profile?.role ?? undefined });
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const name = session.user.user_metadata?.name || session.user.email || 'Neighbor';
-        const role = session.user.app_metadata?.role;
-        setUser({ id: session.user.id, name, email: session.user.email ?? undefined, role });
-      }
+      if (session?.user) loadUser(session.user);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const name = session.user.user_metadata?.name || session.user.email || 'Neighbor';
-        const role = session.user.app_metadata?.role;
-        setUser({ id: session.user.id, name, email: session.user.email ?? undefined, role });
-      } else {
-        setUser(null);
-      }
+      if (session?.user) loadUser(session.user);
+      else setUser(null);
     });
 
     return () => subscription.unsubscribe();
@@ -73,6 +80,7 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col pb-20 md:pb-0">
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 h-20">
           <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
@@ -146,7 +154,7 @@ const App: React.FC = () => {
               <Route path="/review/:providerId" element={<AddReview providers={providers} reviews={reviews} setReviews={setReviews} user={user} />} />
               <Route path="/ask" element={<Recommendations requests={requests} setRequests={setRequests} user={user} />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/spotlights" element={<Spotlights />} />
+              <Route path="/spotlights" element={<Spotlights user={user} />} />
               <Route path="/admin" element={<Admin user={user} />} />
             </Routes>
           )}
