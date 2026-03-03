@@ -1,0 +1,110 @@
+
+export type Category = 'Home Services' | 'Auto' | 'Personal Care' | 'Professional Services' | 'Healthcare' | 'Rentals' | 'Restaurants';
+
+// Town is a plain string so each tenant can define its own town list.
+export type Town = string;
+
+export type CostRange = 'under_100' | '100_500' | '500_1000' | '1000_5000' | 'over_5000' | 'not_shared';
+
+export interface Provider {
+  id: string;
+  name: string;
+  category: Category;
+  subcategory?: string;
+  description?: string;
+  phone?: string;
+  website?: string;
+  facebook?: string;
+  address?: string;
+  hours?: string;
+  town: Town;
+  averageRating: number;
+  reviewCount: number;
+  hireAgainPercent: number;
+  createdAt: string;
+  image?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  claimStatus: 'unclaimed' | 'claimed';
+  claimedBy?: string;
+  listingTier: 'none' | 'standard' | 'spotlight';
+}
+
+export interface ListingClaim {
+  id: string;
+  providerId: string;
+  providerName: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  verificationMethod: 'email' | 'phone' | 'manual';
+  verificationDetail: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  providerId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  wouldHireAgain: boolean;
+  serviceDescription: string;
+  costRange: CostRange;
+  reviewText: string;
+  serviceDate: string;
+  createdAt: string;
+}
+
+export type LostFoundType = 'lost_pet' | 'found_pet' | 'lost_item' | 'found_item' | 'lost_package' | 'found_package';
+
+export interface LostFoundPost {
+  id: string;
+  userId: string;
+  userName: string;
+  type: LostFoundType;
+  title: string;
+  description: string;
+  photoUrl?: string;
+  locationDescription: string;
+  town: Town;
+  dateOccurred: string;
+  contactMethod: string;
+  status: 'active' | 'resolved';
+  createdAt: string;
+}
+
+export interface RecommendationRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  serviceNeeded: string;
+  description: string;
+  town: Town;
+  status: 'open' | 'resolved';
+  createdAt: string;
+  responseCount: number;
+}
+
+export interface RecommendationResponse {
+  id: string;
+  requestId: string;
+  userId: string;
+  userName: string;
+  recommendation: string;
+  voteCount: number;
+  createdAt: string;
+}
+
+export type ReportContentType = 'provider' | 'lost_found' | 'recommendation_request' | 'recommendation_response';
+
+export interface ContentReport {
+  id: string;
+  contentType: ReportContentType;
+  contentId: string;
+  contentTitle: string;
+  reportedBy: string;
+  reportedByName: string;
+  reason: string;
+  createdAt: string;
+}

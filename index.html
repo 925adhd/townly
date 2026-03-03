@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grayson County Townly</title>
+    <link rel="icon" type="image/png" href="/images/chair-icon.png" />
+    <link rel="apple-touch-icon" href="/images/logo.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Pacifico&family=Ultra&display=swap');
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #fdfcf8; /* Warmer cream background from logo */
+        overflow-y: scroll;
+      }
+      
+      .font-porch { font-family: 'Pacifico', cursive; }
+      .font-talk { font-family: 'Ultra', serif; }
+      
+      .mobile-nav-shadow {
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .branding-text {
+        filter: drop-shadow(2px 2px 0px #0f172a);
+      }
+
+      @keyframes rock {
+        0%   { transform: rotate(0deg); }
+        20%  { transform: rotate(-8deg); }
+        40%  { transform: rotate(6deg); }
+        60%  { transform: rotate(-4deg); }
+        80%  { transform: rotate(3deg); }
+        100% { transform: rotate(0deg); }
+      }
+      .chair-icon {
+        transform-origin: bottom center;
+        transition: transform 0.1s;
+      }
+      .chair-icon:hover {
+        animation: rock 1.8s ease-in-out;
+      }
+      .chair-icon.rocking {
+        animation: rock 1.8s ease-in-out;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
