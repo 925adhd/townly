@@ -26,9 +26,10 @@ export default defineConfig(() => {
                 src: '/images/chair-icon.png',
                 sizes: '192x192',
                 type: 'image/png',
+                purpose: 'any',
               },
               {
-                src: '/images/logo.png',
+                src: '/images/chair-icon.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any maskable',
