@@ -1,20 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Townly
 
-# Run and deploy your AI Studio app
+A hyperlocal community platform for small towns — built to help neighbors discover local businesses, post lost & found, share events, and stay connected.
 
-This contains everything you need to run your app locally.
+## Stack
 
-View your app in AI Studio: https://ai.studio/apps/drive/1qedmOBmq9-gsQP5qEoiVL9k-7l2tJcHF
+- **React 19** + **TypeScript** — UI and type safety
+- **Vite** — dev server and build
+- **Tailwind CSS** — styling
+- **Supabase** — auth, database, and file storage
+- **React Router** — client-side routing (HashRouter)
+- **Lucide React** — icons
+- **Recharts** — analytics charts
+
+## Features
+
+- Business directory with search, category filters, and reviews
+- Provider claim flow — owners can claim and manage their listing
+- Lost & Found board
+- Community events / Spotlights page
+- Community alerts (admin-managed)
+- Ask the Community (recommendations)
+- Admin panel — manage providers, claims, reviews, and alerts
+- Multi-tenant — supports multiple county/town deployments via `VITE_TENANT_ID`
+- PWA-ready
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js 18+
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+   ```
+   npm install
+   ```
+2. Copy `.env.example` to `.env.local` and fill in your Supabase project URL and anon key:
+   ```
+   VITE_SUPABASE_URL=...
+   VITE_SUPABASE_ANON_KEY=...
+   ```
 3. Run the app:
-   `npm run dev`
+   ```
+   npm run dev
+   ```
+
+## Multi-Tenancy
+
+Tenant is resolved from the `VITE_TENANT_ID` env var, then subdomain, then defaults to `grayscounty`. Add new counties in `tenants.ts`.
