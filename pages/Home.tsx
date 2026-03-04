@@ -108,7 +108,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
             </span>
-            <h2 className="text-base font-semibold text-slate-900">Around Town</h2>
+            <h2 className="text-base font-semibold text-slate-900">Upcoming This Week</h2>
           </div>
           <Link to="/spotlights" className="text-amber-600 font-normal text-[10px] whitespace-nowrap hover:underline flex-shrink-0">See all events</Link>
         </div>
