@@ -15,7 +15,6 @@ dist-ssr
 # Environment variables - never commit these
 .env
 .env.*
-!.env.example
 
 # Claude Code local settings
 .claude/
