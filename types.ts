@@ -27,6 +27,7 @@ export interface Provider {
   claimStatus: 'unclaimed' | 'claimed';
   claimedBy?: string;
   listingTier: 'none' | 'standard' | 'featured' | 'spotlight';
+  tags?: string[];
 }
 
 export interface ListingClaim {

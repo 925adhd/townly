@@ -290,6 +290,8 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [eHours, setEHours] = useState(provider.hours ?? '');
   const [eFacebook, setEFacebook] = useState(provider.facebook ?? '');
   const [eWebsite, setEWebsite] = useState(provider.website ?? '');
+  const [eTags, setETags] = useState<string[]>(provider.tags ?? []);
+  const [tagInput, setTagInput] = useState('');
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,6 +306,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
         hours: eHours,
         facebook: eFacebook,
         website: eWebsite,
+        tags: eTags,
       });
       onSaved(updated);
       setSuccess('Changes saved.');
@@ -433,6 +436,48 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
+          </div>
+
+          {/* Service Tags */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Service Tags</label>
+            <p className="text-xs text-slate-400 mb-2">Add keywords for services you offer so customers can find you (e.g. "oil change", "roof repair").</p>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                    e.preventDefault();
+                    const tag = tagInput.trim().toLowerCase().replace(/,/g, '');
+                    if (!eTags.includes(tag)) setETags(prev => [...prev, tag]);
+                    setTagInput('');
+                  }
+                }}
+                placeholder="Type a service and press Enter..."
+                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const tag = tagInput.trim().toLowerCase().replace(/,/g, '');
+                  if (tag && !eTags.includes(tag)) setETags(prev => [...prev, tag]);
+                  setTagInput('');
+                }}
+                className="bg-slate-100 text-slate-600 font-bold px-4 py-2.5 rounded-xl hover:bg-slate-200 text-sm"
+              >Add</button>
+            </div>
+            {eTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {eTags.map(tag => (
+                  <span key={tag} className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    {tag}
+                    <button type="button" onClick={() => setETags(prev => prev.filter(t => t !== tag))} className="text-blue-400 hover:text-blue-600 leading-none">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}

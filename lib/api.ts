@@ -26,6 +26,7 @@ function mapProvider(row: any): Provider {
     claimStatus: (row.claim_status ?? 'unclaimed') as 'unclaimed' | 'claimed',
     claimedBy: row.claimed_by ?? undefined,
     listingTier: (row.listing_tier ?? 'none') as 'none' | 'standard' | 'featured' | 'spotlight',
+    tags: row.tags ?? [],
   };
 }
 
@@ -671,6 +672,7 @@ export async function updateOwnerListing(
     facebook?: string;
     website?: string;
     image?: string;
+    tags?: string[];
   }
 ): Promise<Provider> {
   const { error } = await supabase
@@ -683,6 +685,7 @@ export async function updateOwnerListing(
       facebook: input.facebook || null,
       website: input.website || null,
       image: input.image || null,
+      ...(input.tags !== undefined && { tags: input.tags }),
     })
     .eq('id', id);
   if (error) throw error;

@@ -40,6 +40,80 @@ interface DirectoryProps {
 
 const SCROLL_KEY = 'directory_scroll';
 
+function levenshtein(a: string, b: string): number {
+  const dp: number[] = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const temp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = temp;
+    }
+  }
+  return dp[b.length];
+}
+
+const STOP_WORDS = new Set([
+  'install', 'installed', 'fix', 'fixed', 'repair', 'repairs', 'repaired',
+  'find', 'get', 'need', 'want', 'help', 'hire', 'looking', 'for', 'a', 'an',
+  'the', 'near', 'me', 'my', 'local', 'best', 'good', 'cheap', 'affordable',
+  'services', 'service', 'professional', 'pros', 'provider', 'change', 'changes',
+]);
+
+// Maps common search terms to the category they imply
+const KEYWORD_CATEGORY: Record<string, string> = {
+  // Auto
+  'oil': 'Auto', 'tire': 'Auto', 'tires': 'Auto', 'brake': 'Auto', 'brakes': 'Auto',
+  'transmission': 'Auto', 'exhaust': 'Auto', 'mechanic': 'Auto', 'alignment': 'Auto',
+  'windshield': 'Auto', 'detailing': 'Auto', 'inspection': 'Auto',
+  'battery': 'Auto', 'radiator': 'Auto', 'alternator': 'Auto', 'coolant': 'Auto',
+  'filter': 'Auto', 'spark': 'Auto', 'muffler': 'Auto', 'axle': 'Auto', 'clutch': 'Auto',
+  // Home Services
+  'plumber': 'Home Services', 'plumbing': 'Home Services',
+  'electrician': 'Home Services', 'electrical': 'Home Services', 'electric': 'Home Services', 'wiring': 'Home Services',
+  'hvac': 'Home Services', 'heating': 'Home Services', 'cooling': 'Home Services', 'ac': 'Home Services',
+  'roofing': 'Home Services', 'roofer': 'Home Services', 'roof': 'Home Services',
+  'painting': 'Home Services', 'painter': 'Home Services',
+  'landscaping': 'Home Services', 'landscaper': 'Home Services', 'lawn': 'Home Services', 'mowing': 'Home Services',
+  'toilet': 'Home Services', 'sink': 'Home Services', 'drain': 'Home Services', 'faucet': 'Home Services',
+  'pipe': 'Home Services', 'pipes': 'Home Services', 'leak': 'Home Services', 'leaking': 'Home Services',
+  'clog': 'Home Services', 'clogged': 'Home Services', 'sewer': 'Home Services', 'water': 'Home Services',
+  'pest': 'Home Services', 'cleaning': 'Home Services', 'gutters': 'Home Services', 'fence': 'Home Services',
+  'carpentry': 'Home Services', 'carpenter': 'Home Services', 'flooring': 'Home Services',
+  'light': 'Home Services', 'lights': 'Home Services', 'lighting': 'Home Services',
+  'drywall': 'Home Services', 'insulation': 'Home Services', 'pressure': 'Home Services',
+  'window': 'Home Services', 'windows': 'Home Services', 'door': 'Home Services', 'doors': 'Home Services',
+  'deck': 'Home Services', 'concrete': 'Home Services', 'foundation': 'Home Services',
+  'tree': 'Home Services', 'trees': 'Home Services', 'irrigation': 'Home Services',
+  'junk': 'Home Services', 'moving': 'Home Services', 'handyman': 'Home Services',
+  // Personal Care
+  'haircut': 'Personal Care', 'hair': 'Personal Care', 'barber': 'Personal Care', 'salon': 'Personal Care',
+  'nails': 'Personal Care', 'manicure': 'Personal Care', 'pedicure': 'Personal Care',
+  'massage': 'Personal Care', 'spa': 'Personal Care', 'waxing': 'Personal Care',
+  // Healthcare
+  'doctor': 'Healthcare', 'dentist': 'Healthcare', 'dental': 'Healthcare', 'clinic': 'Healthcare',
+  'therapy': 'Healthcare', 'therapist': 'Healthcare', 'chiropractor': 'Healthcare', 'vision': 'Healthcare',
+  // Restaurants
+  'restaurant': 'Restaurants', 'food': 'Restaurants', 'pizza': 'Restaurants', 'burger': 'Restaurants',
+  'cafe': 'Restaurants', 'diner': 'Restaurants', 'takeout': 'Restaurants', 'delivery': 'Restaurants',
+  // Rentals
+  'rental': 'Rentals', 'apartment': 'Rentals', 'house': 'Rentals', 'storage': 'Rentals',
+};
+
+function fuzzyMatchToken(token: string, fields: string, fieldWords: string[]): boolean {
+  if (fields.includes(token)) return true;
+  // Prefix match for suffix variants (e.g. "electric" → "electrical")
+  const prefix = token.slice(0, Math.max(4, Math.ceil(token.length * 0.7)));
+  if (fieldWords.some(w => w.startsWith(prefix))) return true;
+  // Levenshtein for typos — threshold scales with word length
+  if (token.length < 5) return false;
+  const maxDist = token.length >= 10 ? 3 : token.length >= 7 ? 2 : 1;
+  return fieldWords.some(w =>
+    Math.abs(w.length - token.length) <= maxDist && levenshtein(token, w) <= maxDist
+  );
+}
+
 function hireAgainLabel(category: string): string {
   if (category === 'Restaurants') return 'would return';
   if (category === 'Personal Care') return 'would book again';
@@ -53,6 +127,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
+  const [localQuery, setLocalQuery] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] || '').get('q') || '');
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -76,6 +151,15 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   // All filter state lives in the URL so back-navigation restores it
   const query    = searchParams.get('q') || '';
+
+  // Debounce search input → only update URL (and trigger filter) after typing stops
+  useEffect(() => {
+    const t = setTimeout(() => updateParam('q', localQuery), 300);
+    return () => clearTimeout(t);
+  }, [localQuery]);
+
+  // Sync local input if URL changes externally (e.g. browser back)
+  useEffect(() => { setLocalQuery(query); }, [query]);
   const category = (searchParams.get('cat') as Category) || 'All';
   const town     = (searchParams.get('town') as Town) || 'All';
   const sortBy   = (searchParams.get('sort') as 'rating' | 'reviews' | 'newest') || 'rating';
@@ -113,13 +197,17 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     return providers.filter(p => {
       const matchCat = category === 'All' || p.category === category;
       const matchTown = town === 'All' || p.town === town;
-      const q = query.toLowerCase();
-      const matchQuery = query ? (
-        p.name.toLowerCase().includes(q) ||
-        p.subcategory?.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.town.toLowerCase().includes(q)
-      ) : true;
+      const matchQuery = !query ? true : (() => {
+        const allTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const tokens = allTokens.filter(t => !STOP_WORDS.has(t));
+        if (tokens.length === 0) return true;
+        const fields = [p.name, p.subcategory || '', p.category, p.town, p.description || '', ...(p.tags ?? [])].join(' ').toLowerCase();
+        const fieldWords = fields.split(/\W+/).filter(Boolean);
+        return tokens.every(token =>
+          fuzzyMatchToken(token, fields, fieldWords) ||
+          KEYWORD_CATEGORY[token] === p.category
+        );
+      })();
       return matchCat && matchTown && matchQuery;
     }).sort((a, b) => {
       // Paid placements always float above organic results
@@ -148,7 +236,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {reportNotice && (
         <div className={`text-sm font-medium px-4 py-3 rounded-xl flex items-center justify-between ${reportNotice.startsWith('Failed') ? 'bg-red-50 border border-red-200 text-red-600' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'}`}>
           <span>{reportNotice.startsWith('Failed') ? reportNotice : <><i className="fas fa-check-circle mr-2"></i>{reportNotice}</>}</span>
@@ -179,13 +267,14 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               type="text"
               name="q"
               placeholder="Search businesses or services..."
-              value={query}
-              onChange={e => updateParam('q', e.target.value)}
+              autoComplete="off"
+              value={localQuery}
+              onChange={e => setLocalQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {query && (
+            {localQuery && (
               <button
-                onClick={() => updateParam('q', '')}
+                onClick={() => { setLocalQuery(''); updateParam('q', ''); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 <i className="fas fa-times text-xs"></i>

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CommunityEvent } from '../types';
 import { fetchApprovedCommunityEvents, submitCommunityEvent } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
@@ -12,7 +12,15 @@ interface SpotlightsProps {
 }
 
 const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const location = useLocation();
+  useEffect(() => {
+    const scrollTo = (location.state as any)?.scrollTo;
+    if (scrollTo) {
+      const el = document.getElementById(scrollTo);
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    }
+    window.scrollTo(0, 0);
+  }, [location.state]);
   const [flyerOpen, setFlyerOpen] = useState(false);
   const [upsOpen, setUpsOpen] = useState(false);
   const [entrepreneurOpen, setEntrepreneurOpen] = useState(false);
@@ -69,19 +77,18 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <div className="inline-flex items-center justify-center w-14 h-14 bg-amber-100 rounded-2xl mb-3 shadow-sm">
           <i className="fas fa-star text-amber-500 text-2xl"></i>
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Community Spotlights</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Around {tenant.name}</h1>
         <p className="text-slate-500 text-base max-w-md mx-auto md:leading-snug">
-          What's happening in {tenant.name} this week. Local events, businesses, and community news worth knowing about.
+          Local events, announcements, and things happening around {tenant.name} this week.
         </p>
       </div>
 
       {/* Current Spotlights */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-4 px-1 -mt-4">This Week's Spotlights</h2>
-        <div className="grid gap-4">
+<div className="grid gap-4">
 
           {/* Disaster Preparedness Summit */}
-          <div className="bg-white rounded-3xl border-2 border-amber-200 overflow-hidden shadow-sm flex flex-col">
+          <div id="disaster-summit" className="bg-white rounded-3xl border-2 border-amber-200 overflow-hidden shadow-sm flex flex-col">
             <button
               onClick={() => setFlyerOpen(true)}
               className="w-full block hover:opacity-95 transition-opacity focus:outline-none"
@@ -96,7 +103,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             <div className="p-6 flex flex-col gap-3">
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700 border border-amber-300 self-start">
-                  Local Spotlight
+                  ⭐ Featured Event
                 </span>
                 <span className="text-slate-400 text-xs font-medium">Apr 2, 2026</span>
               </div>
@@ -203,21 +210,21 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <div className="flex items-center justify-between mb-1 px-1">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
-            <p className="text-slate-400 text-xs mt-0.5">Free events posted by your neighbors — pending admin review.</p>
+            <p className="text-slate-400 text-xs mt-0.5">Free events posted by neighbors and organizations — pending admin review.</p>
           </div>
           {user ? (
             <button
               onClick={() => { setShowForm(true); setSubmitted(false); }}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors"
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
-              <i className="fas fa-plus text-[10px]"></i> Post an Event
+              <i className="fas fa-plus text-[10px]"></i> Post Event
             </button>
           ) : (
             <Link
               to="/auth?signup=true"
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors"
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
-              <i className="fas fa-plus text-[10px]"></i> Post an Event
+              <i className="fas fa-plus text-[10px]"></i> Post Event
             </Link>
           )}
         </div>
@@ -260,7 +267,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
       {/* Pricing tiers */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Share Something With Your Community</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Promote Your Event or Business</h2>
         <p className="text-slate-500 text-sm mb-4 px-1">Have an event, a business, or something worth sharing? Get it in front of your neighbors.</p>
         <div className="space-y-5">
 
@@ -271,17 +278,18 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-xl font-bold text-slate-900">Local Spotlight</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The most visible spot on Townly this week. One business or event, featured on the home page for every neighbor who visits. Once it's taken, it's gone until next week.
+              The highest visibility placement on Townly. One event or business featured on the home page for every neighbor who visits — for the entire week.
             </p>
             <div className="pt-1">
               <span className="text-3xl font-bold text-amber-600">$25</span>
               <span className="text-slate-400 text-sm font-medium"> / week</span>
             </div>
+            <p className="text-xs text-amber-700 font-medium">Only 1 Local Spotlight available each week.</p>
             <ul className="space-y-1.5 text-sm text-slate-600">
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Prime placement on the home page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Highlighted gold border — stands out on this page</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Highlighted gold border — stands out on the page</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Custom description &amp; icon</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned at the TOP of this page all week</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned at the top of this page all week</li>
               <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 slot available per week</li>
             </ul>
             <a
@@ -296,57 +304,32 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           {/* Other Featured Listings */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3 px-1">Other Featured Listings</p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
-                <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                  <i className="fas fa-store text-slate-400 text-base"></i>
-                </div>
-                <h2 className="text-base font-bold text-slate-800">Featured Listing</h2>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  A simple way to let your neighbors know what you're up to. Good for an upcoming event, a seasonal offer, or just something worth sharing this week.
-                </p>
-                <div className="pt-0.5">
-                  <span className="text-xl font-bold text-slate-700">$5</span>
-                  <span className="text-slate-400 text-xs font-medium"> / week</span>
-                </div>
-                <ul className="space-y-1.5 text-xs text-slate-500">
-                  <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Listed on this Spotlights page</li>
-                  <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description &amp; icon</li>
-                  <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> No long-term commitment — book by the week</li>
-                </ul>
-                <a
-                  href="mailto:hello@townlyapp.io?subject=Featured Listing Inquiry"
-                  className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
-                >
-                  <i className="fas fa-envelope text-[10px]"></i>
-                  Get a Featured Listing
-                </a>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
+              <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
+                <i className="fas fa-store text-slate-400 text-base"></i>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
-                <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                  <i className="fas fa-store text-slate-400 text-base"></i>
-                </div>
-                <h2 className="text-base font-bold text-slate-800">Featured Listing</h2>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  A simple way to let your neighbors know what you're up to. Good for an upcoming event, a seasonal offer, or just something worth sharing this week.
-                </p>
-                <div className="pt-0.5">
-                  <span className="text-xl font-bold text-slate-700">$5</span>
-                  <span className="text-slate-400 text-xs font-medium"> / week</span>
-                </div>
-                <ul className="space-y-1.5 text-xs text-slate-500">
-                  <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Listed on this Spotlights page</li>
-                  <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description &amp; icon</li>
-                  <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> No long-term commitment — book by the week</li>
-                </ul>
-                <a
-                  href="mailto:hello@townlyapp.io?subject=Featured Listing Inquiry"
-                  className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
-                >
-                  <i className="fas fa-envelope text-[10px]"></i>
-                  Get a Featured Listing
-                </a>
+              <h2 className="text-base font-bold text-slate-800">Featured Listing</h2>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                A simple way to highlight your event or business in the weekly listings — displayed above regular community posts.
+              </p>
+              <div className="pt-0.5">
+                <span className="text-xl font-bold text-slate-700">$5</span>
+                <span className="text-slate-400 text-xs font-medium"> / week</span>
               </div>
+              <ul className="space-y-1.5 text-xs text-slate-500">
+                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Appears in the Featured Listings section</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Displayed above regular community posts</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description &amp; icon</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Listed for the full week</li>
+                <li className="flex items-center gap-2 font-semibold text-slate-600"><i className="fas fa-lock text-slate-400 text-[10px]"></i> Limited to 5 featured listings each week</li>
+              </ul>
+              <a
+                href="mailto:hello@townlyapp.io?subject=Featured Listing Inquiry"
+                className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
+              >
+                <i className="fas fa-envelope text-[10px]"></i>
+                Get a Featured Listing
+              </a>
             </div>
           </div>
 

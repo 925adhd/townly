@@ -81,7 +81,7 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <ScrollToTop />
-      <div className="min-h-screen flex flex-col pb-20 md:pb-0">
+      <div className="min-h-screen flex flex-col nav-page-pb">
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 h-20">
           <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
             <span className="md:hidden absolute left-1/2 -translate-x-1/2 font-bold text-slate-900 text-base pointer-events-none">{tenant.name}</span>
@@ -161,23 +161,25 @@ const App: React.FC = () => {
         </main>
 
         {/* Mobile Navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 flex items-center justify-around z-50 mobile-nav-shadow">
-          <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
-            <i className="fas fa-home text-lg"></i>
-            <span className="text-[10px] mt-1 font-medium">Home</span>
-          </Link>
-          <Link to="/directory" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
-            <i className="fas fa-search text-lg"></i>
-            <span className="text-[10px] mt-1 font-medium">Find Pros</span>
-          </Link>
-          <Link to="/lost-found" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
-            <i className="fas fa-paw text-lg"></i>
-            <span className="text-[10px] mt-1 font-medium">Lost/Found</span>
-          </Link>
-          <Link to="/ask" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
-            <i className="fas fa-comments text-lg"></i>
-            <span className="text-[10px] mt-1 font-medium">Ask</span>
-          </Link>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="h-16 flex items-center justify-around">
+            <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+              <i className="fas fa-home text-lg"></i>
+              <span className="text-[10px] mt-1 font-medium">Home</span>
+            </Link>
+            <Link to="/directory" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+              <i className="fas fa-search text-lg"></i>
+              <span className="text-[10px] mt-1 font-medium">Find Pros</span>
+            </Link>
+            <Link to="/lost-found" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+              <i className="fas fa-paw text-lg"></i>
+              <span className="text-[10px] mt-1 font-medium">Lost/Found</span>
+            </Link>
+            <Link to="/ask" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+              <i className="fas fa-comments text-lg"></i>
+              <span className="text-[10px] mt-1 font-medium">Ask</span>
+            </Link>
+          </div>
         </nav>
       </div>
     </HashRouter>

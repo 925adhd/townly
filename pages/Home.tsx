@@ -110,26 +110,27 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
             </span>
             <h2 className="text-base font-semibold text-slate-900">Around Town</h2>
           </div>
-          <Link to="/spotlights" className="text-amber-600 font-normal text-[10px] whitespace-nowrap hover:underline flex-shrink-0">See all spotlights</Link>
+          <Link to="/spotlights" className="text-amber-600 font-normal text-[10px] whitespace-nowrap hover:underline flex-shrink-0">See all events</Link>
         </div>
 
         <div className="space-y-3">
 
           {/* Spotlight Card — full width, dominant */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-6 py-7 md:px-8 md:py-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 flex flex-col md:flex-row md:items-center md:gap-10">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 pt-4 pb-7 md:px-8 md:pt-4 md:pb-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 flex flex-col md:flex-row md:items-center md:gap-10">
             <div className="flex flex-col flex-1">
-              <span className="text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest bg-amber-500 text-white self-start mb-3">
-                Around Town
-              </span>
-              <h3 className="font-extrabold text-slate-900 text-[19px] leading-tight mb-1">Disaster Preparedness Summit</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Featured Event</span>
+                <span className="text-xs font-medium text-gray-700 flex items-center gap-1"><i className="fas fa-calendar text-[10px] text-amber-500"></i> Apr 2 · 4:30–6:30 PM</span>
+              </div>
+              <h3 className="font-semibold text-slate-900 text-lg leading-tight mb-1">Disaster Preparedness Summit</h3>
               <p className="text-slate-500 text-xs flex items-center gap-1 mb-3">
                 <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {tenant.name} Extension Office
               </p>
               <p className="text-slate-600 text-xs leading-relaxed">
-                Apr 2 · 4:30–6:30 PM. Keynote, panels &amp; resource expo. Free admission, all ages welcome.
+                Keynote, panels &amp; resource expo. Free admission, all ages welcome.
               </p>
             </div>
-            <Link to="/spotlights" className="mt-5 md:mt-0 md:flex-shrink-0 inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-5 py-3 rounded-xl transition-colors shadow-sm">
+            <Link to="/spotlights" state={{ scrollTo: 'disaster-summit' }} className="mt-5 md:mt-0 md:flex-shrink-0 inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-5 py-3 rounded-xl transition-colors shadow-sm">
               View Event Details <i className="fas fa-arrow-right text-[10px]"></i>
             </Link>
           </div>
@@ -138,30 +139,31 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
           <div className="grid md:grid-cols-2 gap-3">
 
             {/* Community Alert Card */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-orange-100 text-orange-600 self-start mb-2">
-                Community Alert
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 self-start mb-2">
+                🚨 Community Alert
               </span>
               {latestAlert ? (
                 <>
                   <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{latestAlert.title}</h3>
                   <p className="text-slate-500 text-xs flex items-center">
-                    <i className="fas fa-map-marker-alt mr-1 text-orange-400"></i>
+                    <i className="fas fa-map-marker-alt mr-1 text-red-400"></i>
                     {latestAlert.locationDescription}
                   </p>
-                  <Link to="/lost-found" className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold hover:underline">
+                  <Link to="/lost-found" className="mt-auto pt-3 inline-flex items-center text-red-600 text-xs font-bold hover:underline">
                     View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
                   </Link>
                 </>
               ) : (
-                <p className="text-slate-400 text-xs leading-relaxed mt-1">
+                <p className="text-slate-500 text-xs leading-relaxed mt-1 flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
                   No alerts right now. That's a good sign.
                 </p>
               )}
             </div>
 
             {/* Lost & Found Card */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               {latestLF ? (
                 <>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest self-start mb-2 ${
