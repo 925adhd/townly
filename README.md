@@ -4,13 +4,13 @@ A hyperlocal community platform for small towns — built to help neighbors disc
 
 ## Stack
 
-- **React 19** + **TypeScript** — UI and type safety
-- **Vite** — dev server and build
-- **Tailwind CSS** — styling
+- **React 19** + **TypeScript**
+- **Vite**
+- **Tailwind CSS**
 - **Supabase** — auth, database, and file storage
-- **React Router** — client-side routing (HashRouter)
-- **Lucide React** — icons
-- **Recharts** — analytics charts
+- **React Router**
+- **Lucide React**
+- **Recharts**
 
 ## Features
 
@@ -18,30 +18,12 @@ A hyperlocal community platform for small towns — built to help neighbors disc
 - Provider claim flow — owners can claim and manage their listing
 - Lost & Found board
 - Community events / Spotlights page
-- Community alerts (admin-managed)
+- Community alerts
 - Ask the Community (recommendations)
 - Admin panel — manage providers, claims, reviews, and alerts
-- Multi-tenant — supports multiple county/town deployments via `VITE_TENANT_ID`
+- Multi-tenant — supports multiple county/town deployments
 - PWA-ready
 
-## Run Locally
+---
 
-**Prerequisites:** Node.js 18+
-
-1. Install dependencies:
-   ```
-   npm install
-   ```
-2. Copy `.env.example` to `.env.local` and fill in your Supabase project URL and anon key:
-   ```
-   VITE_SUPABASE_URL=...
-   VITE_SUPABASE_ANON_KEY=...
-   ```
-3. Run the app:
-   ```
-   npm run dev
-   ```
-
-## Multi-Tenancy
-
-Tenant is resolved from the `VITE_TENANT_ID` env var, then subdomain, then defaults to `grayscounty`. Add new counties in `tenants.ts`.
+© 2025 Townly. All rights reserved. This project is not open source. Do not copy, reuse, or redistribute any part of this codebase without explicit permission.
