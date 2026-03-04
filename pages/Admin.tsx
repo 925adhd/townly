@@ -1,10 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent } from '../lib/api';
+import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert } from '../types';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, createAlert, dismissAlert } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
+  communityAlert: CommunityAlert | null;
+  setCommunityAlert: (alert: CommunityAlert | null) => void;
 }
 
 const contentTypeLabel: Record<ReportContentType, string> = {
@@ -21,8 +23,8 @@ const contentTypeBadge: Record<ReportContentType, string> = {
   recommendation_response: 'bg-slate-100 text-slate-600',
 };
 
-const Admin: React.FC<AdminProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events'>('pending');
+const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }) => {
+  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts'>('pending');
 
   // Pending providers
   const [pending, setPending] = useState<Provider[]>([]);
@@ -49,6 +51,12 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [actingEvent, setActingEvent] = useState<string | null>(null);
   const [eventsError, setEventsError] = useState('');
+
+  // Community alerts
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertDescription, setAlertDescription] = useState('');
+  const [alertActing, setAlertActing] = useState(false);
+  const [alertError, setAlertError] = useState('');
 
   useEffect(() => {
     fetchPendingProviders()
@@ -183,6 +191,37 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
     }
   };
 
+  const handlePostAlert = async () => {
+    if (!alertTitle.trim() || !alertDescription.trim() || !user) return;
+    setAlertActing(true);
+    setAlertError('');
+    try {
+      if (communityAlert) await dismissAlert(communityAlert.id);
+      const newAlert = await createAlert(alertTitle.trim(), alertDescription.trim(), user.id);
+      setCommunityAlert(newAlert);
+      setAlertTitle('');
+      setAlertDescription('');
+    } catch (e: any) {
+      setAlertError(e.message || 'Failed to post alert.');
+    } finally {
+      setAlertActing(false);
+    }
+  };
+
+  const handleDismissAlert = async () => {
+    if (!communityAlert) return;
+    setAlertActing(true);
+    setAlertError('');
+    try {
+      await dismissAlert(communityAlert.id);
+      setCommunityAlert(null);
+    } catch (e: any) {
+      setAlertError(e.message || 'Failed to dismiss alert.');
+    } finally {
+      setAlertActing(false);
+    }
+  };
+
   const handleRemoveContent = async (report: ContentReport) => {
     setActingReport(report.id);
     try {
@@ -222,6 +261,11 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
           {pendingEvents.length > 0 && (
             <span className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">
               {pendingEvents.length} events
+            </span>
+          )}
+          {communityAlert && (
+            <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
+              1 alert live
             </span>
           )}
         </div>
@@ -283,6 +327,20 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
           Events
           {pendingEvents.length > 0 && (
             <span className="ml-2 bg-purple-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{pendingEvents.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('alerts')}
+          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
+            activeTab === 'alerts'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <i className="fas fa-triangle-exclamation mr-2"></i>
+          Alerts
+          {communityAlert && (
+            <span className="ml-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">1</span>
           )}
         </button>
       </div>
@@ -448,6 +506,74 @@ const Admin: React.FC<AdminProps> = ({ user }) => {
             </div>
           )}
         </>
+      )}
+
+      {/* Community Alerts Tab */}
+      {activeTab === 'alerts' && (
+        <div className="space-y-4">
+          {alertError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl flex items-center justify-between">
+              <span>{alertError}</span>
+              <button onClick={() => setAlertError('')} className="ml-4 font-bold text-lg leading-none">&times;</button>
+            </div>
+          )}
+
+          {/* Current active alert */}
+          {communityAlert ? (
+            <div className="bg-red-50 border border-red-200 rounded-3xl p-5 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700">🚨 Live Alert</span>
+                    <span className="text-xs text-slate-400">{new Date(communityAlert.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <h2 className="font-bold text-slate-900 text-base">{communityAlert.title}</h2>
+                  <p className="text-slate-600 text-sm">{communityAlert.description}</p>
+                </div>
+                <button
+                  onClick={handleDismissAlert}
+                  disabled={alertActing}
+                  className="bg-white border border-red-200 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  Dismiss Alert
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5 flex items-center gap-3 text-slate-400 text-sm">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+              No active alert. Community is all clear.
+            </div>
+          )}
+
+          {/* Post new alert form */}
+          <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm">{communityAlert ? 'Replace Alert' : 'Post New Alert'}</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Alert title (e.g. Boil Water Advisory)"
+                value={alertTitle}
+                onChange={e => setAlertTitle(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+              <textarea
+                placeholder="Details (e.g. Affects downtown area through Friday. Do not drink tap water.)"
+                value={alertDescription}
+                onChange={e => setAlertDescription(e.target.value)}
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+              />
+            </div>
+            <button
+              onClick={handlePostAlert}
+              disabled={alertActing || !alertTitle.trim() || !alertDescription.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50"
+            >
+              {alertActing ? 'Posting...' : '🚨 Post Alert'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Flagged Content Tab */}

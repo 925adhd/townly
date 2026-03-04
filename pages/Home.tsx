@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Provider, LostFoundPost } from '../types';
+import { Home as HomeIcon, Car, Scissors, Stethoscope, UtensilsCrossed, Key } from 'lucide-react';
+import { Provider, LostFoundPost, CommunityAlert } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -9,19 +10,21 @@ const tenant = getCurrentTenant();
 interface HomeProps {
   providers: Provider[];
   lostFound: LostFoundPost[];
+  communityAlert: CommunityAlert | null;
+  setCommunityAlert: (alert: CommunityAlert | null) => void;
 }
 
-const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
+const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
   const categories = [
-    { name: 'Home Services', label: 'Home Services', icon: 'fa-house-chimney', color: 'bg-blue-100 text-blue-600' },
-    { name: 'Auto', label: 'Auto', icon: 'fa-car', color: 'bg-indigo-100 text-indigo-600' },
-    { name: 'Personal Care', label: 'Personal Care', icon: 'fa-scissors', color: 'bg-pink-100 text-pink-600' },
-    { name: 'Healthcare', label: 'Healthcare', icon: 'fa-stethoscope', color: 'bg-emerald-100 text-emerald-600' },
-    { name: 'Restaurants', label: 'Restaurants', icon: 'fa-utensils', color: 'bg-red-100 text-red-600' },
-    { name: 'Rentals', label: 'Rentals', icon: 'fa-key', color: 'bg-purple-100 text-purple-600' },
+    { name: 'Home Services', label: 'Home Services', icon: HomeIcon, color: 'bg-blue-100 text-blue-600' },
+    { name: 'Auto', label: 'Auto', icon: Car, color: 'bg-indigo-100 text-indigo-600' },
+    { name: 'Personal Care', label: 'Personal Care', icon: Scissors, color: 'bg-pink-100 text-pink-600' },
+    { name: 'Healthcare', label: 'Healthcare', icon: Stethoscope, color: 'bg-emerald-100 text-emerald-600' },
+    { name: 'Restaurants', label: 'Restaurants', icon: UtensilsCrossed, color: 'bg-red-100 text-red-600' },
+    { name: 'Rentals', label: 'Rentals', icon: Key, color: 'bg-purple-100 text-purple-600' },
   ];
 
   const handleSearch = (e: React.FormEvent) => {
@@ -32,8 +35,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
   const sortedPosts = [...lostFound].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const latestAlert = sortedPosts.find(p => p.status === 'active');
-  const latestLF = sortedPosts.find(p => p.id !== latestAlert?.id) ?? sortedPosts[0];
+  const latestLF = sortedPosts[0];
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
@@ -62,7 +64,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
             What's happening in your town?
           </h1>
           <p className="text-white/75 text-sm md:text-base mb-6 font-medium leading-relaxed">
-            Find trusted local pros. See community updates. Stay connected.
+            Discover local events, businesses, and updates from your neighbors.
           </p>
 
           {/* CTA Buttons */}
@@ -77,7 +79,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
               to="/directory"
               className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white/85 px-5 py-2 rounded-xl font-medium text-sm transition-all hover:scale-105 active:scale-95"
             >
-              Find a Local Pro
+              Find Local Businesses
             </Link>
           </div>
 
@@ -86,7 +88,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
             <input
               type="text"
               name="search"
-              placeholder="Search local pros..."
+              placeholder="Search local businesses..."
               className="w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -143,16 +145,10 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 self-start mb-2">
                 🚨 Community Alert
               </span>
-              {latestAlert ? (
+              {communityAlert ? (
                 <>
-                  <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{latestAlert.title}</h3>
-                  <p className="text-slate-500 text-xs flex items-center">
-                    <i className="fas fa-map-marker-alt mr-1 text-red-400"></i>
-                    {latestAlert.locationDescription}
-                  </p>
-                  <Link to="/lost-found" className="mt-auto pt-3 inline-flex items-center text-red-600 text-xs font-bold hover:underline">
-                    View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
-                  </Link>
+                  <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{communityAlert.title}</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed mt-1">{communityAlert.description}</p>
                 </>
               ) : (
                 <p className="text-slate-500 text-xs leading-relaxed mt-1 flex items-center gap-1.5">
@@ -202,17 +198,17 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
           <h2 className="text-base font-bold text-slate-900">Popular Categories</h2>
           <Link to="/directory" className="text-orange-600 font-bold text-sm hover:underline">View all</Link>
         </div>
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
+        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
           {categories.map((cat) => (
             <Link
               key={cat.name}
               to={`/directory?cat=${encodeURIComponent(cat.name)}`}
-              className="group flex flex-col items-center p-3 md:p-5 bg-white border border-slate-100 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-md hover:border-orange-100 transition-all text-center"
+              className="group flex flex-col items-center p-4 md:p-6 bg-white border border-slate-100 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:border-orange-100 hover:-translate-y-1 transition-all duration-200 text-center"
             >
-              <div className={`${cat.color} w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center mb-1.5 md:mb-3 group-hover:scale-110 transition-transform shadow-sm`}>
-                <i className={`fas ${cat.icon} text-lg md:text-2xl`}></i>
+              <div className={`${cat.color} w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-2 md:mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
+                {(() => { const Icon = cat.icon; return <Icon className="w-6 h-6 md:w-7 md:h-7" />; })()}
               </div>
-              <span className="font-bold text-slate-800 text-xs md:text-sm">{cat.label}</span>
+              <span className="font-semibold text-slate-700 text-xs md:text-sm leading-tight">{cat.label}</span>
             </Link>
           ))}
         </div>
@@ -227,7 +223,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound }) => {
           <h2 className="text-xl md:text-3xl font-bold text-slate-900 mb-3 md:mb-4">Your Voice Helps This Community</h2>
           <p className="text-slate-500 mb-5 md:mb-8 text-sm md:text-lg leading-relaxed">
             Know a business worth listing? Add them to the directory.<br />
-            Looking for a trusted local pro? Ask your neighbors.
+            Looking for a local business? Ask your neighbors.
           </p>
           <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3">
             <Link to="/add-provider" className="w-full md:w-auto text-center bg-blue-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-2xl font-bold shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">

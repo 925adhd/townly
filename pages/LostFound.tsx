@@ -483,9 +483,10 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
           );
         })}
         {filteredPosts.length === 0 && (
-          <div className="col-span-full text-center py-14 bg-white rounded-3xl border border-dashed border-slate-200">
+          <div className="col-span-full text-center py-14 px-8 bg-white rounded-3xl border border-dashed border-slate-200">
             <div className="text-4xl text-emerald-300 mb-3"><i className="fas fa-handshake"></i></div>
-            <p className="text-slate-500 font-medium">No active posts right now. That's a good sign.</p>
+            <p className="text-slate-500 font-medium">No active posts right now.</p>
+            <p className="text-slate-400 font-medium text-sm">That's a good sign.</p>
             <p className="text-slate-400 text-sm mt-1">If something goes missing, your neighbors will see it here.</p>
           </div>
         )}

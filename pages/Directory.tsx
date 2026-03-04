@@ -16,6 +16,7 @@ const categoryIcon: Record<string, string> = {
   'Professional Services': 'fa-briefcase',
   'Rentals': 'fa-key',
   'Restaurants': 'fa-utensils',
+  'Other': 'fa-store',
 };
 
 const categoryIconColor: Record<string, string> = {
@@ -26,6 +27,7 @@ const categoryIconColor: Record<string, string> = {
   'Professional Services': 'text-amber-300',
   'Rentals': 'text-purple-300',
   'Restaurants': 'text-red-300',
+  'Other': 'text-slate-300',
 };
 
 function providerImage(p: Provider): string | null {
@@ -245,7 +247,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Local Service Providers</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Local Businesses</h1>
           <p className="text-slate-500">Found {filteredProviders.length} businesses matching your criteria</p>
         </div>
         {user && (
@@ -318,7 +320,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
           const icon = categoryIcon[p.category] || 'fa-store';
           const iconColor = categoryIconColor[p.category] || 'text-slate-300';
           return (
-            <div key={p.id} className="relative">
+            <div key={p.id} className="relative min-w-0">
               <Link
                 to={`/provider/${p.id}`}
                 onClick={handleProviderClick}
@@ -330,8 +332,8 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                     : <i className={`fas ${icon} text-2xl ${iconColor}`}></i>
                   }
                 </div>
-                <div className="flex-grow">
-                  <div className="flex items-center space-x-2 mb-1">
+                <div className="flex-grow min-w-0">
+                  <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-1">
                     <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{p.category}</span>
                     <span className="text-slate-400 text-xs">• {p.town}</span>
                     {p.claimStatus !== 'claimed' && (
@@ -419,7 +421,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
         {filteredProviders.length === 0 && (
           <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
             <div className="text-4xl mb-4 text-slate-200"><i className="fas fa-magnifying-glass"></i></div>
-            <p className="text-slate-500 mb-4">No pros found in this category yet.</p>
+            <p className="text-slate-500 mb-4">No businesses found in this category yet.</p>
             <Link to="/ask" className="text-blue-600 font-bold">Ask the community for a recommendation</Link>
           </div>
         )}

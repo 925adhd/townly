@@ -1,5 +1,5 @@
 
-export type Category = 'Home Services' | 'Auto' | 'Personal Care' | 'Professional Services' | 'Healthcare' | 'Rentals' | 'Restaurants';
+export type Category = 'Home Services' | 'Auto' | 'Personal Care' | 'Professional Services' | 'Healthcare' | 'Rentals' | 'Restaurants' | 'Other';
 
 // Town is a plain string so each tenant can define its own town list.
 export type Town = string;
@@ -118,6 +118,13 @@ export interface CommunityEvent {
   town: Town;
   photoUrl?: string;
   status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export interface CommunityAlert {
+  id: string;
+  title: string;
+  description: string;
   createdAt: string;
 }
 

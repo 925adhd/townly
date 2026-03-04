@@ -20,8 +20,8 @@ import Auth from './pages/Auth';
 import Spotlights from './pages/Spotlights';
 import Admin from './pages/Admin';
 import { supabase } from './lib/supabase';
-import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, signOut } from './lib/api';
-import { Provider, Review, LostFoundPost, RecommendationRequest } from './types';
+import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlert, signOut } from './lib/api';
+import { Provider, Review, LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
 
 const tenant = getCurrentTenant();
 
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [lostFound, setLostFound] = useState<LostFoundPost[]>([]);
   const [requests, setRequests] = useState<RecommendationRequest[]>([]);
+  const [communityAlert, setCommunityAlert] = useState<CommunityAlert | null>(null);
   const [user, setUser] = useState<{ id: string, name: string, email?: string, role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,11 +42,13 @@ const App: React.FC = () => {
       fetchReviews(),
       fetchLostFound(),
       fetchRequests(),
-    ]).then(([p, r, lf, req]) => {
+      fetchActiveAlert(),
+    ]).then(([p, r, lf, req, alert]) => {
       setProviders(p);
       setReviews(r);
       setLostFound(lf);
       setRequests(req);
+      setCommunityAlert(alert);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
@@ -91,7 +94,13 @@ const App: React.FC = () => {
                   src="/images/chair-icon.png"
                   alt={tenant.displayName}
                   className={`h-10 w-auto object-contain chair-icon${chairRocking ? ' rocking' : ''}`}
-                  onClick={() => setChairRocking(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setChairRocking(true);
+                    const onHome = ['', '#', '#/'].includes(window.location.hash);
+                    if (!onHome) window.location.hash = '#/';
+                    else e.preventDefault();
+                  }}
                   onAnimationEnd={() => setChairRocking(false)}
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
@@ -106,7 +115,7 @@ const App: React.FC = () => {
             </Link>
 
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Pros</Link>
+              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Businesses</Link>
               <Link to="/lost-found" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Lost & Found</Link>
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
@@ -124,10 +133,18 @@ const App: React.FC = () => {
 
             <div className="md:hidden flex items-center space-x-3">
               {user ? (
-                <button onClick={handleLogout} className="flex flex-col items-center text-slate-500 hover:text-orange-600 transition-colors">
-                  <i className="fas fa-right-from-bracket text-lg"></i>
-                  <span className="text-[10px] mt-1 font-medium">Logout</span>
-                </button>
+                <>
+                  {user.role === 'admin' && (
+                    <Link to="/admin" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
+                      <i className="fas fa-shield-halved text-lg"></i>
+                      <span className="text-[10px] mt-1 font-medium">Admin</span>
+                    </Link>
+                  )}
+                  <button onClick={handleLogout} className="flex flex-col items-center text-slate-500 hover:text-orange-600 transition-colors">
+                    <i className="fas fa-right-from-bracket text-lg"></i>
+                    <span className="text-[10px] mt-1 font-medium">Logout</span>
+                  </button>
+                </>
               ) : (
                 <Link to="/auth" className="flex flex-col items-center text-orange-600 hover:text-orange-700 transition-colors">
                   <i className="fas fa-user text-lg"></i>
@@ -145,7 +162,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <Routes>
-              <Route path="/" element={<Home providers={providers} lostFound={lostFound} />} />
+              <Route path="/" element={<Home providers={providers} lostFound={lostFound} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} />} />
               <Route path="/directory" element={<Directory providers={providers} user={user} />} />
               <Route path="/provider/:id" element={<ProviderDetail providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
               <Route path="/lost-found" element={<LostFound posts={lostFound} setPosts={setLostFound} user={user} />} />
@@ -155,7 +172,7 @@ const App: React.FC = () => {
               <Route path="/ask" element={<Recommendations requests={requests} setRequests={setRequests} user={user} />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/spotlights" element={<Spotlights user={user} />} />
-              <Route path="/admin" element={<Admin user={user} />} />
+              <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} />} />
             </Routes>
           )}
         </main>
@@ -169,7 +186,7 @@ const App: React.FC = () => {
             </Link>
             <Link to="/directory" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
               <i className="fas fa-search text-lg"></i>
-              <span className="text-[10px] mt-1 font-medium">Find Pros</span>
+              <span className="text-[10px] mt-1 font-medium">Businesses</span>
             </Link>
             <Link to="/lost-found" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
               <i className="fas fa-paw text-lg"></i>

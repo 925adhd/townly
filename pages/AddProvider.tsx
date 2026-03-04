@@ -33,7 +33,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const categories: Category[] = ['Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals'];
+  const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Other'];
   const towns: Town[] = tenant.towns;
 
   if (!user) return (

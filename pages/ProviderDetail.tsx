@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats } from '../lib/api';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
 
@@ -279,10 +280,20 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [success, setSuccess] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [featuredSlots, setFeaturedSlots] = useState<number | null>(null);
+  const [stats, setStats] = useState<ListingStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     fetchFeaturedCount(provider.category, provider.town).then(count => setFeaturedSlots(count));
   }, [provider.category, provider.town]);
+
+  useEffect(() => {
+    if (!open || stats) return;
+    setStatsLoading(true);
+    fetchListingStats(provider.id)
+      .then(s => setStats(s))
+      .finally(() => setStatsLoading(false));
+  }, [open, provider.id]);
 
   const [eDesc, setEDesc] = useState(provider.description ?? '');
   const [ePhone, setEPhone] = useState(provider.phone ?? '');
@@ -351,6 +362,55 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
       </button>
 
       {open && (
+        <>
+        {/* Analytics Panel */}
+        <div className="border-t border-emerald-200 pt-4 space-y-3">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            <i className="fas fa-chart-line text-emerald-500"></i> Listing Views
+          </p>
+          {statsLoading ? (
+            <p className="text-xs text-slate-400">Loading...</p>
+          ) : stats ? (
+            <>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { label: 'This Week', value: stats.thisWeek, prev: stats.lastWeek },
+                  { label: 'Last Week', value: stats.lastWeek, prev: null },
+                  { label: 'This Month', value: stats.thisMonth, prev: stats.lastMonth },
+                  { label: 'Last Month', value: stats.lastMonth, prev: null },
+                ].map(({ label, value, prev }) => {
+                  const delta = prev !== null ? value - prev : null;
+                  return (
+                    <div key={label} className="bg-white rounded-2xl border border-emerald-100 px-4 py-3 text-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                      <p className="text-2xl font-bold text-slate-900">{value}</p>
+                      {delta !== null && (
+                        <p className={`text-[10px] font-semibold mt-0.5 ${delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                          {delta > 0 ? `↑ +${delta} vs prev` : delta < 0 ? `↓ ${delta} vs prev` : '— same as prev'}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="bg-white rounded-2xl border border-emerald-100 px-4 py-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Last 12 Months</p>
+                <ResponsiveContainer width="100%" height={120}>
+                  <LineChart data={stats.monthly} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
+                    <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid #d1fae5', padding: '4px 10px' }}
+                      formatter={(v: number) => [v, 'Views']}
+                    />
+                    <Line type="monotone" dataKey="views" stroke="#059669" strokeWidth={2} dot={{ r: 3, fill: '#059669' }} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          ) : null}
+        </div>
+
         <form onSubmit={handleSave} className="space-y-4 border-t border-emerald-200 pt-4">
           {/* Photo upload */}
           <div>
@@ -495,44 +555,51 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
 
           {/* Visibility upgrade */}
           <div className="border-t border-emerald-200 pt-4 space-y-3">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Visibility Upgrades</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 text-sm">Standard Listing</span>
-                  <span className="text-sm font-bold text-slate-700">$5<span className="text-xs font-medium text-slate-400">/wk</span></span>
-                </div>
-                <p className="text-xs text-slate-500">Appears in category, searchable, normal display.</p>
-                <p className="text-[10px] text-slate-400 italic">Founding Business Rate</p>
-              </div>
-              <div className={`border rounded-2xl p-4 space-y-1 ${provider.listingTier === 'featured' ? 'bg-amber-100 border-amber-400' : featuredSlots !== null && featuredSlots >= 3 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-amber-50 border-amber-300'}`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 text-sm flex items-center gap-1">
-                    <i className="fas fa-bolt text-amber-500 text-xs"></i>Featured Listing
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Visibility Upgrade</p>
+            <div className={`border rounded-2xl p-5 space-y-3 ${provider.listingTier === 'featured' ? 'bg-amber-100 border-amber-400' : featuredSlots !== null && featuredSlots >= 3 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-gradient-to-br from-amber-50 to-orange-50/60 border-amber-300'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="font-bold text-slate-900 text-base flex items-center gap-1.5">
+                    <i className="fas fa-bolt text-amber-500 text-sm"></i>Category Leader
                   </span>
-                  <span className="text-sm font-bold text-amber-700">$9.99<span className="text-xs font-medium text-amber-500">/mo</span></span>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Be one of the three featured businesses at the top of your category in the Townly directory.<br />
+                    When neighbors search for services, your business appears first.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-600">Highlighted card, floats above standard listings in your category.</p>
-                {provider.listingTier === 'featured' ? (
-                  <p className="text-[10px] font-bold text-amber-700">✓ Active</p>
-                ) : featuredSlots !== null && featuredSlots >= 3 ? (
-                  <p className="text-[10px] font-semibold text-slate-500">All 3 slots filled — check back soon</p>
-                ) : (
-                  <p className="text-[10px] text-amber-700 font-semibold">{featuredSlots !== null ? 3 - featuredSlots : '?'} of 3 slots available</p>
-                )}
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 text-sm flex items-center gap-1"><i className="fas fa-star text-amber-400 text-xs"></i>Local Spotlight</span>
-                  <span className="text-sm font-bold text-amber-700">$25<span className="text-xs font-medium text-amber-500">/wk</span></span>
+                <div className="flex-shrink-0 text-right">
+                  <span className="text-xl font-bold text-amber-700">$99</span>
+                  <span className="text-xs font-medium text-amber-500">/mo</span>
                 </div>
-                <p className="text-xs text-slate-600">Top of homepage, pinned for the week. Only 1 available per week.</p>
-                <p className="text-[10px] text-slate-400 italic">Founding Business Rate</p>
               </div>
+              <ul className="space-y-1 text-xs text-slate-600">
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Locked Top 3 placement in your category</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Always visible to local customers</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct contact links</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Priority exposure in the directory</li>
+                <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-[10px]"></i>
+                  {provider.listingTier === 'featured' ? (
+                    '✓ Your spot is active'
+                  ) : featuredSlots !== null && featuredSlots >= 3 ? (
+                    'All 3 spots filled — check back soon'
+                  ) : (
+                    `${featuredSlots !== null ? 3 - featuredSlots : '?'} of 3 spots available in ${provider.category}`
+                  )}
+                </li>
+              </ul>
+              {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && (
+                <a
+                  href={`mailto:hello@townlyapp.io?subject=Category Leader – ${encodeURIComponent(provider.name)}`}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors shadow-sm"
+                >
+                  <i className="fas fa-envelope text-[10px]"></i>
+                  Reserve My Spot
+                </a>
+              )}
             </div>
-            <p className="text-xs text-slate-400">Contact us to upgrade. Claiming your listing is always free.</p>
           </div>
         </form>
+        </>
       )}
     </div>
   );
@@ -568,6 +635,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       data.forEach(r => { map[r.reviewId] = r; });
       setReplies(map);
     }).catch(console.error);
+  }, [id]);
+
+  useEffect(() => {
+    if (id) logListingView(id).catch(() => {});
   }, [id]);
 
   const [eName, setEName] = useState('');

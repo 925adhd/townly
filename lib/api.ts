@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent } from '../types';
+import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -864,4 +864,113 @@ export async function rejectCommunityEvent(id: string): Promise<void> {
     .update({ status: 'rejected' })
     .eq('id', id);
   if (error) throw error;
+}
+
+// ── Community Alerts ──────────────────────────────────────────────────────────
+
+function mapCommunityAlert(row: any): CommunityAlert {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchActiveAlert(): Promise<CommunityAlert | null> {
+  const { data, error } = await supabase
+    .from('community_alerts')
+    .select('*')
+    .eq('tenant_id', getCurrentTenant().id)
+    .is('dismissed_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data && data.length > 0 ? mapCommunityAlert(data[0]) : null;
+}
+
+export async function createAlert(title: string, description: string, userId: string): Promise<CommunityAlert> {
+  const { data, error } = await supabase
+    .from('community_alerts')
+    .insert({ title, description, created_by: userId, tenant_id: getCurrentTenant().id })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapCommunityAlert(data);
+}
+
+export async function dismissAlert(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('community_alerts')
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// ── Listing Analytics ─────────────────────────────────────────────────────────
+
+export async function logListingView(providerId: string): Promise<void> {
+  const storageKey = `view_${providerId}`;
+  if (sessionStorage.getItem(storageKey)) return;
+  const sessionKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  sessionStorage.setItem(storageKey, sessionKey);
+  await supabase.from('listing_views').upsert(
+    { provider_id: providerId, tenant_id: getCurrentTenant().id, session_key: sessionKey },
+    { onConflict: 'provider_id,session_key', ignoreDuplicates: true }
+  );
+}
+
+export interface ListingStats {
+  thisWeek: number;
+  lastWeek: number;
+  thisMonth: number;
+  lastMonth: number;
+  monthly: { month: string; views: number }[];
+}
+
+export async function fetchListingStats(providerId: string): Promise<ListingStats> {
+  const now = new Date();
+
+  const dayOfWeek = now.getDay();
+  const daysToMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const thisWeekStart = new Date(now);
+  thisWeekStart.setDate(now.getDate() - daysToMon);
+  thisWeekStart.setHours(0, 0, 0, 0);
+
+  const lastWeekStart = new Date(thisWeekStart);
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+  const { data, error } = await supabase
+    .from('listing_views')
+    .select('viewed_at')
+    .eq('provider_id', providerId)
+    .gte('viewed_at', twelveMonthsAgo.toISOString());
+  if (error) throw error;
+
+  let thisWeek = 0, lastWeek = 0, thisMonth = 0, lastMonth = 0;
+  const monthlyCounts: Record<string, number> = {};
+
+  for (const row of data ?? []) {
+    const d = new Date(row.viewed_at);
+    if (d >= thisWeekStart) thisWeek++;
+    else if (d >= lastWeekStart && d < thisWeekStart) lastWeek++;
+    if (d >= thisMonthStart) thisMonth++;
+    else if (d >= lastMonthStart && d < thisMonthStart) lastMonth++;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    monthlyCounts[key] = (monthlyCounts[key] ?? 0) + 1;
+  }
+
+  const monthly: { month: string; views: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    monthly.push({ month: d.toLocaleString('default', { month: 'short' }), views: monthlyCounts[key] ?? 0 });
+  }
+
+  return { thisWeek, lastWeek, thisMonth, lastMonth, monthly };
 }

@@ -267,70 +267,68 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
       {/* Pricing tiers */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Promote Your Event or Business</h2>
-        <p className="text-slate-500 text-sm mb-4 px-1">Have an event, a business, or something worth sharing? Get it in front of your neighbors.</p>
+        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Get Your Event or Post Noticed</h2>
+        <p className="text-slate-500 text-sm mb-4 px-1">Short-term visibility for events, announcements, and community posts. Looking to grow your business? See the directory listing options on your business page.</p>
         <div className="space-y-5">
 
           {/* Local Spotlight — full width */}
           <div className="bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200 rounded-3xl p-8 space-y-3 shadow-md">
             <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center shadow-sm">
-              <i className="fas fa-house text-amber-500 text-xl"></i>
+              <i className="fas fa-star text-amber-500 text-xl"></i>
             </div>
-            <h2 className="text-xl font-bold text-slate-900">Local Spotlight</h2>
+            <h2 className="text-xl font-bold text-slate-900">Weekly Spotlight</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The highest visibility placement on Townly. One event or business featured on the home page for every neighbor who visits — for the entire week.
+              The most visible placement on Townly. Your event is pinned at the very top of the home page for every neighbor who visits this week.
             </p>
             <div className="pt-1">
               <span className="text-3xl font-bold text-amber-600">$25</span>
               <span className="text-slate-400 text-sm font-medium"> / week</span>
             </div>
-            <p className="text-xs text-amber-700 font-medium">Only 1 Local Spotlight available each week.</p>
             <ul className="space-y-1.5 text-sm text-slate-600">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Prime placement on the home page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Highlighted gold border — stands out on the page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Custom description &amp; icon</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned at the top of this page all week</li>
-              <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 slot available per week</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the home page</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Gold highlight that immediately stands out</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Custom description and icon</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned above all other listings for the full week</li>
+              <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 spotlight available each week</li>
             </ul>
+            <p className="text-xs text-amber-700/80 font-medium">Ideal for grand openings, ticketed events, and time-sensitive announcements.</p>
             <a
-              href="mailto:hello@townlyapp.io?subject=Local Spotlight Inquiry"
+              href="mailto:hello@townlyapp.io?subject=Weekly Spotlight Inquiry"
               className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
             >
               <i className="fas fa-envelope"></i>
-              Book the Local Spotlight
+              Claim This Week's Spotlight
             </a>
           </div>
 
-          {/* Other Featured Listings */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3 px-1">Other Featured Listings</p>
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
-              <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                <i className="fas fa-store text-slate-400 text-base"></i>
-              </div>
-              <h2 className="text-base font-bold text-slate-800">Featured Listing</h2>
-              <p className="text-slate-500 text-xs leading-relaxed">
-                A simple way to highlight your event or business in the weekly listings — displayed above regular community posts.
-              </p>
-              <div className="pt-0.5">
-                <span className="text-xl font-bold text-slate-700">$5</span>
-                <span className="text-slate-400 text-xs font-medium"> / week</span>
-              </div>
-              <ul className="space-y-1.5 text-xs text-slate-500">
-                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Appears in the Featured Listings section</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Displayed above regular community posts</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description &amp; icon</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Listed for the full week</li>
-                <li className="flex items-center gap-2 font-semibold text-slate-600"><i className="fas fa-lock text-slate-400 text-[10px]"></i> Limited to 5 featured listings each week</li>
-              </ul>
-              <a
-                href="mailto:hello@townlyapp.io?subject=Featured Listing Inquiry"
-                className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
-              >
-                <i className="fas fa-envelope text-[10px]"></i>
-                Get a Featured Listing
-              </a>
+          {/* Featured Post */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
+            <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
+              <i className="fas fa-bullhorn text-slate-400 text-base"></i>
             </div>
+            <h2 className="text-base font-bold text-slate-800">Featured Post</h2>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              Boost a community post or event into the weekly featured section, where it rises above regular listings for the week.
+            </p>
+            <div className="pt-0.5">
+              <span className="text-xl font-bold text-slate-700">$5</span>
+              <span className="text-slate-400 text-xs font-medium"> / week</span>
+            </div>
+            <ul className="space-y-1.5 text-xs text-slate-500">
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Rises above regular community posts</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown in the weekly featured section</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description and icon</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Active for the full week</li>
+              <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
+            </ul>
+            <p className="text-xs text-slate-400 font-medium">Great for one-time events, yard sales, community announcements, and seasonal posts.</p>
+            <a
+              href="mailto:hello@townlyapp.io?subject=Featured Post Inquiry"
+              className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
+            >
+              <i className="fas fa-envelope text-[10px]"></i>
+              Get Featured This Week
+            </a>
           </div>
 
         </div>
