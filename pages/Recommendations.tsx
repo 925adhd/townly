@@ -44,7 +44,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     if (!user) return;
     setSubmittingReport(true);
     try {
-      await submitReport(contentType, contentId, contentTitle, user.id, user.name, reportReason);
+      await submitReport(contentType, contentId, contentTitle, reportReason);
       setReportingId(null);
       setReportReason('');
       setNotice('Report submitted. Thank you.');

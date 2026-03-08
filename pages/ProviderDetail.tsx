@@ -78,9 +78,6 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
       await submitClaim(
         provider.id,
         provider.name,
-        user.id,
-        user.name,
-        user.email ?? '',
         method,
         detail.trim()
       );
@@ -200,9 +197,7 @@ const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user,
         provider.id,
         provider.name,
         requestType,
-        message.trim(),
-        user?.name ?? 'Anonymous',
-        user?.id ?? ''
+        message.trim()
       );
       setDone(true);
     } catch (err: any) {

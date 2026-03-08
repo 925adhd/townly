@@ -139,7 +139,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     if (!user) return;
     setSubmittingReport(true);
     try {
-      await submitReport('provider', providerId, providerName, user.id, user.name, reportReason);
+      await submitReport('provider', providerId, providerName, reportReason);
       setReportingId(null);
       setReportReason('');
       setReportNotice('Report submitted. Thank you.');

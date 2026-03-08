@@ -20,6 +20,40 @@ function sanitize(input: string, maxLength: number): string {
 }
 
 /**
+ * Validate a URL string: must be http or https. Throws on invalid input.
+ * Returns the normalised href so callers can store it safely.
+ */
+function validateUrl(raw: string): string {
+  let href: string;
+  try {
+    const url = new URL(raw.trim());
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+    href = url.href;
+  } catch {
+    throw new Error('Website/social URL must start with http:// or https://');
+  }
+  if (href.length > 500) throw new Error('URL is too long (max 500 characters).');
+  return href;
+}
+
+/**
+ * Derive the file extension from the MIME type, never from the filename.
+ * This prevents extension spoofing (e.g. evil.jpg.php).
+ */
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
+function safeImageExt(file: File): string {
+  const ext = MIME_TO_EXT[file.type];
+  if (!ext) throw new Error('Unsupported image type. Use JPEG, PNG, WebP, or GIF.');
+  return ext;
+}
+
+/**
  * Verify the calling user is authenticated and has the admin role in the
  * profiles table. Returns the user's uid.
  *
@@ -219,8 +253,8 @@ export async function updateProvider(
       subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
       phone: input.phone ? sanitize(input.phone, 20) : null,
       town: input.town,
-      facebook: input.facebook ? sanitize(input.facebook, 500) : null,
-      website: input.website ? sanitize(input.website, 500) : null,
+      facebook: input.facebook ? validateUrl(input.facebook) : null,
+      website: input.website ? validateUrl(input.website) : null,
     })
     .eq('id', id);
   if (error) throw error;
@@ -265,7 +299,8 @@ export async function fetchReviews(): Promise<Review[]> {
     .from('reviews')
     .select('*')
     .eq('tenant_id', getCurrentTenant().id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 999);
   if (error) throw error;
   return (data ?? []).map(mapReview);
 }
@@ -315,7 +350,8 @@ export async function fetchLostFound(): Promise<LostFoundPost[]> {
     .from('lost_found_posts')
     .select('*')
     .eq('tenant_id', getCurrentTenant().id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 499);
   if (error) throw error;
   return (data ?? []).map(mapLostFound);
 }
@@ -345,7 +381,7 @@ export async function addLostFoundPost(
 
   if (photoFile) {
     validateImageFile(photoFile);
-    const ext = photoFile.name.split('.').pop();
+    const ext = safeImageExt(photoFile);
     const path = `${userId}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from('lost-found-photos')
@@ -432,7 +468,8 @@ export async function fetchRequests(): Promise<RecommendationRequest[]> {
     .from('recommendation_requests')
     .select('*')
     .eq('tenant_id', getCurrentTenant().id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 499);
   if (error) throw error;
   return (data ?? []).map(mapRequest);
 }
@@ -634,18 +671,24 @@ export async function submitReport(
   contentType: ReportContentType,
   contentId: string,
   contentTitle: string,
-  reportedBy: string,
-  reportedByName: string,
   reason: string
 ): Promise<void> {
+  // Resolve identity from the server-side session — never trust caller-supplied IDs.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to report content.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', session.user.id)
+    .single();
   const sanitizedReason = sanitize(reason, 1000);
   if (!sanitizedReason) throw new Error('Please provide a reason for your report.');
   const { error } = await supabase.from('content_reports').insert({
     content_type: contentType,
     content_id: contentId,
     content_title: sanitize(contentTitle, 200),
-    reported_by: reportedBy,
-    reported_by_name: sanitize(reportedByName, 100),
+    reported_by: session.user.id,
+    reported_by_name: sanitize(profile?.name ?? 'Anonymous', 100),
     reason: sanitizedReason,
     tenant_id: getCurrentTenant().id,
   });
@@ -665,7 +708,12 @@ export async function fetchReports(): Promise<ContentReport[]> {
 
 export async function dismissReport(id: string): Promise<void> {
   await requireAdmin();
-  const { error } = await supabase.from('content_reports').delete().eq('id', id);
+  // Scope delete to the admin's own tenant to prevent cross-tenant data deletion.
+  const { error } = await supabase
+    .from('content_reports')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to dismiss report.');
 }
 
@@ -677,7 +725,12 @@ export async function removeContent(contentType: ReportContentType, contentId: s
     recommendation_request: 'recommendation_requests',
     recommendation_response: 'recommendation_responses',
   };
-  const { error } = await supabase.from(tableMap[contentType]).delete().eq('id', contentId);
+  // Scope delete to the admin's own tenant to prevent cross-tenant data deletion.
+  const { error } = await supabase
+    .from(tableMap[contentType])
+    .delete()
+    .eq('id', contentId)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to remove content.');
 }
 
@@ -686,20 +739,25 @@ export async function removeContent(contentType: ReportContentType, contentId: s
 export async function submitClaim(
   providerId: string,
   providerName: string,
-  userId: string,
-  userName: string,
-  userEmail: string,
   verificationMethod: 'email' | 'phone' | 'manual',
   verificationDetail: string
 ): Promise<void> {
+  // Resolve identity from the server-side session — never trust caller-supplied IDs.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to claim a listing.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', session.user.id)
+    .single();
   const sanitizedDetail = sanitize(verificationDetail, 500);
   if (!sanitizedDetail) throw new Error('Please provide verification details.');
   const { error } = await supabase.from('listing_claims').insert({
     provider_id: providerId,
     provider_name: sanitize(providerName, 200),
-    user_id: userId,
-    user_name: sanitize(userName, 100),
-    user_email: sanitize(userEmail, 200),
+    user_id: session.user.id,
+    user_name: sanitize(profile?.name ?? 'Unknown', 100),
+    user_email: sanitize(session.user.email ?? '', 200),
     verification_method: verificationMethod,
     verification_detail: sanitizedDetail,
     status: 'pending',
@@ -720,8 +778,18 @@ export async function fetchPendingClaims(): Promise<ListingClaim[]> {
   return (data ?? []).map(mapClaim);
 }
 
-export async function approveClaim(claimId: string, providerId: string, userId: string): Promise<void> {
+export async function approveClaim(claimId: string): Promise<void> {
   await requireAdmin();
+  // Fetch the claim first and derive providerId + userId from the DB record,
+  // never from caller-supplied parameters, to prevent cross-object IDOR.
+  const { data: claim, error: fetchError } = await supabase
+    .from('listing_claims')
+    .select('provider_id, user_id, status')
+    .eq('id', claimId)
+    .single();
+  if (fetchError || !claim) throw new Error('Claim not found.');
+  if (claim.status !== 'pending') throw new Error('Only pending claims can be approved.');
+
   const { error: claimError } = await supabase
     .from('listing_claims')
     .update({ status: 'approved' })
@@ -730,8 +798,8 @@ export async function approveClaim(claimId: string, providerId: string, userId: 
 
   const { error: providerError } = await supabase
     .from('providers')
-    .update({ claim_status: 'claimed', claimed_by: userId })
-    .eq('id', providerId);
+    .update({ claim_status: 'claimed', claimed_by: claim.user_id })
+    .eq('id', claim.provider_id);
   if (providerError) throw new Error('Failed to update provider claim status.');
 }
 
@@ -759,6 +827,19 @@ export async function updateOwnerListing(
     tags?: string[];
   }
 ): Promise<Provider> {
+  // Defence-in-depth: verify session and ownership before issuing the UPDATE.
+  // The primary guard is the RLS policy (claimed_by = auth.uid()), but this
+  // ensures a clear error message and avoids a silent RLS rejection.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to edit a listing.');
+  const { data: existing, error: fetchErr } = await supabase
+    .from('providers')
+    .select('claimed_by')
+    .eq('id', id)
+    .single();
+  if (fetchErr || !existing) throw new Error('Listing not found.');
+  if (existing.claimed_by !== session.user.id) throw new Error('You do not own this listing.');
+
   const { error } = await supabase
     .from('providers')
     .update({
@@ -766,8 +847,8 @@ export async function updateOwnerListing(
       phone: input.phone ? sanitize(input.phone, 20) : null,
       address: input.address ? sanitize(input.address, 300) : null,
       hours: input.hours ? sanitize(input.hours, 500) : null,
-      facebook: input.facebook ? sanitize(input.facebook, 500) : null,
-      website: input.website ? sanitize(input.website, 500) : null,
+      facebook: input.facebook ? validateUrl(input.facebook) : null,
+      website: input.website ? validateUrl(input.website) : null,
       image: input.image || null,
       ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
     })
@@ -785,7 +866,7 @@ export async function updateOwnerListing(
 
 export async function uploadOwnerPhoto(providerId: string, userId: string, file: File): Promise<string> {
   validateImageFile(file);
-  const ext = file.name.split('.').pop();
+  const ext = safeImageExt(file);
   const path = `${userId}/${providerId}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from('provider-photos')
@@ -867,18 +948,24 @@ export async function submitUpdateRequest(
   providerId: string,
   providerName: string,
   requestType: 'update' | 'removal',
-  message: string,
-  requesterName: string,
-  requesterId: string
+  message: string
 ): Promise<void> {
+  // Resolve identity from the server-side session — never trust caller-supplied IDs.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to submit a request.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', session.user.id)
+    .single();
   const sanitizedMessage = sanitize(message, 1000);
   if (!sanitizedMessage) throw new Error('Please provide details for your request.');
   const { error } = await supabase.from('content_reports').insert({
     content_type: 'provider',
     content_id: providerId,
     content_title: sanitize(providerName, 200),
-    reported_by: requesterId,
-    reported_by_name: sanitize(requesterName, 100),
+    reported_by: session.user.id,
+    reported_by_name: sanitize(profile?.name ?? 'Anonymous', 100),
     reason: `[${requestType.toUpperCase()} REQUEST] ${sanitizedMessage}`,
     tenant_id: getCurrentTenant().id,
   });

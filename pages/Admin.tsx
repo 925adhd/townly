@@ -143,7 +143,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
     setActingClaim(claim.id);
     setClaimsError('');
     try {
-      await approveClaim(claim.id, claim.providerId, claim.userId);
+      await approveClaim(claim.id);
       setClaims(prev => prev.filter(c => c.id !== claim.id));
     } catch (e: any) {
       setClaimsError(e.message || 'Failed to approve claim.');

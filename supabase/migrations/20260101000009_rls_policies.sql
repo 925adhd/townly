@@ -6,6 +6,13 @@
 -- Re-running is also safe — duplicate policy errors are caught and ignored.
 -- ══════════════════════════════════════════════════════════════════════════════
 
+-- Drop superseded policies before re-creating corrected versions.
+-- These are wrapped in DO blocks so they are skipped if the policy never existed.
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "authenticated update vote count" ON recommendation_responses;
+  DROP POLICY IF EXISTS "anyone log views" ON listing_views;
+EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
 -- ── providers ─────────────────────────────────────────────────────────────────
 
 DO $$ BEGIN
@@ -157,10 +164,12 @@ DO $$ BEGIN
     WITH CHECK (user_id = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
+-- Vote count is synced server-side via a SELECT COUNT from the votes table.
+-- Only the row owner may update their own response; no other user may touch any row.
 DO $$ BEGIN
-  CREATE POLICY "authenticated update vote count"
+  CREATE POLICY "owner update own response"
     ON recommendation_responses FOR UPDATE TO authenticated
-    USING (true) WITH CHECK (true);
+    USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -221,6 +230,39 @@ EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $
 DO $$ BEGIN
   ALTER TABLE listing_claims ENABLE ROW LEVEL SECURITY;
 EXCEPTION WHEN undefined_table THEN RAISE NOTICE 'Table listing_claims does not exist, skipping.'; END $$;
+
+-- Users can submit a claim for themselves only.
+DO $$ BEGIN
+  CREATE POLICY "owner insert own claim"
+    ON listing_claims FOR INSERT TO authenticated
+    WITH CHECK (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+-- Users can read their own claims; admins can read all.
+DO $$ BEGIN
+  CREATE POLICY "owner read own claims"
+    ON listing_claims FOR SELECT TO authenticated
+    USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "admin read all claims"
+    ON listing_claims FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+-- Only admins may update (approve/reject) or delete claims.
+DO $$ BEGIN
+  CREATE POLICY "admin update claims"
+    ON listing_claims FOR UPDATE TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "admin delete claims"
+    ON listing_claims FOR DELETE TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- ── review_replies ────────────────────────────────────────────────────────────
 
@@ -303,9 +345,10 @@ DO $$ BEGIN
   ALTER TABLE listing_views ENABLE ROW LEVEL SECURITY;
 EXCEPTION WHEN undefined_table THEN RAISE NOTICE 'Table listing_views does not exist, skipping.'; END $$;
 
+-- Restrict view logging to authenticated users to prevent anonymous spam inserts.
 DO $$ BEGIN
-  CREATE POLICY "anyone log views"
-    ON listing_views FOR INSERT WITH CHECK (true);
+  CREATE POLICY "authenticated log views"
+    ON listing_views FOR INSERT TO authenticated WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN

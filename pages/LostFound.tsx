@@ -53,7 +53,7 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
     if (!user) return;
     setSubmittingReport(true);
     try {
-      await submitReport('lost_found', postId, postTitle, user.id, user.name, reportReason);
+      await submitReport('lost_found', postId, postTitle, reportReason);
       setReportingId(null);
       setReportReason('');
       setActionNotice('Report submitted. Thank you.');
