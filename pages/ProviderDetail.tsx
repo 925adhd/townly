@@ -710,7 +710,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
     if (!replyText.trim() || !user) return;
     setSubmittingReply(true);
     try {
-      const reply = await submitReviewReply(reviewId, provider!.id, user.id, user.name, replyText.trim());
+      const reply = await submitReviewReply(reviewId, provider!.id, user.id, replyText.trim());
       setReplies(prev => ({ ...prev, [reviewId]: reply }));
       setReplyingTo(null);
       setReplyText('');

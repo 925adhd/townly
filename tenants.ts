@@ -16,7 +16,8 @@ export const TENANTS: Record<string, TenantConfig> = {
     tagline: "Grayson County's Digital Front Porch",
     region: 'Grayson County, Kentucky',
     towns: ['Leitchfield', 'Clarkson', 'Caneyville', 'Big Clifty', 'Wax'],
-    contactEmail: 'kara@925adhd.com',
+    // Set VITE_CONTACT_EMAIL in your Vercel/local environment — never hardcode here.
+    contactEmail: (import.meta.env.VITE_CONTACT_EMAIL as string) || '',
   },
   // Add new counties here, e.g.:
   // hardincounty: {

@@ -206,39 +206,47 @@ export async function fetchPendingProviders(): Promise<Provider[]> {
 }
 
 export async function approveProvider(id: string): Promise<void> {
-  await requireAdmin();
+  const adminId = await requireAdmin();
   const { error } = await supabase
     .from('providers')
     .update({ status: 'approved' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to approve provider.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'approve_provider', target_table: 'providers', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 export async function rejectProvider(id: string): Promise<void> {
-  await requireAdmin();
+  const adminId = await requireAdmin();
   const { error } = await supabase
     .from('providers')
     .update({ status: 'rejected' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to reject provider.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'reject_provider', target_table: 'providers', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 export async function deleteReview(id: string): Promise<void> {
-  await requireModOrAdmin();
+  const actorId = await requireModOrAdmin();
   const { error } = await supabase
     .from('reviews')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to delete review.');
+  await supabase.from('audit_log').insert({ actor_id: actorId, action: 'delete_review', target_table: 'reviews', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 export async function deleteProvider(id: string): Promise<void> {
-  await requireModOrAdmin();
+  const actorId = await requireModOrAdmin();
   const { error } = await supabase
     .from('providers')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to delete provider.');
+  await supabase.from('audit_log').insert({ actor_id: actorId, action: 'delete_provider', target_table: 'providers', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 export async function updateProvider(
@@ -416,6 +424,9 @@ export async function addLostFoundPost(
 }
 
 export async function updateLostFoundStatus(id: string, status: 'active' | 'resolved'): Promise<void> {
+  if (!['active', 'resolved'].includes(status)) throw new Error('Invalid status value.');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('lost_found_posts')
     .update({ status })
@@ -499,6 +510,8 @@ export async function addRequest(
 }
 
 export async function resolveRequest(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('recommendation_requests')
     .update({ status: 'resolved' })
@@ -507,6 +520,8 @@ export async function resolveRequest(id: string): Promise<void> {
 }
 
 export async function unresolveRequest(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('recommendation_requests')
     .update({ status: 'open' })
@@ -607,26 +622,22 @@ export async function toggleResponseVote(
     if (error) throw error;
   }
 
-  // Get the accurate count and sync it to the response row
-  const { count, error: countError } = await supabase
-    .from('recommendation_response_votes')
-    .select('*', { count: 'exact', head: true })
-    .eq('response_id', responseId);
-  if (countError) throw countError;
+  // Sync the cached vote_count via a SECURITY DEFINER function.
+  // Direct UPDATE is blocked by RLS (only row owners may update their response).
+  // The function reads the votes table and writes vote_count, nothing else.
+  const { data: newCount, error: rpcError } = await supabase
+    .rpc('sync_vote_count', { p_response_id: responseId });
+  if (rpcError) throw rpcError;
 
-  const newCount = count ?? 0;
-  const { error: updateError } = await supabase
-    .from('recommendation_responses')
-    .update({ vote_count: newCount })
-    .eq('id', responseId);
-  if (updateError) throw updateError;
-
-  return newCount;
+  return newCount ?? 0;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export async function signUp(email: string, password: string, name: string) {
+  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+  if (!/[A-Z]/.test(password)) throw new Error('Password must contain at least one uppercase letter.');
+  if (!/[0-9]/.test(password)) throw new Error('Password must contain at least one number.');
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -779,13 +790,13 @@ export async function fetchPendingClaims(): Promise<ListingClaim[]> {
 }
 
 export async function approveClaim(claimId: string): Promise<void> {
-  await requireAdmin();
-  // Fetch the claim first and derive providerId + userId from the DB record,
-  // never from caller-supplied parameters, to prevent cross-object IDOR.
+  const adminId = await requireAdmin();
+  // Fetch the claim scoped to this tenant — never trust caller-supplied IDs.
   const { data: claim, error: fetchError } = await supabase
     .from('listing_claims')
     .select('provider_id, user_id, status')
     .eq('id', claimId)
+    .eq('tenant_id', getCurrentTenant().id)
     .single();
   if (fetchError || !claim) throw new Error('Claim not found.');
   if (claim.status !== 'pending') throw new Error('Only pending claims can be approved.');
@@ -793,23 +804,28 @@ export async function approveClaim(claimId: string): Promise<void> {
   const { error: claimError } = await supabase
     .from('listing_claims')
     .update({ status: 'approved' })
-    .eq('id', claimId);
+    .eq('id', claimId)
+    .eq('tenant_id', getCurrentTenant().id);
   if (claimError) throw new Error('Failed to approve claim.');
 
   const { error: providerError } = await supabase
     .from('providers')
     .update({ claim_status: 'claimed', claimed_by: claim.user_id })
-    .eq('id', claim.provider_id);
+    .eq('id', claim.provider_id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (providerError) throw new Error('Failed to update provider claim status.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'approve_claim', target_table: 'listing_claims', target_id: claimId, tenant_id: getCurrentTenant().id });
 }
 
 export async function rejectClaim(claimId: string): Promise<void> {
-  await requireAdmin();
+  const adminId = await requireAdmin();
   const { error } = await supabase
     .from('listing_claims')
     .update({ status: 'rejected' })
-    .eq('id', claimId);
+    .eq('id', claimId)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to reject claim.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'reject_claim', target_table: 'listing_claims', target_id: claimId, tenant_id: getCurrentTenant().id });
 }
 
 // ── Owner-Controlled Listing Updates ──────────────────────────────────────────
@@ -849,7 +865,7 @@ export async function updateOwnerListing(
       hours: input.hours ? sanitize(input.hours, 500) : null,
       facebook: input.facebook ? validateUrl(input.facebook) : null,
       website: input.website ? validateUrl(input.website) : null,
-      image: input.image || null,
+      image: input.image ? validateUrl(input.image) : null,
       ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
     })
     .eq('id', id);
@@ -903,9 +919,21 @@ export async function submitReviewReply(
   reviewId: string,
   providerId: string,
   ownerId: string,
-  ownerName: string,
   replyText: string
 ): Promise<ReviewReply> {
+  // Resolve ownerName from the server-side session — never trust caller-supplied strings.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to reply.');
+  if (session.user.id !== ownerId) throw new Error('Owner ID mismatch.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', session.user.id)
+    .single();
+  // Resolve display name: profile name → email prefix → fallback
+  const resolvedName = profile?.name
+    || session.user.email?.split('@')[0]
+    || 'Business Owner';
   const sanitizedReply = sanitize(replyText, 1000);
   if (!sanitizedReply) throw new Error('Reply text is required.');
   const { data, error } = await supabase
@@ -914,7 +942,7 @@ export async function submitReviewReply(
       review_id: reviewId,
       provider_id: providerId,
       owner_id: ownerId,
-      owner_name: sanitize(ownerName, 100),
+      owner_name: sanitize(resolvedName, 100),
       reply_text: sanitizedReply,
       tenant_id: getCurrentTenant().id,
     })
@@ -925,9 +953,14 @@ export async function submitReviewReply(
 }
 
 export async function deleteReviewReply(replyId: string): Promise<void> {
-  await requireModOrAdmin();
-  const { error } = await supabase.from('review_replies').delete().eq('id', replyId);
+  const actorId = await requireModOrAdmin();
+  const { error } = await supabase
+    .from('review_replies')
+    .delete()
+    .eq('id', replyId)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to delete reply.');
+  await supabase.from('audit_log').insert({ actor_id: actorId, action: 'delete_review_reply', target_table: 'review_replies', target_id: replyId, tenant_id: getCurrentTenant().id });
 }
 
 // ── Update / Removal Request ───────────────────────────────────────────────────
@@ -1041,21 +1074,25 @@ export async function submitCommunityEvent(
 }
 
 export async function approveCommunityEvent(id: string): Promise<void> {
-  await requireAdmin();
+  const adminId = await requireAdmin();
   const { error } = await supabase
     .from('community_events')
     .update({ status: 'approved' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to approve event.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'approve_event', target_table: 'community_events', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 export async function rejectCommunityEvent(id: string): Promise<void> {
-  await requireAdmin();
+  const adminId = await requireAdmin();
   const { error } = await supabase
     .from('community_events')
     .update({ status: 'rejected' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to reject event.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'reject_event', target_table: 'community_events', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 // ── Community Alerts ──────────────────────────────────────────────────────────
@@ -1102,12 +1139,14 @@ export async function createAlert(title: string, description: string, userId: st
 }
 
 export async function dismissAlert(id: string): Promise<void> {
-  await requireAdmin();
+  const adminId = await requireAdmin();
   const { error } = await supabase
     .from('community_alerts')
     .update({ dismissed_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to dismiss alert.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'dismiss_alert', target_table: 'community_alerts', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
 // ── Listing Analytics ─────────────────────────────────────────────────────────
@@ -1133,6 +1172,19 @@ export interface ListingStats {
 }
 
 export async function fetchListingStats(providerId: string): Promise<ListingStats> {
+  // Only the claiming owner may read analytics for their listing.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { data: provider } = await supabase
+    .from('providers')
+    .select('claimed_by')
+    .eq('id', providerId)
+    .eq('tenant_id', getCurrentTenant().id)
+    .single();
+  if (!provider || provider.claimed_by !== session.user.id) {
+    throw new Error('You do not own this listing.');
+  }
+
   const now = new Date();
 
   const dayOfWeek = now.getDay();
