@@ -253,6 +253,7 @@ export async function updateProvider(
   id: string,
   input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string }
 ): Promise<Provider> {
+  await requireModOrAdmin();
   const { error } = await supabase
     .from('providers')
     .update({
@@ -264,13 +265,14 @@ export async function updateProvider(
       facebook: input.facebook ? validateUrl(input.facebook) : null,
       website: input.website ? validateUrl(input.website) : null,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
-  // Fetch the updated row separately to avoid RLS read-back issues with .single()
   const { data, error: fetchError } = await supabase
     .from('providers')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id)
     .single();
   if (fetchError) throw fetchError;
   return mapProvider(data);
@@ -430,7 +432,8 @@ export async function updateLostFoundStatus(id: string, status: 'active' | 'reso
   const { error } = await supabase
     .from('lost_found_posts')
     .update({ status })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id);
   if (error) throw error;
 }
 
@@ -515,7 +518,8 @@ export async function resolveRequest(id: string): Promise<void> {
   const { error } = await supabase
     .from('recommendation_requests')
     .update({ status: 'resolved' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id);
   if (error) throw error;
 }
 
@@ -525,7 +529,8 @@ export async function unresolveRequest(id: string): Promise<void> {
   const { error } = await supabase
     .from('recommendation_requests')
     .update({ status: 'open' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id);
   if (error) throw error;
 }
 
@@ -910,7 +915,8 @@ export async function fetchReviewReplies(providerId: string): Promise<ReviewRepl
   const { data, error } = await supabase
     .from('review_replies')
     .select('*')
-    .eq('provider_id', providerId);
+    .eq('provider_id', providerId)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
   return (data ?? []).map(mapReviewReply);
 }
@@ -1067,7 +1073,7 @@ export async function submitCommunityEvent(
     description: sanitizedDescription,
     event_date: eventDate,
     location: sanitizedLocation,
-    town,
+    town: sanitize(town, 100),
     tenant_id: getCurrentTenant().id,
   });
   if (error) throw new Error('Failed to submit event. Please try again.');
