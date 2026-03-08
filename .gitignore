@@ -23,6 +23,16 @@ dist-ssr
 mockData.ts
 metadata.json
 scripts/
+README.md
+supabase/config.toml
+
+# Unused/legacy assets
+public/images/background.png
+public/images/logo.png
+public/images/logo1.png
+public/images/logo2.png
+public/images/logo3.png
+public/images/oldlogo.png
 
 # Editor directories and files
 .vscode/*
