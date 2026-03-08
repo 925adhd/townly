@@ -633,7 +633,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
   }, [id]);
 
   useEffect(() => {
-    if (id) logListingView(id).catch(() => {});
+    if (id) logListingView(id, user?.id).catch(() => {});
   }, [id]);
 
   const [eName, setEName] = useState('');

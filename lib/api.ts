@@ -627,14 +627,16 @@ export async function toggleResponseVote(
     if (error) throw error;
   }
 
-  // Sync the cached vote_count via a SECURITY DEFINER function.
-  // Direct UPDATE is blocked by RLS (only row owners may update their response).
-  // The function reads the votes table and writes vote_count, nothing else.
-  const { data: newCount, error: rpcError } = await supabase
-    .rpc('sync_vote_count', { p_response_id: responseId });
-  if (rpcError) throw rpcError;
+  // Trigger handles vote_count update (SECURITY DEFINER).
+  // Read the updated count directly from the response row.
+  const { data, error: readError } = await supabase
+    .from('recommendation_responses')
+    .select('vote_count')
+    .eq('id', responseId)
+    .single();
+  if (readError) throw readError;
 
-  return newCount ?? 0;
+  return data?.vote_count ?? 0;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -1157,15 +1159,14 @@ export async function dismissAlert(id: string): Promise<void> {
 
 // ── Listing Analytics ─────────────────────────────────────────────────────────
 
-export async function logListingView(providerId: string): Promise<void> {
-  const storageKey = `view_${providerId}`;
+export async function logListingView(providerId: string, userId?: string): Promise<void> {
+  if (!userId) return; // only log authenticated views
+  const storageKey = `view_${providerId}_${userId}`;
   if (sessionStorage.getItem(storageKey)) return;
-  // Use crypto.randomUUID() instead of Math.random() for proper randomness
-  const sessionKey = crypto.randomUUID();
-  sessionStorage.setItem(storageKey, sessionKey);
+  sessionStorage.setItem(storageKey, '1');
   await supabase.from('listing_views').upsert(
-    { provider_id: providerId, tenant_id: getCurrentTenant().id, session_key: sessionKey },
-    { onConflict: 'provider_id,session_key', ignoreDuplicates: true }
+    { provider_id: providerId, tenant_id: getCurrentTenant().id, user_id: userId },
+    { onConflict: 'provider_id,user_id', ignoreDuplicates: true }
   );
 }
 
