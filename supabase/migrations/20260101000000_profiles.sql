@@ -10,8 +10,10 @@ create table if not exists public.profiles (
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'name', new.email, 'Neighbor'))
+  -- Insert only the columns that exist on the profiles table (id, role).
+  -- 'name' does NOT exist on this table — it lives in auth.users.user_metadata.
+  insert into public.profiles (id)
+  values (new.id)
   on conflict (id) do nothing;
   return new;
 end;

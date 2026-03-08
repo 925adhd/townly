@@ -2,7 +2,59 @@ import { supabase } from './supabase';
 import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert } from '../types';
 import { getCurrentTenant } from '../tenants';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── Security helpers ──────────────────────────────────────────────────────────
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/** Validate an uploaded image file for type and size. */
+function validateImageFile(file: File): void {
+  if (file.size > MAX_FILE_SIZE_BYTES) throw new Error('Image must be under 5MB.');
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) throw new Error('Only JPEG, PNG, WebP, or GIF images are allowed.');
+}
+
+/** Trim and hard-cap a string to prevent oversized DB writes. */
+function sanitize(input: string, maxLength: number): string {
+  if (typeof input !== 'string') return '';
+  return input.trim().slice(0, maxLength);
+}
+
+/**
+ * Verify the calling user is authenticated and has the admin role in the
+ * profiles table. Returns the user's uid.
+ *
+ * NOTE: This is a client-side defence-in-depth guard. The primary enforcement
+ * must be Row-Level Security policies in Supabase (see supabase/rls_policies.sql).
+ */
+async function requireAdmin(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+  if (profile?.role !== 'admin') throw new Error('Admin access required.');
+  return session.user.id;
+}
+
+/**
+ * Verify the calling user is authenticated and has at least moderator role.
+ * Returns the user's uid.
+ */
+async function requireModOrAdmin(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+  if (!['admin', 'moderator'].includes(profile?.role ?? '')) throw new Error('Access denied.');
+  return session.user.id;
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 function mapProvider(row: any): Provider {
   return {
@@ -108,6 +160,7 @@ export async function fetchProviders(): Promise<Provider[]> {
 }
 
 export async function fetchPendingProviders(): Promise<Provider[]> {
+  await requireAdmin();
   const { data, error } = await supabase
     .from('providers')
     .select('*')
@@ -119,35 +172,39 @@ export async function fetchPendingProviders(): Promise<Provider[]> {
 }
 
 export async function approveProvider(id: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase
     .from('providers')
     .update({ status: 'approved' })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to approve provider.');
 }
 
 export async function rejectProvider(id: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase
     .from('providers')
     .update({ status: 'rejected' })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to reject provider.');
 }
 
 export async function deleteReview(id: string): Promise<void> {
+  await requireModOrAdmin();
   const { error } = await supabase
     .from('reviews')
     .delete()
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to delete review.');
 }
 
 export async function deleteProvider(id: string): Promise<void> {
+  await requireModOrAdmin();
   const { error } = await supabase
     .from('providers')
     .delete()
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to delete provider.');
 }
 
 export async function updateProvider(
@@ -157,13 +214,13 @@ export async function updateProvider(
   const { error } = await supabase
     .from('providers')
     .update({
-      name: input.name,
+      name: sanitize(input.name, 200),
       category: input.category,
-      subcategory: input.subcategory || null,
-      phone: input.phone || null,
+      subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
+      phone: input.phone ? sanitize(input.phone, 20) : null,
       town: input.town,
-      facebook: input.facebook || null,
-      website: input.website || null,
+      facebook: input.facebook ? sanitize(input.facebook, 500) : null,
+      website: input.website ? sanitize(input.website, 500) : null,
     })
     .eq('id', id);
   if (error) throw error;
@@ -181,16 +238,18 @@ export async function addProvider(
   input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town },
   userId: string
 ): Promise<Provider> {
+  const name = sanitize(input.name, 200);
+  if (!name) throw new Error('Business name is required.');
   const { data, error } = await supabase
     .from('providers')
     .insert({
-      name: input.name,
+      name,
       category: input.category,
-      subcategory: input.subcategory || null,
-      phone: input.phone || null,
+      subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
+      phone: input.phone ? sanitize(input.phone, 20) : null,
       town: input.town,
       created_by: userId,
-      status: 'approved',
+      status: 'pending',       // submissions go to admin queue — NOT auto-approved
       tenant_id: getCurrentTenant().id,
     })
     .select()
@@ -224,17 +283,22 @@ export async function addReview(
   userId: string,
   userName: string
 ): Promise<Review> {
+  const rating = Math.max(1, Math.min(5, Math.round(input.rating)));
+  const serviceDescription = sanitize(input.serviceDescription, 200);
+  const reviewText = sanitize(input.reviewText, 2000);
+  if (!serviceDescription) throw new Error('Service description is required.');
+  if (!reviewText) throw new Error('Review text is required.');
   const { data, error } = await supabase
     .from('reviews')
     .insert({
       provider_id: input.providerId,
       user_id: userId,
-      user_name: userName,
-      rating: input.rating,
+      user_name: sanitize(userName, 100),
+      rating,
       would_hire_again: input.wouldHireAgain,
-      service_description: input.serviceDescription,
+      service_description: serviceDescription,
       cost_range: input.costRange,
-      review_text: input.reviewText,
+      review_text: reviewText,
       service_date: input.serviceDate,
       tenant_id: getCurrentTenant().id,
     })
@@ -270,15 +334,23 @@ export async function addLostFoundPost(
   userId: string,
   userName: string
 ): Promise<LostFoundPost> {
+  const title = sanitize(input.title, 200);
+  const description = sanitize(input.description, 2000);
+  const locationDescription = sanitize(input.locationDescription, 500);
+  const contactMethod = sanitize(input.contactMethod, 200);
+  if (!title) throw new Error('Title is required.');
+  if (!description) throw new Error('Description is required.');
+
   let photoUrl: string | null = null;
 
   if (photoFile) {
+    validateImageFile(photoFile);
     const ext = photoFile.name.split('.').pop();
     const path = `${userId}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from('lost-found-photos')
       .upload(path, photoFile, { upsert: false });
-    if (uploadError) throw uploadError;
+    if (uploadError) throw new Error('Photo upload failed. Please try again.');
 
     const { data: urlData } = supabase.storage
       .from('lost-found-photos')
@@ -290,15 +362,15 @@ export async function addLostFoundPost(
     .from('lost_found_posts')
     .insert({
       user_id: userId,
-      user_name: userName,
+      user_name: sanitize(userName, 100),
       type: input.type,
-      title: input.title,
-      description: input.description,
+      title,
+      description,
       photo_url: photoUrl,
-      location_description: input.locationDescription,
+      location_description: locationDescription,
       town: input.town,
       date_occurred: input.dateOccurred,
-      contact_method: input.contactMethod,
+      contact_method: contactMethod,
       tenant_id: getCurrentTenant().id,
     })
     .select()
@@ -331,12 +403,12 @@ export async function updateLostFoundPost(
     .from('lost_found_posts')
     .update({
       type: input.type,
-      title: input.title,
-      description: input.description,
-      location_description: input.locationDescription,
+      title: sanitize(input.title, 200),
+      description: sanitize(input.description, 2000),
+      location_description: sanitize(input.locationDescription, 500),
       town: input.town,
       date_occurred: input.dateOccurred,
-      contact_method: input.contactMethod,
+      contact_method: sanitize(input.contactMethod, 200),
     })
     .eq('id', id)
     .select()
@@ -370,13 +442,16 @@ export async function addRequest(
   userId: string,
   userName: string
 ): Promise<RecommendationRequest> {
+  const serviceNeeded = sanitize(input.serviceNeeded, 200);
+  const description = sanitize(input.description, 1000);
+  if (!serviceNeeded) throw new Error('Service type is required.');
   const { data, error } = await supabase
     .from('recommendation_requests')
     .insert({
       user_id: userId,
-      user_name: userName,
-      service_needed: input.serviceNeeded,
-      description: input.description,
+      user_name: sanitize(userName, 100),
+      service_needed: serviceNeeded,
+      description,
       town: input.town,
       tenant_id: getCurrentTenant().id,
     })
@@ -450,9 +525,17 @@ export async function addResponse(
   userId: string,
   userName: string
 ): Promise<RecommendationResponse> {
+  const sanitizedRecommendation = sanitize(recommendation, 1000);
+  if (!sanitizedRecommendation) throw new Error('Recommendation text is required.');
   const { data, error } = await supabase
     .from('recommendation_responses')
-    .insert({ request_id: requestId, user_id: userId, user_name: userName, recommendation, tenant_id: getCurrentTenant().id })
+    .insert({
+      request_id: requestId,
+      user_id: userId,
+      user_name: sanitize(userName, 100),
+      recommendation: sanitizedRecommendation,
+      tenant_id: getCurrentTenant().id,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -510,7 +593,7 @@ export async function signUp(email: string, password: string, name: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name } },
+    options: { data: { name: sanitize(name, 100) } },
   });
   if (error) throw error;
   return data.user;
@@ -533,15 +616,6 @@ export async function getSession() {
 }
 
 // ── Content Reports ───────────────────────────────────────────────────────────
-// Requires a `content_reports` table in Supabase:
-//   id uuid default gen_random_uuid() primary key,
-//   content_type text not null,
-//   content_id text not null,
-//   content_title text,
-//   reported_by uuid,
-//   reported_by_name text,
-//   reason text,
-//   created_at timestamptz default now()
 
 function mapReport(row: any): ContentReport {
   return {
@@ -564,19 +638,22 @@ export async function submitReport(
   reportedByName: string,
   reason: string
 ): Promise<void> {
+  const sanitizedReason = sanitize(reason, 1000);
+  if (!sanitizedReason) throw new Error('Please provide a reason for your report.');
   const { error } = await supabase.from('content_reports').insert({
     content_type: contentType,
     content_id: contentId,
-    content_title: contentTitle,
+    content_title: sanitize(contentTitle, 200),
     reported_by: reportedBy,
-    reported_by_name: reportedByName,
-    reason,
+    reported_by_name: sanitize(reportedByName, 100),
+    reason: sanitizedReason,
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw error;
+  if (error) throw new Error('Failed to submit report. Please try again.');
 }
 
 export async function fetchReports(): Promise<ContentReport[]> {
+  await requireAdmin();
   const { data, error } = await supabase
     .from('content_reports')
     .select('*')
@@ -587,11 +664,13 @@ export async function fetchReports(): Promise<ContentReport[]> {
 }
 
 export async function dismissReport(id: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase.from('content_reports').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to dismiss report.');
 }
 
 export async function removeContent(contentType: ReportContentType, contentId: string): Promise<void> {
+  await requireAdmin();
   const tableMap: Record<ReportContentType, string> = {
     provider: 'providers',
     lost_found: 'lost_found_posts',
@@ -599,7 +678,7 @@ export async function removeContent(contentType: ReportContentType, contentId: s
     recommendation_response: 'recommendation_responses',
   };
   const { error } = await supabase.from(tableMap[contentType]).delete().eq('id', contentId);
-  if (error) throw error;
+  if (error) throw new Error('Failed to remove content.');
 }
 
 // ── Listing Claims ─────────────────────────────────────────────────────────────
@@ -613,21 +692,24 @@ export async function submitClaim(
   verificationMethod: 'email' | 'phone' | 'manual',
   verificationDetail: string
 ): Promise<void> {
+  const sanitizedDetail = sanitize(verificationDetail, 500);
+  if (!sanitizedDetail) throw new Error('Please provide verification details.');
   const { error } = await supabase.from('listing_claims').insert({
     provider_id: providerId,
-    provider_name: providerName,
+    provider_name: sanitize(providerName, 200),
     user_id: userId,
-    user_name: userName,
-    user_email: userEmail,
+    user_name: sanitize(userName, 100),
+    user_email: sanitize(userEmail, 200),
     verification_method: verificationMethod,
-    verification_detail: verificationDetail,
+    verification_detail: sanitizedDetail,
     status: 'pending',
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw error;
+  if (error) throw new Error('Failed to submit claim. Please try again.');
 }
 
 export async function fetchPendingClaims(): Promise<ListingClaim[]> {
+  await requireAdmin();
   const { data, error } = await supabase
     .from('listing_claims')
     .select('*')
@@ -639,25 +721,27 @@ export async function fetchPendingClaims(): Promise<ListingClaim[]> {
 }
 
 export async function approveClaim(claimId: string, providerId: string, userId: string): Promise<void> {
+  await requireAdmin();
   const { error: claimError } = await supabase
     .from('listing_claims')
     .update({ status: 'approved' })
     .eq('id', claimId);
-  if (claimError) throw claimError;
+  if (claimError) throw new Error('Failed to approve claim.');
 
   const { error: providerError } = await supabase
     .from('providers')
     .update({ claim_status: 'claimed', claimed_by: userId })
     .eq('id', providerId);
-  if (providerError) throw providerError;
+  if (providerError) throw new Error('Failed to update provider claim status.');
 }
 
 export async function rejectClaim(claimId: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase
     .from('listing_claims')
     .update({ status: 'rejected' })
     .eq('id', claimId);
-  if (error) throw error;
+  if (error) throw new Error('Failed to reject claim.');
 }
 
 // ── Owner-Controlled Listing Updates ──────────────────────────────────────────
@@ -678,14 +762,14 @@ export async function updateOwnerListing(
   const { error } = await supabase
     .from('providers')
     .update({
-      description: input.description ?? null,
-      phone: input.phone || null,
-      address: input.address || null,
-      hours: input.hours || null,
-      facebook: input.facebook || null,
-      website: input.website || null,
+      description: input.description ? sanitize(input.description, 2000) : null,
+      phone: input.phone ? sanitize(input.phone, 20) : null,
+      address: input.address ? sanitize(input.address, 300) : null,
+      hours: input.hours ? sanitize(input.hours, 500) : null,
+      facebook: input.facebook ? sanitize(input.facebook, 500) : null,
+      website: input.website ? sanitize(input.website, 500) : null,
       image: input.image || null,
-      ...(input.tags !== undefined && { tags: input.tags }),
+      ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
     })
     .eq('id', id);
   if (error) throw error;
@@ -700,12 +784,13 @@ export async function updateOwnerListing(
 }
 
 export async function uploadOwnerPhoto(providerId: string, userId: string, file: File): Promise<string> {
+  validateImageFile(file);
   const ext = file.name.split('.').pop();
   const path = `${userId}/${providerId}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from('provider-photos')
     .upload(path, file, { upsert: true });
-  if (uploadError) throw uploadError;
+  if (uploadError) throw new Error('Photo upload failed. Please try again.');
   const { data } = supabase.storage.from('provider-photos').getPublicUrl(path);
   return data.publicUrl;
 }
@@ -740,9 +825,18 @@ export async function submitReviewReply(
   ownerName: string,
   replyText: string
 ): Promise<ReviewReply> {
+  const sanitizedReply = sanitize(replyText, 1000);
+  if (!sanitizedReply) throw new Error('Reply text is required.');
   const { data, error } = await supabase
     .from('review_replies')
-    .insert({ review_id: reviewId, provider_id: providerId, owner_id: ownerId, owner_name: ownerName, reply_text: replyText, tenant_id: getCurrentTenant().id })
+    .insert({
+      review_id: reviewId,
+      provider_id: providerId,
+      owner_id: ownerId,
+      owner_name: sanitize(ownerName, 100),
+      reply_text: sanitizedReply,
+      tenant_id: getCurrentTenant().id,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -750,8 +844,9 @@ export async function submitReviewReply(
 }
 
 export async function deleteReviewReply(replyId: string): Promise<void> {
+  await requireModOrAdmin();
   const { error } = await supabase.from('review_replies').delete().eq('id', replyId);
-  if (error) throw error;
+  if (error) throw new Error('Failed to delete reply.');
 }
 
 // ── Update / Removal Request ───────────────────────────────────────────────────
@@ -776,16 +871,18 @@ export async function submitUpdateRequest(
   requesterName: string,
   requesterId: string
 ): Promise<void> {
+  const sanitizedMessage = sanitize(message, 1000);
+  if (!sanitizedMessage) throw new Error('Please provide details for your request.');
   const { error } = await supabase.from('content_reports').insert({
     content_type: 'provider',
     content_id: providerId,
-    content_title: providerName,
+    content_title: sanitize(providerName, 200),
     reported_by: requesterId,
-    reported_by_name: requesterName,
-    reason: `[${requestType.toUpperCase()} REQUEST] ${message}`,
+    reported_by_name: sanitize(requesterName, 100),
+    reason: `[${requestType.toUpperCase()} REQUEST] ${sanitizedMessage}`,
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw error;
+  if (error) throw new Error('Failed to submit request. Please try again.');
 }
 
 // ── Community Events ──────────────────────────────────────────────────────────
@@ -818,6 +915,7 @@ export async function fetchApprovedCommunityEvents(): Promise<CommunityEvent[]> 
 }
 
 export async function fetchPendingCommunityEvents(): Promise<CommunityEvent[]> {
+  await requireAdmin();
   const { data, error } = await supabase
     .from('community_events')
     .select('*')
@@ -837,33 +935,40 @@ export async function submitCommunityEvent(
   location: string,
   town: string,
 ): Promise<void> {
+  const sanitizedTitle = sanitize(title, 200);
+  const sanitizedDescription = sanitize(description, 2000);
+  const sanitizedLocation = sanitize(location, 300);
+  if (!sanitizedTitle) throw new Error('Event title is required.');
+  if (!sanitizedDescription) throw new Error('Event description is required.');
   const { error } = await supabase.from('community_events').insert({
     user_id: userId,
-    user_name: userName,
-    title,
-    description,
+    user_name: sanitize(userName, 100),
+    title: sanitizedTitle,
+    description: sanitizedDescription,
     event_date: eventDate,
-    location,
+    location: sanitizedLocation,
     town,
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw error;
+  if (error) throw new Error('Failed to submit event. Please try again.');
 }
 
 export async function approveCommunityEvent(id: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase
     .from('community_events')
     .update({ status: 'approved' })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to approve event.');
 }
 
 export async function rejectCommunityEvent(id: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase
     .from('community_events')
     .update({ status: 'rejected' })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to reject event.');
 }
 
 // ── Community Alerts ──────────────────────────────────────────────────────────
@@ -890,21 +995,32 @@ export async function fetchActiveAlert(): Promise<CommunityAlert | null> {
 }
 
 export async function createAlert(title: string, description: string, userId: string): Promise<CommunityAlert> {
+  await requireAdmin();
+  const sanitizedTitle = sanitize(title, 200);
+  const sanitizedDescription = sanitize(description, 1000);
+  if (!sanitizedTitle) throw new Error('Alert title is required.');
+  if (!sanitizedDescription) throw new Error('Alert description is required.');
   const { data, error } = await supabase
     .from('community_alerts')
-    .insert({ title, description, created_by: userId, tenant_id: getCurrentTenant().id })
+    .insert({
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      created_by: userId,
+      tenant_id: getCurrentTenant().id,
+    })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error('Failed to create alert.');
   return mapCommunityAlert(data);
 }
 
 export async function dismissAlert(id: string): Promise<void> {
+  await requireAdmin();
   const { error } = await supabase
     .from('community_alerts')
     .update({ dismissed_at: new Date().toISOString() })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error('Failed to dismiss alert.');
 }
 
 // ── Listing Analytics ─────────────────────────────────────────────────────────
@@ -912,7 +1028,8 @@ export async function dismissAlert(id: string): Promise<void> {
 export async function logListingView(providerId: string): Promise<void> {
   const storageKey = `view_${providerId}`;
   if (sessionStorage.getItem(storageKey)) return;
-  const sessionKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  // Use crypto.randomUUID() instead of Math.random() for proper randomness
+  const sessionKey = crypto.randomUUID();
   sessionStorage.setItem(storageKey, sessionKey);
   await supabase.from('listing_views').upsert(
     { provider_id: providerId, tenant_id: getCurrentTenant().id, session_key: sessionKey },
