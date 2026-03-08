@@ -28,6 +28,13 @@ export const TENANTS: Record<string, TenantConfig> = {
   //   region: 'Hardin County, Kentucky',
   //   towns: ['Elizabethtown', 'Radcliff', 'Vine Grove', 'Cecilia'],
   // },
+  //
+  // ⚠️  BEFORE LAUNCHING A SECOND COUNTY — add tenant_id to SELECT RLS policies in Supabase.
+  // Right now SELECT policies on public tables (providers, reviews, community_alerts, etc.)
+  // do NOT filter by tenant_id, so a direct REST API call returns data from ALL counties.
+  // The app filters correctly, but the raw API does not.
+  // Fix: add `AND tenant_id = <tenant>` to every public SELECT policy, or use a Postgres
+  // row-level default via a JWT claim. Ask Claude Code to do this — it knows the full list.
 };
 
 function resolveTenantId(): string {
