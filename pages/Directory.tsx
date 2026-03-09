@@ -319,17 +319,18 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
             )}
           </div>
         </div>
-        {/* Row: Category + Town */}
+        {/* Category — full width */}
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Category</label>
+          <CustomSelect
+            value={category}
+            onChange={(v) => updateParam('cat', v)}
+            options={[{ value: 'All', label: 'All Categories' }, ...categories.map(c => ({ value: c, label: c }))]}
+          />
+        </div>
+        {/* Row: Town + Sort By / Denomination */}
         <div className="flex gap-3">
-          <div className="flex-[3] min-w-0">
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Category</label>
-            <CustomSelect
-              value={category}
-              onChange={(v) => updateParam('cat', v)}
-              options={[{ value: 'All', label: 'All Categories' }, ...categories.map(c => ({ value: c, label: c }))]}
-            />
-          </div>
-          <div className="flex-[2] min-w-0">
+          <div className="flex-1 min-w-0">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Town</label>
             <CustomSelect
               value={town}
@@ -337,31 +338,30 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               options={[{ value: 'All', label: 'Everywhere' }, ...towns.map(t => ({ value: t, label: t }))]}
             />
           </div>
+          {category === 'Churches & Faith' ? (
+            <div className="flex-1 min-w-0">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Denomination</label>
+              <CustomSelect
+                value={denomination}
+                onChange={(v) => updateParam('denom', v)}
+                options={denominations.map(d => ({ value: d, label: d === 'All' ? 'All Denominations' : d }))}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 min-w-0">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Sort By</label>
+              <CustomSelect
+                value={sortBy}
+                onChange={(v) => updateParam('sort', v)}
+                options={[
+                  { value: 'rating', label: 'Highest Rated' },
+                  { value: 'reviews', label: 'Most Reviewed' },
+                  { value: 'newest', label: 'Recently Added' },
+                ]}
+              />
+            </div>
+          )}
         </div>
-        {/* Row: Sort By or Denomination */}
-        {category === 'Churches & Faith' ? (
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Denomination</label>
-            <CustomSelect
-              value={denomination}
-              onChange={(v) => updateParam('denom', v)}
-              options={denominations.map(d => ({ value: d, label: d === 'All' ? 'All Denominations' : d }))}
-            />
-          </div>
-        ) : (
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Sort By</label>
-            <CustomSelect
-              value={sortBy}
-              onChange={(v) => updateParam('sort', v)}
-              options={[
-                { value: 'rating', label: 'Highest Rated' },
-                { value: 'reviews', label: 'Most Reviewed' },
-                { value: 'newest', label: 'Recently Added' },
-              ]}
-            />
-          </div>
-        )}
       </div>
 
       <div className="grid gap-4">
