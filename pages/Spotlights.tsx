@@ -73,11 +73,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     <div className="space-y-10 pb-10 -mt-6 md:mt-0">
 
       {/* Header */}
-      <div className="text-center py-8 md:pt-5 md:pb-4">
+      <div className="text-center pt-4 pb-3 md:pt-5 md:pb-4">
         <div className="inline-flex items-center justify-center w-14 h-14 bg-amber-100 rounded-2xl mb-3 shadow-sm">
           <i className="fas fa-star text-amber-500 text-2xl"></i>
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Around {tenant.name}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Around {tenant.name}</h1>
         <p className="text-slate-500 text-base max-w-md mx-auto md:leading-snug">
           Local events, announcements, and things happening around {tenant.name} this week.
         </p>
