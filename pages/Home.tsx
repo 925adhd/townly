@@ -96,6 +96,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               <input
                 type="text"
                 name="search"
+                autoComplete="off"
                 placeholder="Search businesses, events..."
                 className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
                 value={search}
@@ -104,6 +105,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               <input
                 type="text"
                 name="search"
+                autoComplete="off"
                 placeholder="Search businesses, events, or services in your town..."
                 className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
                 value={search}

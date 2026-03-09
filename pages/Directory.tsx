@@ -174,6 +174,18 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
   const [reportReason, setReportReason] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
   const [reportNotice, setReportNotice] = useState('');
+  const [showSearchTip, setShowSearchTip] = useState(false);
+  const searchTipRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!showSearchTip) return;
+    const handler = (e: MouseEvent) => {
+      if (searchTipRef.current && !searchTipRef.current.contains(e.target as Node)) {
+        setShowSearchTip(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSearchTip]);
 
   const handleSubmitReport = async (providerId: string, providerName: string) => {
     if (!user) return;
@@ -297,7 +309,28 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{catLabel(category, 'heading')}</h1>
-          <p className="text-slate-500">Found {filteredProviders.length} {catLabel(category, 'noun')} matching your criteria</p>
+          <p className="text-slate-500 flex items-center gap-1.5 flex-wrap">
+            Found {filteredProviders.length} {catLabel(category, 'noun')} matching your criteria
+            {query && (
+              <span className="relative inline-flex items-center md:hidden" ref={searchTipRef}>
+                <button
+                  onClick={() => setShowSearchTip(v => !v)}
+                  className="text-slate-400 hover:text-slate-600 text-sm leading-none"
+                  title="About these results"
+                >
+                  <i className="fas fa-circle-info"></i>
+                </button>
+                {showSearchTip && (
+                  <span className="absolute right-0 top-full mt-1 z-50 bg-slate-800 text-white text-xs rounded-xl px-3 py-2 w-64 shadow-xl">
+                    Services reflect what businesses add to their profile. Unclaimed listings may be incomplete.
+                  </span>
+                )}
+              </span>
+            )}
+          </p>
+          {query && (
+            <p className="hidden md:block text-xs text-slate-400 italic mt-0.5">Services listed reflect what businesses have added to their profile. Unclaimed listings may not show all services offered.</p>
+          )}
         </div>
         {user && (
           <div className="flex gap-2">
