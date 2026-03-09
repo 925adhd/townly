@@ -128,6 +128,29 @@ export interface CommunityAlert {
   createdAt: string;
 }
 
+export interface SpotlightBooking {
+  id: string;
+  tenantId: string;
+  type: 'spotlight' | 'featured';
+  title: string;
+  description: string;
+  eventDate?: string;
+  location?: string;
+  town?: string;
+  imageUrl?: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  submittedBy?: string;
+  submittedByName?: string;
+  status: 'pending_review' | 'approved' | 'rejected';
+  paymentStatus: 'unpaid' | 'paid';
+  stripeSessionId?: string;
+  weekStart: string; // ISO date string for the Sunday of the booked week
+  adminNotes?: string;
+  createdAt: string;
+}
+
 export type ReportContentType = 'provider' | 'lost_found' | 'recommendation_request' | 'recommendation_response';
 
 export interface ContentReport {

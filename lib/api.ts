@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert } from '../types';
+import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 // ── Security helpers ──────────────────────────────────────────────────────────
@@ -1260,4 +1260,165 @@ export async function fetchListingStats(providerId: string): Promise<ListingStat
   }
 
   return { thisWeek, lastWeek, thisMonth, lastMonth, monthly };
+}
+
+// ── Paid Submissions (Spotlight / Featured) ───────────────────────────────────
+
+/** Returns the Sunday (00:00 local) of the week containing `date`. */
+export function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay()); // rewind to Sunday
+  return d;
+}
+
+/** Format a week-start Date as "Sun Mar 16 – Sat Mar 22, 2026" */
+export function formatWeekRange(weekStart: Date): string {
+  const end = new Date(weekStart);
+  end.setDate(end.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const startStr = weekStart.toLocaleDateString('en-US', opts);
+  const endStr = end.toLocaleDateString('en-US', { ...opts, year: 'numeric' });
+  return `${startStr} – ${endStr}`;
+}
+
+/** Upload a spotlight/featured image. Returns public URL. */
+export async function uploadSpotlightImage(file: File): Promise<string> {
+  validateImageFile(file);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const ext = safeImageExt(file);
+  const path = `${session.user.id}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('spotlight-images').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('spotlight-images').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Fetch booked weeks for availability display.
+ * Returns { spotlight: string[], featured: { week: string; count: number }[] }
+ * where strings are ISO date strings of week_start.
+ */
+export async function fetchBookedWeeks(): Promise<{
+  spotlight: string[];
+  featured: { week: string; count: number }[];
+}> {
+  const tenant = getCurrentTenant();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { data, error } = await supabase
+    .from('paid_submissions')
+    .select('type, week_start')
+    .eq('tenant_id', tenant.id)
+    .neq('status', 'rejected')
+    .gte('week_start', today.toISOString().split('T')[0]);
+  if (error) throw new Error(error.message);
+
+  const spotlightWeeks: string[] = [];
+  const featuredMap: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (row.type === 'spotlight') {
+      spotlightWeeks.push(row.week_start);
+    } else {
+      featuredMap[row.week_start] = (featuredMap[row.week_start] ?? 0) + 1;
+    }
+  }
+  const featured = Object.entries(featuredMap).map(([week, count]) => ({ week, count }));
+  return { spotlight: spotlightWeeks, featured };
+}
+
+/** Submit a spotlight or featured booking (pre-payment). */
+export async function submitSpotlightBooking(
+  type: 'spotlight' | 'featured',
+  title: string,
+  description: string,
+  weekStart: string,
+  eventDate: string,
+  location: string,
+  town: string,
+  contactName: string,
+  contactEmail: string,
+  contactPhone: string,
+  imageUrl: string,
+): Promise<SpotlightBooking> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be logged in to submit a booking.');
+  const tenant = getCurrentTenant();
+
+  const payload = {
+    tenant_id: tenant.id,
+    type,
+    title: sanitize(title, 200),
+    description: sanitize(description, 2000),
+    week_start: weekStart,
+    event_date: eventDate || null,
+    location: sanitize(location, 300),
+    town: sanitize(town, 100),
+    contact_name: sanitize(contactName, 100),
+    contact_email: sanitize(contactEmail, 200),
+    contact_phone: sanitize(contactPhone, 30),
+    image_url: imageUrl || null,
+    submitted_by: session.user.id,
+    submitted_by_name: session.user.user_metadata?.full_name || session.user.email || 'Unknown',
+    status: 'pending_review',
+    payment_status: 'unpaid',
+  };
+
+  const { data, error } = await supabase.from('paid_submissions').insert(payload).select().single();
+  if (error) throw new Error(error.message);
+  return mapSpotlightBooking(data);
+}
+
+/** Admin: fetch all non-rejected submissions ordered by week. */
+export async function fetchSpotlightBookings(): Promise<SpotlightBooking[]> {
+  await requireAdmin();
+  const tenant = getCurrentTenant();
+  const { data, error } = await supabase
+    .from('paid_submissions')
+    .select('*')
+    .eq('tenant_id', tenant.id)
+    .order('week_start', { ascending: true })
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapSpotlightBooking);
+}
+
+/** Admin: approve or reject a submission, optionally adding notes. */
+export async function updateSpotlightBookingStatus(
+  id: string,
+  status: 'approved' | 'rejected',
+  adminNotes?: string,
+): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabase
+    .from('paid_submissions')
+    .update({ status, admin_notes: adminNotes ?? null })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+function mapSpotlightBooking(row: Record<string, any>): SpotlightBooking {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    type: row.type,
+    title: row.title,
+    description: row.description,
+    eventDate: row.event_date ?? undefined,
+    location: row.location ?? undefined,
+    town: row.town ?? undefined,
+    imageUrl: row.image_url ?? undefined,
+    contactName: row.contact_name,
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone ?? undefined,
+    submittedBy: row.submitted_by ?? undefined,
+    submittedByName: row.submitted_by_name ?? undefined,
+    status: row.status,
+    paymentStatus: row.payment_status,
+    stripeSessionId: row.stripe_session_id ?? undefined,
+    weekStart: row.week_start,
+    adminNotes: row.admin_notes ?? undefined,
+    createdAt: row.created_at,
+  };
 }

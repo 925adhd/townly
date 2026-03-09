@@ -1,8 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CommunityEvent } from '../types';
-import { fetchApprovedCommunityEvents, submitCommunityEvent } from '../lib/api';
+import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchBookedWeeks, uploadSpotlightImage, submitSpotlightBooking, getWeekStart, formatWeekRange } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -24,6 +24,26 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const [flyerOpen, setFlyerOpen] = useState(false);
   const [upsOpen, setUpsOpen] = useState(false);
   const [entrepreneurOpen, setEntrepreneurOpen] = useState(false);
+
+  // Booking modal state
+  const [bookingType, setBookingType] = useState<'spotlight' | 'featured' | null>(null);
+  const [bookedWeeks, setBookedWeeks] = useState<{ spotlight: string[]; featured: { week: string; count: number }[] } | null>(null);
+  const [bWeekStart, setBWeekStart] = useState('');
+  const [bTitle, setBTitle] = useState('');
+  const [bDesc, setBDesc] = useState('');
+  const [bEventDate, setBEventDate] = useState('');
+  const [bLocation, setBLocation] = useState('');
+  const [bTown, setBTown] = useState(tenant.towns[0] ?? '');
+  const [bContactName, setBContactName] = useState('');
+  const [bContactEmail, setBContactEmail] = useState('');
+  const [bContactPhone, setBContactPhone] = useState('');
+  const [bImageFile, setBImageFile] = useState<File | null>(null);
+  const [bImagePreview, setBImagePreview] = useState('');
+  const [bTos, setBTos] = useState(false);
+  const [bSubmitting, setBSubmitting] = useState(false);
+  const [bError, setBError] = useState('');
+  const [bSuccess, setBSuccess] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Community events
   const [events, setEvents] = useState<CommunityEvent[]>([]);
@@ -63,6 +83,68 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       setSubmitting(false);
     }
   };
+
+  // Build the next 8 week-start dates (Sundays) starting from this week
+  function getUpcomingWeeks(): Date[] {
+    const weeks: Date[] = [];
+    const start = getWeekStart(new Date());
+    for (let i = 0; i < 8; i++) {
+      const w = new Date(start);
+      w.setDate(w.getDate() + i * 7);
+      weeks.push(w);
+    }
+    return weeks;
+  }
+
+  function weekIsoDate(d: Date): string {
+    return d.toISOString().split('T')[0];
+  }
+
+  function openBooking(type: 'spotlight' | 'featured') {
+    setBookingType(type);
+    setBWeekStart('');
+    setBTitle(''); setBDesc(''); setBEventDate(''); setBLocation('');
+    setBTown(tenant.towns[0] ?? '');
+    setBContactName(''); setBContactEmail(''); setBContactPhone('');
+    setBImageFile(null); setBImagePreview('');
+    setBTos(false); setBError(''); setBSuccess(false);
+    if (!bookedWeeks) {
+      fetchBookedWeeks().then(setBookedWeeks).catch(console.error);
+    }
+  }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBImageFile(file);
+    setBImagePreview(URL.createObjectURL(file));
+  }
+
+  async function handleBookingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bTos) { setBError('Please agree to the content policy.'); return; }
+    if (!bWeekStart) { setBError('Please select a week.'); return; }
+    setBSubmitting(true);
+    setBError('');
+    try {
+      let imageUrl = '';
+      if (bImageFile) {
+        imageUrl = await uploadSpotlightImage(bImageFile);
+      }
+      await submitSpotlightBooking(
+        bookingType!,
+        bTitle, bDesc, bWeekStart,
+        bEventDate, bLocation, bTown,
+        bContactName, bContactEmail, bContactPhone,
+        imageUrl,
+      );
+      setBSuccess(true);
+    } catch (err: any) {
+      setBError(err.message || 'Failed to submit. Please try again.');
+    } finally {
+      setBSubmitting(false);
+    }
+  }
 
   function formatEventDate(dateStr: string) {
     const d = new Date(dateStr + 'T00:00:00');
@@ -292,13 +374,23 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 spotlight available each week</li>
             </ul>
             <p className="text-xs text-amber-700/80 font-medium">Ideal for grand openings, ticketed events, and time-sensitive announcements.</p>
-            <a
-              href="mailto:hello@townlyapp.io?subject=Weekly Spotlight Inquiry"
-              className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
-            >
-              <i className="fas fa-envelope"></i>
-              Claim This Week's Spotlight
-            </a>
+            {user ? (
+              <button
+                onClick={() => openBooking('spotlight')}
+                className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
+              >
+                <i className="fas fa-star"></i>
+                Book a Weekly Spotlight
+              </button>
+            ) : (
+              <Link
+                to="/auth?signup=true"
+                className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
+              >
+                <i className="fas fa-star"></i>
+                Sign In to Book
+              </Link>
+            )}
           </div>
 
           {/* Featured Post */}
@@ -323,16 +415,31 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
             </ul>
             <p className="text-xs text-slate-400 font-medium">Great for yard sales, one-time events, community announcements, and seasonal posts.</p>
-            <a
-              href="mailto:hello@townlyapp.io?subject=Featured Post Inquiry"
-              className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
-            >
-              <i className="fas fa-envelope text-[10px]"></i>
-              Get Featured This Week
-            </a>
+            {user ? (
+              <button
+                onClick={() => openBooking('featured')}
+                className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
+              >
+                <i className="fas fa-bullhorn text-[10px]"></i>
+                Get Featured This Week
+              </button>
+            ) : (
+              <Link
+                to="/auth?signup=true"
+                className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
+              >
+                <i className="fas fa-bullhorn text-[10px]"></i>
+                Sign In to Book
+              </Link>
+            )}
           </div>
 
         </div>
+
+        {/* Content Policy Disclaimer */}
+        <p className="text-xs text-slate-400 mt-4 px-1">
+          By submitting a paid post you agree that content violating community standards — including misleading, obscene, or fraudulent posts — may be removed by the admin without refund, and may result in a permanent account ban.
+        </p>
       </div>
 
       {/* Submit Event Modal */}
@@ -448,6 +555,187 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <i className="fas fa-times text-sm"></i>
             </button>
             <img src="/images/ups.jpg" alt="Ribbon Cutting – The UPS Store Leitchfield" className="w-full rounded-2xl shadow-2xl" />
+          </div>
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {bookingType && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setBookingType(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white rounded-t-3xl px-6 pt-6 pb-3 border-b border-slate-100 flex items-center justify-between z-10">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {bookingType === 'spotlight' ? '⭐ Book a Weekly Spotlight' : '📣 Get Featured This Week'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {bookingType === 'spotlight' ? '$25 / week · Only 1 available per week' : '$5 / week · Up to 5 available per week'}
+                </p>
+              </div>
+              <button onClick={() => setBookingType(null)} className="text-slate-400 hover:text-slate-600 transition-colors ml-4 flex-shrink-0">
+                <i className="fas fa-times text-lg"></i>
+              </button>
+            </div>
+
+            {bSuccess ? (
+              <div className="px-6 py-10 text-center space-y-3">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                  <i className="fas fa-check text-emerald-500 text-2xl"></i>
+                </div>
+                <h4 className="text-lg font-bold text-slate-900">Submission Received!</h4>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  We'll review your submission and contact you at <strong>{bContactEmail}</strong> to confirm payment and publish your post.
+                </p>
+                <p className="text-xs text-slate-400">Payment: {bookingType === 'spotlight' ? '$25' : '$5'} — we'll send an invoice to your email.</p>
+                <button onClick={() => setBookingType(null)} className="mt-2 bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm">Done</button>
+              </div>
+            ) : (
+              <form onSubmit={handleBookingSubmit} className="px-6 py-5 space-y-4">
+
+                {/* Week Picker */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Select Week <span className="text-red-400">*</span></label>
+                  <div className="space-y-2">
+                    {getUpcomingWeeks().map(week => {
+                      const iso = weekIsoDate(week);
+                      const label = formatWeekRange(week);
+                      const isSpotlightTaken = bookingType === 'spotlight' && (bookedWeeks?.spotlight ?? []).includes(iso);
+                      const featuredCount = (bookedWeeks?.featured ?? []).find(f => f.week === iso)?.count ?? 0;
+                      const isFeaturedFull = bookingType === 'featured' && featuredCount >= 5;
+                      const isUnavailable = isSpotlightTaken || isFeaturedFull;
+                      const isSelected = bWeekStart === iso;
+                      return (
+                        <button
+                          key={iso}
+                          type="button"
+                          disabled={isUnavailable}
+                          onClick={() => !isUnavailable && setBWeekStart(iso)}
+                          className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-between ${
+                            isUnavailable
+                              ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-orange-50 border-orange-400 text-orange-700 shadow-sm'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-orange-300'
+                          }`}
+                        >
+                          <span>Sun–Sat &nbsp;{label}</span>
+                          {isUnavailable ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+                              {isSpotlightTaken ? 'Booked' : 'Full'}
+                            </span>
+                          ) : bookingType === 'featured' && featuredCount > 0 ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">
+                              {5 - featuredCount} left
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">Available</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Title <span className="text-red-400">*</span></label>
+                  <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" placeholder="e.g. Grand Opening – Sunrise Bakery" value={bTitle} onChange={e => setBTitle(e.target.value)} />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Description <span className="text-red-400">*</span></label>
+                  <textarea required rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none" placeholder="What should neighbors know?" value={bDesc} onChange={e => setBDesc(e.target.value)} />
+                </div>
+
+                {/* Date + Location */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Date</label>
+                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" value={bEventDate} onChange={e => setBEventDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" value={bTown} onChange={e => setBTown(e.target.value)}>
+                      {tenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue</label>
+                  <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" placeholder="e.g. Courthouse Square, Leitchfield" value={bLocation} onChange={e => setBLocation(e.target.value)} />
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    {bookingType === 'spotlight' ? 'Banner / Flyer Image' : 'Flyer Image (optional)'}
+                    {bookingType === 'spotlight' && <span className="text-red-400 ml-1">*</span>}
+                  </label>
+                  <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  {bImagePreview ? (
+                    <div className="relative">
+                      <img src={bImagePreview} className="w-full h-32 object-cover rounded-xl border border-slate-200" alt="Preview" />
+                      <button type="button" onClick={() => { setBImageFile(null); setBImagePreview(''); if (imageInputRef.current) imageInputRef.current.value = ''; }} className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center text-slate-500 hover:text-red-500">
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => imageInputRef.current?.click()} className="w-full border-2 border-dashed border-slate-200 rounded-xl py-6 text-slate-400 hover:border-orange-300 hover:text-orange-400 transition-colors text-sm font-medium flex flex-col items-center gap-1">
+                      <i className="fas fa-cloud-upload-alt text-xl"></i>
+                      <span>Click to upload image</span>
+                      <span className="text-xs font-normal">JPEG, PNG, WebP · max 5MB</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-3 pt-1">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Contact Info</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Name <span className="text-red-400">*</span></label>
+                      <input required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" placeholder="Your name" value={bContactName} onChange={e => setBContactName(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Phone</label>
+                      <input type="tel" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" placeholder="Optional" value={bContactPhone} onChange={e => setBContactPhone(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Email <span className="text-red-400">*</span></label>
+                    <input required type="email" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 outline-none" placeholder="We'll send your invoice here" value={bContactEmail} onChange={e => setBContactEmail(e.target.value)} />
+                  </div>
+                </div>
+
+                {/* ToS */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={bTos} onChange={e => setBTos(e.target.checked)} className="mt-0.5 flex-shrink-0 accent-orange-500" />
+                  <span className="text-xs text-slate-500 leading-relaxed">
+                    I agree that posts violating community standards (misleading, obscene, or fraudulent content) may be removed by the admin <strong>without refund</strong> and may result in a permanent account ban.
+                  </span>
+                </label>
+
+                {bError && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2.5 rounded-xl">{bError}</div>
+                )}
+
+                {/* Payment note */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 flex items-start gap-2">
+                  <i className="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+                  <span>Payment ({bookingType === 'spotlight' ? '$25' : '$5'}) will be collected after review. We'll email you an invoice within 1 business day.</span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={bSubmitting || !bTos || !bWeekStart}
+                  className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-sm transition-colors text-sm"
+                >
+                  {bSubmitting ? 'Submitting...' : `Submit for Review — ${bookingType === 'spotlight' ? '$25' : '$5'}`}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

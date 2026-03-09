@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, createAlert, dismissAlert } from '../lib/api';
+import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking } from '../types';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, formatWeekRange } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -24,7 +24,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
 };
 
 const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings'>('pending');
 
   // Pending providers
   const [pending, setPending] = useState<Provider[]>([]);
@@ -51,6 +51,14 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [actingEvent, setActingEvent] = useState<string | null>(null);
   const [eventsError, setEventsError] = useState('');
+
+  // Spotlight bookings
+  const [bookings, setBookings] = useState<SpotlightBooking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingsLoaded, setBookingsLoaded] = useState(false);
+  const [actingBooking, setActingBooking] = useState<string | null>(null);
+  const [bookingsError, setBookingsError] = useState('');
+  const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
 
   // Community alerts
   const [alertTitle, setAlertTitle] = useState('');
@@ -84,6 +92,16 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
         .finally(() => setLoadingClaims(false));
     }
   }, [activeTab, claimsLoaded]);
+
+  useEffect(() => {
+    if (activeTab === 'bookings' && !bookingsLoaded) {
+      setLoadingBookings(true);
+      fetchSpotlightBookings()
+        .then(data => { setBookings(data); setBookingsLoaded(true); })
+        .catch(console.error)
+        .finally(() => setLoadingBookings(false));
+    }
+  }, [activeTab, bookingsLoaded]);
 
   useEffect(() => {
     if (activeTab === 'events' && !eventsLoaded) {
@@ -222,6 +240,32 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
     }
   };
 
+  const handleApproveBooking = async (id: string) => {
+    setActingBooking(id);
+    setBookingsError('');
+    try {
+      await updateSpotlightBookingStatus(id, 'approved');
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'approved' } : b));
+    } catch (e: any) {
+      setBookingsError(e.message || 'Failed to approve booking.');
+    } finally {
+      setActingBooking(null);
+    }
+  };
+
+  const handleRejectBooking = async (id: string) => {
+    setActingBooking(id);
+    setBookingsError('');
+    try {
+      await updateSpotlightBookingStatus(id, 'rejected', rejectNotes[id] || undefined);
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'rejected' } : b));
+    } catch (e: any) {
+      setBookingsError(e.message || 'Failed to reject booking.');
+    } finally {
+      setActingBooking(null);
+    }
+  };
+
   const handleRemoveContent = async (report: ContentReport) => {
     setActingReport(report.id);
     try {
@@ -341,6 +385,22 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
           Alerts
           {communityAlert && (
             <span className="ml-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">1</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('bookings')}
+          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
+            activeTab === 'bookings'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <i className="fas fa-star mr-2"></i>
+          Bookings
+          {bookings.filter(b => b.status === 'pending_review').length > 0 && (
+            <span className="ml-2 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+              {bookings.filter(b => b.status === 'pending_review').length}
+            </span>
           )}
         </button>
       </div>
@@ -633,6 +693,113 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                       </button>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Spotlight Bookings Tab */}
+      {activeTab === 'bookings' && (
+        <>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-slate-900">Spotlight & Featured Bookings</h2>
+            <button onClick={() => { setBookingsLoaded(false); }} className="text-xs text-slate-400 hover:text-slate-600">
+              <i className="fas fa-refresh mr-1"></i> Refresh
+            </button>
+          </div>
+          {bookingsError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-2xl mb-4">{bookingsError}</div>}
+          {loadingBookings ? (
+            <div className="text-center py-10 text-slate-400 text-sm">Loading bookings...</div>
+          ) : bookings.length === 0 ? (
+            <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center text-slate-400 text-sm shadow-sm">
+              No bookings yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {bookings.map(b => (
+                <div key={b.id} className={`bg-white border rounded-2xl p-5 shadow-sm space-y-3 ${
+                  b.status === 'approved' ? 'border-emerald-200' :
+                  b.status === 'rejected' ? 'border-slate-100 opacity-60' :
+                  'border-amber-200'
+                }`}>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest ${
+                        b.type === 'spotlight' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {b.type === 'spotlight' ? '⭐ Spotlight' : '📣 Featured'}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest ${
+                        b.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                        b.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                        'bg-orange-100 text-orange-700'
+                      }`}>
+                        {b.status === 'pending_review' ? 'Pending Review' : b.status}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest ${
+                        b.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {b.paymentStatus === 'paid' ? '$ Paid' : '$ Unpaid'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400 whitespace-nowrap">
+                      Week of {formatWeekRange(new Date(b.weekStart + 'T00:00:00'))}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">{b.title}</h3>
+                    <p className="text-slate-500 text-xs mt-1 leading-relaxed">{b.description}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                    {b.eventDate && <span><i className="fas fa-calendar mr-1"></i>{b.eventDate}</span>}
+                    {b.location && <span><i className="fas fa-map-marker-alt mr-1"></i>{b.location}</span>}
+                    {b.town && <span><i className="fas fa-city mr-1"></i>{b.town}</span>}
+                  </div>
+
+                  {b.imageUrl && (
+                    <img src={b.imageUrl} alt="" className="w-full h-28 object-cover rounded-xl border border-slate-100" />
+                  )}
+
+                  <div className="text-xs text-slate-500 space-y-0.5">
+                    <p><strong>Contact:</strong> {b.contactName} · {b.contactEmail}{b.contactPhone ? ` · ${b.contactPhone}` : ''}</p>
+                    {b.submittedByName && <p><strong>Submitted by:</strong> {b.submittedByName}</p>}
+                  </div>
+
+                  {b.adminNotes && (
+                    <p className="text-xs text-slate-400 italic">Admin note: {b.adminNotes}</p>
+                  )}
+
+                  {b.status === 'pending_review' && (
+                    <div className="space-y-2 pt-1">
+                      <input
+                        type="text"
+                        placeholder="Rejection reason (optional)"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-300"
+                        value={rejectNotes[b.id] ?? ''}
+                        onChange={e => setRejectNotes(prev => ({ ...prev, [b.id]: e.target.value }))}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          disabled={actingBooking === b.id}
+                          onClick={() => handleApproveBooking(b.id)}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors"
+                        >
+                          {actingBooking === b.id ? 'Working...' : 'Approve & Publish'}
+                        </button>
+                        <button
+                          disabled={actingBooking === b.id}
+                          onClick={() => handleRejectBooking(b.id)}
+                          className="flex-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-600 text-xs font-bold py-2 rounded-xl border border-red-200 transition-colors"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
