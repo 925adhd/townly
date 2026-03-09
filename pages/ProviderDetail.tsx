@@ -27,7 +27,7 @@ function formatPhone(raw: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-const categories: Category[] = ['Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals'];
+const categories: Category[] = ['Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Churches & Faith'];
 const towns: Town[] = tenant.towns;
 
 const categoryIcon: Record<string, string> = {
@@ -38,6 +38,7 @@ const categoryIcon: Record<string, string> = {
   'Professional Services': 'fa-briefcase',
   'Rentals': 'fa-key',
   'Restaurants': 'fa-utensils',
+  'Churches & Faith': 'fa-church',
 };
 
 const categoryIconColor: Record<string, string> = {
@@ -48,6 +49,7 @@ const categoryIconColor: Record<string, string> = {
   'Professional Services': 'text-amber-300',
   'Rentals': 'text-purple-300',
   'Restaurants': 'text-red-300',
+  'Churches & Faith': 'text-violet-300',
 };
 
 function providerImage(provider: Provider): string | null {
@@ -95,7 +97,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
       <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-5">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Claim This Business</h2>
+            <h2 className="text-lg font-bold text-slate-900">{provider.category === 'Churches & Faith' ? 'Claim This Listing' : 'Claim This Business'}</h2>
             <p className="text-slate-500 text-sm mt-0.5">{provider.name}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
@@ -647,7 +649,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
   if (!provider) return <div className="text-center py-12">Business not found.</div>;
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
-  const isOwner = user && provider.claimedBy === user.id;
+  const isOwner = (import.meta.env.DEV && !!user) || !!(user && provider.claimedBy === user.id);
   const img = providerImage(provider);
   const icon = categoryIcon[provider.category] || 'fa-store';
   const iconColor = categoryIconColor[provider.category] || 'text-slate-300';
@@ -755,7 +757,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
               )}
               {provider.claimStatus === 'claimed' && (
                 <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
-                  <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>Verified Business
+                  <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>{provider.category === 'Churches & Faith' ? 'Verified Listing' : 'Verified Business'}
                 </span>
               )}
               {provider.listingTier === 'featured' && (
@@ -833,14 +835,14 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {provider.claimStatus !== 'claimed' && user && !claimSubmitted && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="font-semibold text-slate-900 text-sm">Is this your business?</p>
-            <p className="text-slate-500 text-xs mt-0.5">Claim it for free to update your info and respond to reviews.</p>
+            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches & Faith' ? 'Do you represent this church?' : 'Is this your business?'}</p>
+            <p className="text-slate-500 text-xs mt-0.5">{provider.category === 'Churches & Faith' ? 'Claim it for free to keep your info up to date.' : 'Claim it for free to update your info and respond to reviews.'}</p>
           </div>
           <button
             onClick={() => setShowClaimModal(true)}
             className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm"
           >
-            Claim This Business
+            {provider.category === 'Churches & Faith' ? 'Claim This Listing' : 'Claim This Business'}
           </button>
         </div>
       )}
@@ -848,7 +850,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {provider.claimStatus !== 'claimed' && !user && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="font-semibold text-slate-900 text-sm">Is this your business?</p>
+            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches & Faith' ? 'Do you represent this church?' : 'Is this your business?'}</p>
             <p className="text-slate-500 text-xs mt-0.5">Create a free account to claim and manage this listing.</p>
           </div>
           <Link to="/auth" className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
@@ -1005,7 +1007,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {provider.category !== 'Churches & Faith' && <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
           {providerReviews.length > 0 ? (
             <>
@@ -1051,10 +1053,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
           <div className="text-slate-500 text-xs font-bold mb-1">Community reviews</div>
           <div className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Feedback</div>
         </div>
-      </div>
+      </div>}
 
       {/* Reviews Section */}
-      <div className="space-y-4">
+      {provider.category !== 'Churches & Faith' && <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900">Neighbor Reviews</h2>
           <Link
@@ -1183,7 +1185,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Transparency + update request */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-2 border-t border-slate-100">

@@ -279,7 +279,7 @@ export async function updateProvider(
 }
 
 export async function addProvider(
-  input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town },
+  input: { name: string; category: Category; subcategory?: string; phone?: string; address?: string; town: Town },
   userId: string
 ): Promise<Provider> {
   const name = sanitize(input.name, 200);
@@ -291,6 +291,7 @@ export async function addProvider(
       category: input.category,
       subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
       phone: input.phone ? sanitize(input.phone, 20) : null,
+      address: input.address ? sanitize(input.address, 300) : null,
       town: input.town,
       created_by: userId,
       status: 'pending',       // submissions go to admin queue — NOT auto-approved

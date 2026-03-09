@@ -1,5 +1,5 @@
 
-export type Category = 'Home Services' | 'Auto' | 'Personal Care' | 'Professional Services' | 'Healthcare' | 'Rentals' | 'Restaurants' | 'Other';
+export type Category = 'Home Services' | 'Auto' | 'Personal Care' | 'Professional Services' | 'Healthcare' | 'Rentals' | 'Restaurants' | 'Churches & Faith' | 'Other';
 
 // Town is a plain string so each tenant can define its own town list.
 export type Town = string;

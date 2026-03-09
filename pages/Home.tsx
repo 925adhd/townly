@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home as HomeIcon, Car, Scissors, Stethoscope, UtensilsCrossed, Key } from 'lucide-react';
+import { Home as HomeIcon, Car, Scissors, Stethoscope, UtensilsCrossed, Key, Church } from 'lucide-react';
 import { Provider, LostFoundPost, CommunityAlert } from '../types';
 import { getCurrentTenant } from '../tenants';
 
@@ -24,7 +24,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
     { name: 'Personal Care', label: 'Personal Care', icon: Scissors, color: 'bg-pink-100 text-pink-600' },
     { name: 'Healthcare', label: 'Healthcare', icon: Stethoscope, color: 'bg-emerald-100 text-emerald-600' },
     { name: 'Restaurants', label: 'Restaurants', icon: UtensilsCrossed, color: 'bg-red-100 text-red-600' },
-    { name: 'Rentals', label: 'Rentals', icon: Key, color: 'bg-purple-100 text-purple-600' },
+    { name: 'Churches & Faith', label: 'Churches & Faith', icon: Church, color: 'bg-violet-100 text-violet-600' },
   ];
 
   const handleSearch = (e: React.FormEvent) => {

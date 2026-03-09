@@ -29,11 +29,12 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
   const [cat, setCat] = useState<Category>('Home Services');
   const [sub, setSub] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [town, setTown] = useState<Town>(tenant.towns[0]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Other'];
+  const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Churches & Faith', 'Other'];
   const towns: Town[] = tenant.towns;
 
   if (!user) return (
@@ -57,7 +58,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
     setError('');
     setLoading(true);
     try {
-      const newProvider = await addProvider({ name, category: cat, subcategory: sub, phone, town }, user.id);
+      const newProvider = await addProvider({ name, category: cat, subcategory: sub, phone, address, town }, user.id);
       setProviders(prev => [newProvider, ...prev]);
       navigate(`/provider/${newProvider.id}`);
     } catch (err: any) {
@@ -68,17 +69,17 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
 
   return (
     <div className="max-w-xl mx-auto pb-10">
-      <h1 className="text-2xl font-bold mb-2">List a New Business</h1>
-      <p className="text-slate-500 mb-6">Help others find great services in {tenant.name}.</p>
+      <h1 className="text-2xl font-bold mb-2">{cat === 'Churches & Faith' ? 'Add a Church or Faith Organization' : 'List a New Business'}</h1>
+      <p className="text-slate-500 mb-6">{cat === 'Churches & Faith' ? `Help your community find faith communities in ${tenant.name}.` : `Help others find great services in ${tenant.name}.`}</p>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-5 text-slate-900">
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Business Name</label>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{cat === 'Churches & Faith' ? 'Church / Organization Name' : 'Business Name'}</label>
           <input
             type="text"
             name="business-name"
             required
-            placeholder="e.g. Mike's Masonry"
+            placeholder={cat === 'Churches & Faith' ? 'e.g. First Baptist Church' : "e.g. Mike's Masonry"}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             value={name}
             onChange={e => setName(e.target.value)}
@@ -105,14 +106,29 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Specific Service</label>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{cat === 'Churches & Faith' ? 'Denomination / Type' : 'Specific Service'}</label>
           <input
             type="text"
             name="subcategory"
-            placeholder="e.g. Chimney Repair, Bricklaying"
+            placeholder={cat === 'Churches & Faith' ? 'e.g. Baptist, Methodist, Non-Denominational' : 'e.g. Chimney Repair, Bricklaying'}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             value={sub}
             onChange={e => setSub(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
+            Address{cat !== 'Churches & Faith' && <span className="normal-case text-slate-300 font-normal"> (optional)</span>}
+          </label>
+          <input
+            type="text"
+            name="address"
+            required={cat === 'Churches & Faith'}
+            placeholder={cat === 'Churches & Faith' ? 'e.g. 123 Main St, Leitchfield, KY' : 'e.g. 123 Main St — leave blank if mobile/on-site'}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+            value={address}
+            onChange={e => setAddress(e.target.value)}
           />
         </div>
 
@@ -139,7 +155,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
           disabled={loading}
           className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
         >
-          {loading ? 'Saving...' : 'Add Business'}
+          {loading ? 'Saving...' : cat === 'Churches & Faith' ? 'Add Listing' : 'Add Business'}
         </button>
       </form>
     </div>

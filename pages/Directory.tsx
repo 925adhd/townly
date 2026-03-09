@@ -16,6 +16,7 @@ const categoryIcon: Record<string, string> = {
   'Professional Services': 'fa-briefcase',
   'Rentals': 'fa-key',
   'Restaurants': 'fa-utensils',
+  'Churches & Faith': 'fa-church',
   'Other': 'fa-store',
 };
 
@@ -27,6 +28,7 @@ const categoryIconColor: Record<string, string> = {
   'Professional Services': 'text-amber-300',
   'Rentals': 'text-purple-300',
   'Restaurants': 'text-red-300',
+  'Churches & Faith': 'text-violet-300',
   'Other': 'text-slate-300',
 };
 
@@ -101,6 +103,12 @@ const KEYWORD_CATEGORY: Record<string, string> = {
   'cafe': 'Restaurants', 'diner': 'Restaurants', 'takeout': 'Restaurants', 'delivery': 'Restaurants',
   // Rentals
   'rental': 'Rentals', 'apartment': 'Rentals', 'house': 'Rentals', 'storage': 'Rentals',
+  // Churches & Faith
+  'church': 'Churches & Faith', 'churches': 'Churches & Faith', 'chapel': 'Churches & Faith',
+  'ministry': 'Churches & Faith', 'pastor': 'Churches & Faith', 'worship': 'Churches & Faith',
+  'congregation': 'Churches & Faith', 'parish': 'Churches & Faith', 'cathedral': 'Churches & Faith',
+  'baptist': 'Churches & Faith', 'methodist': 'Churches & Faith', 'catholic': 'Churches & Faith',
+  'protestant': 'Churches & Faith', 'evangelical': 'Churches & Faith', 'faith': 'Churches & Faith',
 };
 
 function fuzzyMatchToken(token: string, fields: string, fieldWords: string[]): boolean {
@@ -122,6 +130,7 @@ function hireAgainLabel(category: string): string {
   if (category === 'Healthcare') return 'would return';
   if (category === 'Rentals') return 'would rent again';
   if (category === 'Auto') return 'would use again';
+  if (category === 'Churches & Faith') return 'would attend again';
   return 'would hire again';
 }
 
@@ -167,7 +176,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
   const sortBy   = (searchParams.get('sort') as 'rating' | 'reviews' | 'newest') || 'rating';
 
   const towns: Town[] = tenant.towns;
-  const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals'];
+  const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Churches & Faith'];
 
   function updateParam(key: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -324,7 +333,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               <Link
                 to={`/provider/${p.id}`}
                 onClick={handleProviderClick}
-                className={`group p-4 border shadow-sm [@media(hover:hover)]:hover:shadow-md transition-all flex flex-row items-center gap-4 ${reportingId === p.id ? 'rounded-t-2xl' : 'rounded-2xl'} ${p.listingTier === 'featured' ? 'bg-amber-50 border-amber-300 [@media(hover:hover)]:hover:border-amber-400 border-l-4' : 'bg-white border-slate-100 [@media(hover:hover)]:hover:border-blue-200'}`}
+                className={`group p-4 border shadow-sm [@media(hover:hover)]:hover:shadow-md transition-all flex flex-row items-center gap-4 ${reportingId === p.id || (p.listingTier === 'featured' && (p.phone || p.website)) ? 'rounded-t-2xl' : 'rounded-2xl'} ${p.listingTier === 'featured' ? 'bg-amber-50 border-amber-300 [@media(hover:hover)]:hover:border-amber-400 border-l-4' : 'bg-white border-slate-100 [@media(hover:hover)]:hover:border-blue-200'}`}
               >
                 <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
                   {img
@@ -358,7 +367,9 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                   <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{p.name}</h3>
                   {p.subcategory && <p className="text-slate-500 text-sm mb-1">{p.subcategory}</p>}
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
-                    {p.reviewCount > 0 ? (
+                    {p.category === 'Churches & Faith' ? (
+                      <span className="text-slate-400 text-xs italic">Community directory listing</span>
+                    ) : p.reviewCount > 0 ? (
                       <>
                         <div className="flex items-center text-amber-500 font-bold">
                           <i className="fas fa-star mr-1 text-xs"></i>
@@ -379,6 +390,30 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                   <i className="fas fa-chevron-right"></i>
                 </div>
               </Link>
+              {p.listingTier === 'featured' && (p.phone || p.website) && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap">
+                  {p.phone && (
+                    <a
+                      href={`tel:${p.phone}`}
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1 rounded-lg transition-colors"
+                    >
+                      <i className="fas fa-phone text-[10px]"></i>{p.phone}
+                    </a>
+                  )}
+                  {p.website && (
+                    <a
+                      href={p.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1 rounded-lg transition-colors"
+                    >
+                      <i className="fas fa-globe text-[10px]"></i>Visit Website
+                    </a>
+                  )}
+                </div>
+              )}
               {user && (
                 <button
                   onClick={() => { setReportingId(reportingId === p.id ? null : p.id); setReportReason(''); }}

@@ -35,6 +35,15 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, reviews, setReviews, u
 
   if (!provider) return <div className="text-center">Business not found.</div>;
 
+  if (provider.category === 'Churches & Faith') return (
+    <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
+      <i className="fas fa-church text-4xl text-violet-300 mb-4"></i>
+      <h2 className="text-xl font-bold mb-2">Reviews not available</h2>
+      <p className="text-slate-500 text-sm mb-6">Churches & faith organizations are listed as a community directory only.</p>
+      <Link to={`/provider/${provider.id}`} className="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm">Back to Listing</Link>
+    </div>
+  );
+
   const alreadyReviewed = reviews.some(r => r.providerId === provider.id && r.userId === user.id);
   if (alreadyReviewed) return (
     <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
