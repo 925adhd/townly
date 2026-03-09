@@ -125,6 +125,21 @@ function fuzzyMatchToken(token: string, fields: string, fieldWords: string[]): b
   );
 }
 
+const CAT_LABELS: Record<string, { heading: string; noun: string; addBtn: string }> = {
+  'Restaurants':            { heading: 'Local Restaurants',         noun: 'restaurants',    addBtn: 'Add a Restaurant' },
+  'Home Services':          { heading: 'Home Service Providers',    noun: 'providers',      addBtn: 'Add a Provider' },
+  'Auto':                   { heading: 'Auto Services',             noun: 'shops',          addBtn: 'Add a Shop' },
+  'Personal Care':          { heading: 'Personal Care Providers',   noun: 'providers',      addBtn: 'Add a Provider' },
+  'Healthcare':             { heading: 'Healthcare Providers',      noun: 'providers',      addBtn: 'Add a Provider' },
+  'Professional Services':  { heading: 'Professional Services',     noun: 'providers',      addBtn: 'Add a Provider' },
+  'Rentals':                { heading: 'Rental Listings',           noun: 'listings',       addBtn: 'Add a Listing' },
+  'Churches & Faith':       { heading: 'Local Churches',            noun: 'churches',       addBtn: 'Add a Church' },
+};
+
+function catLabel(category: string, key: 'heading' | 'noun' | 'addBtn'): string {
+  return CAT_LABELS[category]?.[key] ?? { heading: 'Local Businesses', noun: 'businesses', addBtn: 'Add a Business' }[key];
+}
+
 function hireAgainLabel(category: string): string {
   if (category === 'Restaurants') return 'would return';
   if (category === 'Personal Care') return 'would book again';
@@ -266,21 +281,22 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{category === 'Churches & Faith' ? 'Local Churches' : 'Local Businesses'}</h1>
-          <p className="text-slate-500">Found {filteredProviders.length} {category === 'Churches & Faith' ? 'churches' : 'businesses'} matching your criteria</p>
+          <h1 className="text-2xl font-bold text-slate-900">{catLabel(category, 'heading')}</h1>
+          <p className="text-slate-500">Found {filteredProviders.length} {catLabel(category, 'noun')} matching your criteria</p>
         </div>
         {user && (
           <div className="flex gap-2">
             <Link to="/add-provider" className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold flex items-center shadow-sm hover:bg-slate-50">
               <i className="fas fa-plus mr-2 text-blue-600"></i>
-              {category === 'Churches & Faith' ? 'Add a Church' : 'Add a Business'}
+              {catLabel(category, 'addBtn')}
             </Link>
           </div>
         )}
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3">
-        <div className="w-full">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
+        {/* Search */}
+        <div>
           <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Search</label>
           <div className="relative">
             <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
@@ -303,24 +319,28 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
             )}
           </div>
         </div>
-        <div className="flex-[2] min-w-[180px]">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Category</label>
-          <CustomSelect
-            value={category}
-            onChange={(v) => updateParam('cat', v)}
-            options={[{ value: 'All', label: 'All Categories' }, ...categories.map(c => ({ value: c, label: c }))]}
-          />
+        {/* Row: Category + Town */}
+        <div className="flex gap-3">
+          <div className="flex-[3] min-w-0">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Category</label>
+            <CustomSelect
+              value={category}
+              onChange={(v) => updateParam('cat', v)}
+              options={[{ value: 'All', label: 'All Categories' }, ...categories.map(c => ({ value: c, label: c }))]}
+            />
+          </div>
+          <div className="flex-[2] min-w-0">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Town</label>
+            <CustomSelect
+              value={town}
+              onChange={(v) => updateParam('town', v)}
+              options={[{ value: 'All', label: 'Everywhere' }, ...towns.map(t => ({ value: t, label: t }))]}
+            />
+          </div>
         </div>
-        <div className="flex-1 min-w-[140px]">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Town</label>
-          <CustomSelect
-            value={town}
-            onChange={(v) => updateParam('town', v)}
-            options={[{ value: 'All', label: 'Everywhere' }, ...towns.map(t => ({ value: t, label: t }))]}
-          />
-        </div>
+        {/* Row: Sort By or Denomination */}
         {category === 'Churches & Faith' ? (
-          <div className="flex-1 min-w-[150px]">
+          <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Denomination</label>
             <CustomSelect
               value={denomination}
@@ -329,7 +349,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
             />
           </div>
         ) : (
-          <div className="flex-1 min-w-[150px]">
+          <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Sort By</label>
             <CustomSelect
               value={sortBy}
@@ -363,7 +383,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                   }
                 </div>
                 <div className="flex-grow min-w-0">
-                  <div className="flex flex-col gap-0.5 mb-1">
+                  <div className="flex flex-col gap-1.5 mb-1">
                     <div className="flex items-center flex-wrap gap-1.5">
                       <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{p.category}</span>
                       {p.claimStatus === 'claimed' && (
@@ -403,11 +423,11 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                     )}
                   </div>
                 </div>
-                {/* Right column: status + flag stacked above chevron */}
-                <div className="hidden sm:flex flex-col items-end justify-between self-stretch py-0.5 flex-shrink-0">
+                {/* Right column: status + flag + chevron */}
+                <div className="flex flex-col items-end justify-between self-stretch py-0.5 flex-shrink-0">
                   <div className="flex items-center gap-1.5">
                     {p.claimStatus !== 'claimed' && (
-                      <span className="text-[10px] font-medium text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-full">Unclaimed</span>
+                      <span className="hidden sm:inline text-[10px] font-medium text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-full">Unclaimed</span>
                     )}
                     {user && (
                       <button
@@ -420,12 +440,6 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                     )}
                   </div>
                   <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
-                </div>
-                {/* Mobile: unclaimed inline, chevron hidden */}
-                <div className="flex sm:hidden flex-col items-end gap-1 flex-shrink-0">
-                  {p.claimStatus !== 'claimed' && (
-                    <span className="text-[10px] font-medium text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-full">Unclaimed</span>
-                  )}
                 </div>
               </Link>
               {p.listingTier === 'featured' && (p.phone || p.website) && (
