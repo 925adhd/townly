@@ -116,6 +116,7 @@ const App: React.FC = () => {
 
             <nav className="hidden md:flex items-center space-x-6">
               <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Businesses</Link>
+              <Link to="/spotlights" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
               <Link to="/lost-found" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Lost & Found</Link>
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
