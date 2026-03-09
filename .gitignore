@@ -19,6 +19,9 @@ dist-ssr
 # Claude Code local settings
 .claude/
 
+# Local-only DB state documentation (never commit — not linked to live Supabase)
+supabase/LIVE_DB_STATE.md
+
 # Dev-only / non-functional files
 mockData.ts
 metadata.json

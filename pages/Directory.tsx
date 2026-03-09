@@ -429,14 +429,17 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                   <textarea
                     value={reportReason}
                     onChange={e => setReportReason(e.target.value)}
-                    placeholder="Why are you reporting this? (optional)"
+                    placeholder="Please describe the issue (required)"
                     rows={2}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-red-300 outline-none resize-none mb-2"
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-red-300 outline-none resize-none mb-1"
                   />
-                  <div className="flex gap-2">
+                  {reportReason.length > 0 && reportReason.trim().length < 10 && (
+                    <p className="text-[10px] text-red-400 mb-2">Please provide at least 10 characters.</p>
+                  )}
+                  <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => handleSubmitReport(p.id, p.name)}
-                      disabled={submittingReport}
+                      disabled={submittingReport || reportReason.trim().length < 10}
                       className="text-xs font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50"
                     >
                       {submittingReport ? 'Reporting...' : 'Submit Report'}

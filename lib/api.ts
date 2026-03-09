@@ -334,6 +334,15 @@ export async function addReview(
   const reviewText = sanitize(input.reviewText, 2000);
   if (!serviceDescription) throw new Error('Service description is required.');
   if (!reviewText) throw new Error('Review text is required.');
+  // Prevent owners from reviewing their own claimed listing.
+  const { data: provider } = await supabase
+    .from('providers')
+    .select('claimed_by')
+    .eq('id', input.providerId)
+    .single();
+  if (provider?.claimed_by && provider.claimed_by === userId) {
+    throw new Error('You cannot review a listing you own.');
+  }
   const { data, error } = await supabase
     .from('reviews')
     .insert({
@@ -450,6 +459,8 @@ export async function updateLostFoundPost(
     contactMethod: string;
   }
 ): Promise<LostFoundPost> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { data, error } = await supabase
     .from('lost_found_posts')
     .update({
@@ -462,6 +473,7 @@ export async function updateLostFoundPost(
       contact_method: sanitize(input.contactMethod, 200),
     })
     .eq('id', id)
+    .eq('user_id', session.user.id)
     .select()
     .single();
   if (error) throw error;
@@ -469,10 +481,14 @@ export async function updateLostFoundPost(
 }
 
 export async function deleteLostFoundPost(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('lost_found_posts')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
 }
 
@@ -1056,22 +1072,29 @@ export async function fetchPendingCommunityEvents(): Promise<CommunityEvent[]> {
 }
 
 export async function submitCommunityEvent(
-  userId: string,
-  userName: string,
   title: string,
   description: string,
   eventDate: string,
   location: string,
   town: string,
 ): Promise<void> {
+  // Resolve identity from the server-side session — never trust caller-supplied IDs.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in to submit an event.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', session.user.id)
+    .single();
+  const resolvedName = profile?.name || session.user.email?.split('@')[0] || 'Neighbor';
   const sanitizedTitle = sanitize(title, 200);
   const sanitizedDescription = sanitize(description, 2000);
   const sanitizedLocation = sanitize(location, 300);
   if (!sanitizedTitle) throw new Error('Event title is required.');
   if (!sanitizedDescription) throw new Error('Event description is required.');
   const { error } = await supabase.from('community_events').insert({
-    user_id: userId,
-    user_name: sanitize(userName, 100),
+    user_id: session.user.id,
+    user_name: sanitize(resolvedName, 100),
     title: sanitizedTitle,
     description: sanitizedDescription,
     event_date: eventDate,

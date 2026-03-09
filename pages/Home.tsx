@@ -20,8 +20,8 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: HomeIcon, color: 'bg-blue-100 text-blue-600' },
-    { name: 'Auto', label: 'Auto', icon: Car, color: 'bg-indigo-100 text-indigo-600' },
     { name: 'Personal Care', label: 'Personal Care', icon: Scissors, color: 'bg-pink-100 text-pink-600' },
+    { name: 'Auto', label: 'Auto', icon: Car, color: 'bg-indigo-100 text-indigo-600' },
     { name: 'Healthcare', label: 'Healthcare', icon: Stethoscope, color: 'bg-emerald-100 text-emerald-600' },
     { name: 'Restaurants', label: 'Restaurants', icon: UtensilsCrossed, color: 'bg-red-100 text-red-600' },
     { name: 'Churches & Faith', label: 'Churches & Faith', icon: Church, color: 'bg-violet-100 text-violet-600' },

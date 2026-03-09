@@ -53,7 +53,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      await submitCommunityEvent(user.id, user.name, eTitle, eDesc, eDate, eLocation, eTown);
+      await submitCommunityEvent(eTitle, eDesc, eDate, eLocation, eTown);
       setSubmitted(true);
       setShowForm(false);
       setETitle(''); setEDesc(''); setEDate(''); setELocation(''); setETown(tenant.towns[0] ?? '');
