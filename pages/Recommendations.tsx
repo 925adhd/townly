@@ -199,12 +199,12 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
           <p className="text-slate-500">Can't find a service? Ask your neighbors for recommendations.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center md:justify-start gap-3">
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
