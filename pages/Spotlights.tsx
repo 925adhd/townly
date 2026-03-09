@@ -81,12 +81,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Current Spotlights */}
       <div>
         <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-          <i className="fas fa-star text-[9px]"></i> Featured Event
+          <i className="fas fa-star text-[9px]"></i> Weekly Spotlight
         </p>
 <div className="grid gap-4">
 
           {/* Disaster Preparedness Summit */}
-          <div id="disaster-summit" className="rounded-3xl border-2 border-amber-300 overflow-hidden shadow-md flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
+          <div id="disaster-summit" className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
             <button
               onClick={() => setFlyerOpen(true)}
               className="w-full block hover:opacity-95 transition-opacity focus:outline-none"
@@ -99,7 +99,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 className="w-full max-h-[260px] object-cover object-top"
               />
             </button>
-            <div className="p-6 flex flex-col gap-3">
+            <div className="p-7 flex flex-col gap-3">
               <div className="flex flex-col gap-2">
                 <span className="text-slate-400 text-xs font-medium">Apr 2, 2026</span>
               </div>
@@ -123,9 +123,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </div>
               <button
                 onClick={() => setFlyerOpen(true)}
-                className="self-start inline-flex items-center gap-1.5 text-orange-600 text-xs font-bold hover:underline"
+                className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
               >
-                <i className="fas fa-image text-[10px]"></i> View full flyer
+                <i className="fas fa-file-image text-[10px]"></i> View Flyer
               </button>
             </div>
           </div>
@@ -163,9 +163,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             <p className="text-[10px] text-slate-400 italic">Limited booths · Must register in advance</p>
             <button
               onClick={() => setEntrepreneurOpen(true)}
-              className="self-start inline-flex items-center gap-1.5 text-orange-600 text-xs font-bold hover:underline mt-0.5"
+              className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
             >
-              <i className="fas fa-image text-[10px]"></i> View full image
+              <i className="fas fa-file-image text-[10px]"></i> View Flyer
             </button>
           </div>
 
@@ -192,9 +192,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <button
               onClick={() => setUpsOpen(true)}
-              className="self-start inline-flex items-center gap-1.5 text-orange-600 text-xs font-bold hover:underline mt-0.5"
+              className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
             >
-              <i className="fas fa-image text-[10px]"></i> View full image
+              <i className="fas fa-file-image text-[10px]"></i> View Flyer
             </button>
           </div>
 
@@ -206,7 +206,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <div className="flex items-center justify-between mb-1 px-1">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
-            <p className="text-slate-400 text-xs mt-0.5">Free events posted by neighbors and organizations (pending review).</p>
+            <p className="text-slate-400 text-xs mt-0.5">Free events posted by neighbors and organizations. <em>Community posts are text-only unless upgraded to Featured.</em></p>
           </div>
           {user ? (
             <button
@@ -274,16 +274,20 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-xl font-bold text-slate-900">Weekly Spotlight</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The most visible placement on Townly. Your event is pinned at the very top of the home page for every neighbor who visits this week.
+              The most visible placement on Townly. Your event is pinned at the very top of the <strong>Home page and Events page</strong> for every neighbor who visits this week.
             </p>
             <div className="pt-1">
               <span className="text-3xl font-bold text-amber-600">$25</span>
               <span className="text-slate-400 text-sm font-medium"> / week</span>
             </div>
             <ul className="space-y-1.5 text-sm text-slate-600">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the home page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Gold highlight that immediately stands out</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Custom description and icon</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the Home page and Events page</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Gold highlighted spotlight card that stands out</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large banner image displayed on the event listing</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Clickable flyer image for full details</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Thumbnail preview shown on the home page</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Use the same image or upload separate images for each placement</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Custom description</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned above all other listings for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 spotlight available each week</li>
             </ul>
@@ -304,7 +308,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-base font-bold text-slate-800">Featured Post</h2>
             <p className="text-slate-500 text-xs leading-relaxed">
-              Boost a community post or event into the weekly featured section, where it rises above regular listings for the week.
+              Boost a community post or event into the weekly featured section so it appears above regular posts for the week.
             </p>
             <div className="pt-0.5">
               <span className="text-xl font-bold text-slate-700">$5</span>
@@ -313,11 +317,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             <ul className="space-y-1.5 text-xs text-slate-500">
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Rises above regular community posts</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown in the weekly featured section</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description and icon</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Flyer preview button included <em className="text-slate-400">(free community posts are text-only)</em></li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Active for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
             </ul>
-            <p className="text-xs text-slate-400 font-medium">Great for one-time events, yard sales, community announcements, and seasonal posts.</p>
+            <p className="text-xs text-slate-400 font-medium">Great for yard sales, one-time events, community announcements, and seasonal posts.</p>
             <a
               href="mailto:hello@townlyapp.io?subject=Featured Post Inquiry"
               className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
@@ -341,6 +346,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </button>
             </div>
             <p className="text-xs text-slate-400">Free to post. Events are reviewed before going live.</p>
+            <p className="text-xs text-slate-300">Free posts are text-only. <a href="mailto:hello@townlyapp.io?subject=Featured Post Inquiry" className="underline hover:text-slate-400 transition-colors">Upgrade to Featured</a> to include an image.</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Title</label>
