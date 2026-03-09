@@ -310,20 +310,23 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{catLabel(category, 'heading')}</h1>
           <p className="text-slate-500 flex items-center gap-1.5 flex-wrap">
-            Found {filteredProviders.length} {catLabel(category, 'noun')} matching your criteria
-            <span className="relative inline-flex items-center md:hidden" ref={searchTipRef}>
-              <button
-                onClick={() => setShowSearchTip(v => !v)}
-                className="text-slate-400 hover:text-slate-600 text-sm leading-none"
-                title="About these results"
-              >
-                <i className="fas fa-circle-info"></i>
-              </button>
-              {showSearchTip && (
-                <span className="absolute right-0 top-full mt-1 z-[200] bg-slate-800 text-white text-xs rounded-xl px-3 py-2 w-64 shadow-xl">
-                  Services reflect what businesses add to their profile. Unclaimed listings may be incomplete.
-                </span>
-              )}
+            Found {filteredProviders.length} {catLabel(category, 'noun')} matching your{' '}
+            <span className="whitespace-nowrap inline-flex items-center gap-1.5">
+              criteria
+              <span className="relative inline-flex items-center md:hidden" ref={searchTipRef}>
+                <button
+                  onClick={() => setShowSearchTip(v => !v)}
+                  className="text-slate-400 hover:text-slate-600 text-sm leading-none"
+                  title="About these results"
+                >
+                  <i className="fas fa-circle-info"></i>
+                </button>
+                {showSearchTip && (
+                  <span className="absolute right-0 top-full mt-1 z-[200] bg-slate-800 text-white text-xs rounded-xl px-3 py-2 w-64 shadow-xl">
+                    Services reflect what businesses add to their profile. Unclaimed listings may be incomplete.
+                  </span>
+                )}
+              </span>
             </span>
           </p>
           <p className="hidden md:block text-xs text-slate-400 italic mt-0.5">Services listed reflect what businesses have added to their profile. Unclaimed listings may not show all services offered.</p>

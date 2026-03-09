@@ -73,22 +73,20 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     <div className="space-y-10 pb-10 -mt-6 md:mt-0">
 
       {/* Header */}
-      <div className="text-center pt-4 pb-3 md:pt-5 md:pb-4">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-amber-100 rounded-2xl mb-3 shadow-sm">
-          <i className="fas fa-star text-amber-500 text-2xl"></i>
-        </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Around {tenant.name}</h1>
-        <p className="text-slate-500 text-base max-w-md mx-auto md:leading-snug">
-          Local events, announcements, and things happening around {tenant.name} this week.
-        </p>
+      <div className="pt-2 pb-3 md:pt-4 md:pb-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Around Town</h1>
+        <p className="text-slate-500 text-sm">Events and announcements happening around {tenant.name} this week.</p>
       </div>
 
       {/* Current Spotlights */}
       <div>
+        <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <i className="fas fa-star text-[9px]"></i> Featured Event
+        </p>
 <div className="grid gap-4">
 
           {/* Disaster Preparedness Summit */}
-          <div id="disaster-summit" className="bg-white rounded-3xl border-2 border-amber-200 overflow-hidden shadow-sm flex flex-col">
+          <div id="disaster-summit" className="rounded-3xl border-2 border-amber-300 overflow-hidden shadow-md flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
             <button
               onClick={() => setFlyerOpen(true)}
               className="w-full block hover:opacity-95 transition-opacity focus:outline-none"
@@ -102,9 +100,6 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </button>
             <div className="p-6 flex flex-col gap-3">
               <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700 border border-amber-300 self-start">
-                  ⭐ Featured Event
-                </span>
                 <span className="text-slate-400 text-xs font-medium">Apr 2, 2026</span>
               </div>
               <div>
