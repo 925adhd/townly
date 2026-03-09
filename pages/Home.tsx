@@ -140,7 +140,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
           <Link to="/spotlights" state={{ scrollTo: 'disaster-summit' }} className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
             {/* Thumbnail */}
             <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
-              <img src="/images/disastersummit.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} />
+              <img src="/images/disastersummit.jpg" alt="" loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} />
             </div>
             <div className="flex flex-col flex-1 gap-1.5">
               <div className="flex items-center gap-2 flex-wrap">

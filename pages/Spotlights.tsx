@@ -95,6 +95,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <img
                 src="/images/disastersummit.jpg"
                 alt="Grayson County Disaster Preparedness Summit flyer"
+                loading="lazy"
                 className="w-full max-h-[260px] object-cover object-top"
               />
             </button>

@@ -422,7 +422,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               >
                 <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
                   {img
-                    ? <img src={img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ? <img src={img} alt={p.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     : (() => { const Icon = icon; return <Icon className={`w-7 h-7 ${iconColor}`} stroke={1.5} />; })()
                   }
                 </div>

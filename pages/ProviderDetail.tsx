@@ -753,7 +753,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-row gap-4">
         <div className="w-20 h-20 md:w-32 md:h-32 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100">
           {img
-            ? <img src={img} className="w-full h-full object-cover" alt="" />
+            ? <img src={img} loading="lazy" className="w-full h-full object-cover" alt="" />
             : <i className={`fas ${icon} text-3xl md:text-4xl ${iconColor}`}></i>
           }
         </div>
