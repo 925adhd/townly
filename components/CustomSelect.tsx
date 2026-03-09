@@ -38,7 +38,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, c
         <i className={`fas fa-chevron-down text-slate-400 text-xs transition-transform ml-2 ${open ? 'rotate-180' : ''}`}></i>
       </button>
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-xl z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-xl z-50 overflow-y-auto max-h-60">
           {options.map(opt => (
             <button
               key={opt.value}
