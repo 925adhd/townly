@@ -303,15 +303,15 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
             )}
           </div>
         </div>
-        <div className="flex-1 min-w-[150px]">
+        <div className="flex-[2] min-w-[180px]">
           <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Category</label>
           <CustomSelect
             value={category}
             onChange={(v) => updateParam('cat', v)}
-            options={[{ value: 'All', label: 'All Categories' }, ...categories.map(c => ({ value: c, label: c === 'Professional Services' ? 'Prof. Services' : c }))]}
+            options={[{ value: 'All', label: 'All Categories' }, ...categories.map(c => ({ value: c, label: c }))]}
           />
         </div>
-        <div className="flex-1 min-w-[150px]">
+        <div className="flex-1 min-w-[140px]">
           <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Town</label>
           <CustomSelect
             value={town}

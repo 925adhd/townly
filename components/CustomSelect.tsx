@@ -44,7 +44,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, c
               key={opt.value}
               type="button"
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
                 value === opt.value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'
               }`}
             >
