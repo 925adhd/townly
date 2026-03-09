@@ -184,7 +184,7 @@ const App: React.FC = () => {
               <i className="fas fa-home text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Home</span>
             </Link>
-            <Link to="/directory" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+            <Link to="/directory" state={{ scrollTop: true }} className="flex flex-col items-center text-slate-400 hover:text-orange-600">
               <i className="fas fa-search text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Businesses</span>
             </Link>
