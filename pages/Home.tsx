@@ -14,6 +14,13 @@ interface HomeProps {
   setCommunityAlert: (alert: CommunityAlert | null) => void;
 }
 
+const now = new Date();
+const isToday = (date: Date) => date.toDateString() === now.toDateString();
+const isRecentlyAdded = (addedAt: Date) => (now.getTime() - addedAt.getTime()) < 48 * 60 * 60 * 1000;
+
+// Hardcoded event metadata — update dates when events change
+const featuredEvent = { date: new Date('2026-04-02'), addedAt: new Date('2026-03-08') };
+
 const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
@@ -105,37 +112,52 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
 
       {/* Community Highlights */}
       <section>
-        <div className="flex items-center justify-between mb-2 px-1">
+        <div className="flex items-center justify-between mb-1 px-1">
           <div className="flex items-center space-x-2">
             <span className="flex h-3 w-3 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
             </span>
-            <h2 className="text-base font-semibold text-slate-900">Upcoming This Week</h2>
+            <h2 className="text-base font-semibold text-slate-900">Upcoming This Week <span className="text-slate-400 font-normal">(3)</span></h2>
           </div>
-          <Link to="/spotlights" className="text-amber-600 font-normal text-[10px] whitespace-nowrap hover:underline flex-shrink-0">See all events</Link>
+          <Link to="/spotlights" className="text-amber-700 font-semibold text-xs whitespace-nowrap hover:text-amber-900 hover:underline flex-shrink-0 flex items-center gap-1">See all events <i className="fas fa-arrow-right text-[9px]"></i></Link>
         </div>
+        <p className="text-slate-400 text-xs px-1 mb-2">3 events happening this week in {tenant.name}</p>
 
         <div className="space-y-3">
 
-          {/* Spotlight Card — full width, dominant */}
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 pt-4 pb-7 md:px-8 md:pt-4 md:pb-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 flex flex-col md:flex-row md:items-center md:gap-10">
-            <div className="flex flex-col flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Featured Event</span>
-                <span className="text-xs font-medium text-gray-700 flex items-center gap-1"><i className="fas fa-calendar text-[10px] text-amber-500"></i> Apr 2 · 4:30–6:30 PM</span>
+          {/* Spotlight Card — accent bar style */}
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
+            {/* Thumbnail */}
+            <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
+              <img src="/images/disastersummit.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} />
+            </div>
+            <div className="flex flex-col flex-1 gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Community Spotlight</span>
+                {isToday(featuredEvent.date) && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest bg-orange-500 text-white">Happening Today</span>
+                )}
+                {isRecentlyAdded(featuredEvent.addedAt) && !isToday(featuredEvent.date) && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-widest bg-emerald-500 text-white">New</span>
+                )}
               </div>
-              <h3 className="font-semibold text-slate-900 text-lg leading-tight mb-1">Disaster Preparedness Summit</h3>
-              <p className="text-slate-500 text-xs flex items-center gap-1 mb-3">
-                <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {tenant.name} Extension Office
+              <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
+                <i className="fas fa-calendar text-amber-500 text-[10px]"></i> Apr 2, 2026 · 4:30–6:30 PM
+              </span>
+              <h3 className="font-bold text-slate-900 text-xl leading-tight">Disaster Preparedness Summit</h3>
+              <p className="text-slate-500 text-xs flex items-center gap-1">
+                <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {tenant.name} Extension Office · Leitchfield
               </p>
-              <p className="text-slate-600 text-xs leading-relaxed">
-                Keynote, panels &amp; resource expo. Free admission, all ages welcome.
+              <p className="text-slate-600 text-sm leading-relaxed mt-1">
+                Keynote, panels &amp; resource expo with local emergency officials. Free admission, all ages welcome.
               </p>
             </div>
-            <Link to="/spotlights" state={{ scrollTo: 'disaster-summit' }} className="mt-5 md:mt-0 md:flex-shrink-0 inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-5 py-3 rounded-xl transition-colors shadow-sm">
-              View Event Details <i className="fas fa-arrow-right text-[10px]"></i>
-            </Link>
+            <div className="mt-4 md:mt-0 md:flex-shrink-0">
+              <Link to="/spotlights" state={{ scrollTo: 'disaster-summit' }} className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors shadow-sm whitespace-nowrap">
+                View Details <i className="fas fa-arrow-right text-[10px]"></i>
+              </Link>
+            </div>
           </div>
 
           {/* Second row: community cards */}
@@ -154,7 +176,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               ) : (
                 <p className="text-slate-500 text-xs leading-relaxed mt-1 flex items-center gap-1.5">
                   <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
-                  No alerts right now. That's a good sign.
+                  No alerts reported in {tenant.name} today.
                 </p>
               )}
             </div>
