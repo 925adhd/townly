@@ -34,7 +34,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, c
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:border-slate-300 transition-colors"
       >
-        <span>{selected?.label ?? ''}</span>
+        <span className="truncate">{selected?.label ?? ''}</span>
         <i className={`fas fa-chevron-down text-slate-400 text-xs transition-transform ml-2 ${open ? 'rotate-180' : ''}`}></i>
       </button>
       {open && (
