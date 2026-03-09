@@ -5,31 +5,32 @@ import { Provider, Category, Town } from '../types';
 import CustomSelect from '../components/CustomSelect';
 import { submitReport } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
+import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch, IconBriefcase, IconKey, IconBuildingStore } from '@tabler/icons-react';
 
 const tenant = getCurrentTenant();
 
-const categoryIcon: Record<string, string> = {
-  'Home Services': 'fa-house-chimney',
-  'Auto': 'fa-car',
-  'Personal Care': 'fa-scissors',
-  'Healthcare': 'fa-stethoscope',
-  'Professional Services': 'fa-briefcase',
-  'Rentals': 'fa-key',
-  'Restaurants': 'fa-utensils',
-  'Churches & Faith': 'fa-church',
-  'Other': 'fa-store',
+const categoryIcon: Record<string, React.ElementType> = {
+  'Home Services': IconHome,
+  'Auto': IconCar,
+  'Personal Care': IconScissors,
+  'Healthcare': IconStethoscope,
+  'Professional Services': IconBriefcase,
+  'Rentals': IconKey,
+  'Restaurants': IconToolsKitchen2,
+  'Churches & Faith': IconBuildingChurch,
+  'Other': IconBuildingStore,
 };
 
 const categoryIconColor: Record<string, string> = {
-  'Home Services': 'text-blue-300',
-  'Auto': 'text-indigo-300',
-  'Personal Care': 'text-pink-300',
-  'Healthcare': 'text-emerald-300',
-  'Professional Services': 'text-amber-300',
-  'Rentals': 'text-purple-300',
-  'Restaurants': 'text-red-300',
-  'Churches & Faith': 'text-violet-300',
-  'Other': 'text-slate-300',
+  'Home Services': 'text-blue-600',
+  'Auto': 'text-indigo-600',
+  'Personal Care': 'text-pink-600',
+  'Healthcare': 'text-emerald-600',
+  'Professional Services': 'text-amber-600',
+  'Rentals': 'text-purple-600',
+  'Restaurants': 'text-red-600',
+  'Churches & Faith': 'text-violet-600',
+  'Other': 'text-slate-500',
 };
 
 function providerImage(p: Provider): string | null {
@@ -346,8 +347,8 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       <div className="grid gap-4">
         {filteredProviders.map(p => {
           const img = providerImage(p);
-          const icon = categoryIcon[p.category] || 'fa-store';
-          const iconColor = categoryIconColor[p.category] || 'text-slate-300';
+          const icon = categoryIcon[p.category] || IconBuildingStore;
+          const iconColor = categoryIconColor[p.category] || 'text-slate-500';
           return (
             <div key={p.id} className="relative min-w-0">
               <Link
@@ -358,31 +359,30 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                 <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
                   {img
                     ? <img src={img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    : <i className={`fas ${icon} text-2xl ${iconColor}`}></i>
+                    : (() => { const Icon = icon; return <Icon className={`w-7 h-7 ${iconColor}`} stroke={1.5} />; })()
                   }
                 </div>
                 <div className="flex-grow min-w-0">
-                  <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-1">
-                    <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{p.category}</span>
-                    <span className="text-slate-400 text-xs">• {p.town}</span>
-                    {p.claimStatus !== 'claimed' && (
-                      <span className="text-[10px] font-semibold text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-md">Unclaimed</span>
-                    )}
-                    {p.claimStatus === 'claimed' && (
-                      <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
-                        <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>Verified Business
-                      </span>
-                    )}
-                    {p.listingTier === 'featured' && (
-                      <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200">
-                        Sponsored
-                      </span>
-                    )}
-                    {p.listingTier === 'spotlight' && (
-                      <span className="text-[10px] font-bold text-amber-600 px-1.5 py-0.5 bg-amber-50 rounded-md">
-                        <i className="fas fa-star mr-0.5 text-[8px]"></i>Spotlight
-                      </span>
-                    )}
+                  <div className="flex flex-col gap-0.5 mb-1">
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{p.category}</span>
+                      {p.claimStatus === 'claimed' && (
+                        <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                          <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>Verified Business
+                        </span>
+                      )}
+                      {p.listingTier === 'featured' && (
+                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200">
+                          Sponsored
+                        </span>
+                      )}
+                      {p.listingTier === 'spotlight' && (
+                        <span className="text-[10px] font-bold text-amber-600 px-1.5 py-0.5 bg-amber-50 rounded-md">
+                          <i className="fas fa-star mr-0.5 text-[8px]"></i>Spotlight
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400">{p.town}</span>
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{p.name}</h3>
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
@@ -403,8 +403,29 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                     )}
                   </div>
                 </div>
-                <div className="hidden sm:block text-slate-300 pr-4">
-                  <i className="fas fa-chevron-right"></i>
+                {/* Right column: status + flag stacked above chevron */}
+                <div className="hidden sm:flex flex-col items-end justify-between self-stretch py-0.5 flex-shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    {p.claimStatus !== 'claimed' && (
+                      <span className="text-[10px] font-medium text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-full">Unclaimed</span>
+                    )}
+                    {user && (
+                      <button
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); setReportingId(reportingId === p.id ? null : p.id); setReportReason(''); }}
+                        className="text-slate-300 hover:text-red-400 transition-colors text-xs p-0.5"
+                        title="Report this listing"
+                      >
+                        <i className="fas fa-flag"></i>
+                      </button>
+                    )}
+                  </div>
+                  <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
+                </div>
+                {/* Mobile: unclaimed inline, chevron hidden */}
+                <div className="flex sm:hidden flex-col items-end gap-1 flex-shrink-0">
+                  {p.claimStatus !== 'claimed' && (
+                    <span className="text-[10px] font-medium text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-full">Unclaimed</span>
+                  )}
                 </div>
               </Link>
               {p.listingTier === 'featured' && (p.phone || p.website) && (
@@ -430,15 +451,6 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                     </a>
                   )}
                 </div>
-              )}
-              {user && (
-                <button
-                  onClick={() => { setReportingId(reportingId === p.id ? null : p.id); setReportReason(''); }}
-                  className="absolute top-3.5 right-3.5 text-slate-200 hover:text-red-400 transition-colors text-xs p-1"
-                  title="Report this listing"
-                >
-                  <i className="fas fa-flag"></i>
-                </button>
               )}
               {reportingId === p.id && (
                 <div className="bg-white border border-t-0 border-slate-100 shadow-sm rounded-b-2xl px-4 pb-4 pt-3">

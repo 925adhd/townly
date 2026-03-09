@@ -244,7 +244,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
         </div>
         <div className="relative z-10 max-w-xl">
           <h2 className="text-xl md:text-3xl font-bold text-slate-900 mb-3 md:mb-4">Your Voice Helps This Community</h2>
-          <p className="text-slate-500 mb-5 md:mb-8 text-sm md:text-lg leading-relaxed">
+          <p className="text-slate-500 mb-5 md:mb-8 text-sm md:text-base leading-[1.6]">
             Know a business worth listing? Add them to the directory.<br />
             Looking for a local business? Ask your neighbors.
           </p>
