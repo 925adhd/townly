@@ -31,7 +31,11 @@ const Auth: React.FC = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
-        navigate(-1);
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate('/');
+        }
       } else {
         await signUp(email, password, name);
         setSignedUp(true);
