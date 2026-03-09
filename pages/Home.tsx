@@ -135,7 +135,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
         <div className="space-y-3">
 
           {/* Spotlight Card — accent bar style */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
+          <Link to="/spotlights" state={{ scrollTo: 'disaster-summit' }} className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
             {/* Thumbnail */}
             <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
               <img src="/images/disastersummit.jpg" alt="" className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} />
@@ -162,11 +162,11 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               </p>
             </div>
             <div className="mt-4 md:mt-0 md:flex-shrink-0">
-              <Link to="/spotlights" state={{ scrollTo: 'disaster-summit' }} className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors shadow-sm whitespace-nowrap">
+              <span className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-6 py-3 rounded-xl shadow-sm whitespace-nowrap">
                 View Details <i className="fas fa-arrow-right text-[10px]"></i>
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
 
           {/* Second row: community cards */}
           <div className="grid md:grid-cols-2 gap-3">
