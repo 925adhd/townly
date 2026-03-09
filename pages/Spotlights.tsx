@@ -205,7 +205,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <div className="flex items-center justify-between mb-1 px-1">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
-            <p className="text-slate-400 text-xs mt-0.5">Free events posted by neighbors and organizations — pending admin review.</p>
+            <p className="text-slate-400 text-xs mt-0.5">Free events posted by neighbors and organizations (pending review).</p>
           </div>
           {user ? (
             <button
