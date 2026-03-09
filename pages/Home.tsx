@@ -28,10 +28,10 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
     { name: 'Personal Care', label: 'Personal Care', icon: IconScissors, color: 'bg-pink-100 text-pink-600' },
-    { name: 'Auto', label: 'Auto', icon: IconCar, color: 'bg-indigo-100 text-indigo-600' },
-    { name: 'Healthcare', label: 'Healthcare', icon: IconStethoscope, color: 'bg-emerald-100 text-emerald-600' },
-    { name: 'Restaurants', label: 'Restaurants', icon: IconToolsKitchen2, color: 'bg-red-100 text-red-600' },
-    { name: 'Churches & Faith', label: 'Churches & Faith', icon: IconBuildingChurch, color: 'bg-violet-100 text-violet-600' },
+    { name: 'Automotive', label: 'Automotive', icon: IconCar, color: 'bg-indigo-100 text-indigo-600' },
+    { name: 'Health & Medical', label: 'Health & Medical', icon: IconStethoscope, color: 'bg-emerald-100 text-emerald-600' },
+    { name: 'Food & Drink', label: 'Food & Drink', icon: IconToolsKitchen2, color: 'bg-red-100 text-red-600' },
+    { name: 'Churches', label: 'Churches', icon: IconBuildingChurch, color: 'bg-violet-100 text-violet-600' },
   ];
 
   const handleSearch = (e: React.FormEvent) => {

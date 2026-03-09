@@ -5,32 +5,42 @@ import { Provider, Category, Town } from '../types';
 import CustomSelect from '../components/CustomSelect';
 import { submitReport } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
-import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch, IconBriefcase, IconKey, IconBuildingStore } from '@tabler/icons-react';
+import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch, IconBriefcase, IconKey, IconBuildingStore, IconShoppingBag, IconSchool, IconBuildingBank, IconCalendarEvent, IconTrees } from '@tabler/icons-react';
 
 const tenant = getCurrentTenant();
 
 const categoryIcon: Record<string, React.ElementType> = {
-  'Home Services': IconHome,
-  'Auto': IconCar,
-  'Personal Care': IconScissors,
-  'Healthcare': IconStethoscope,
-  'Professional Services': IconBriefcase,
-  'Rentals': IconKey,
-  'Restaurants': IconToolsKitchen2,
-  'Churches & Faith': IconBuildingChurch,
-  'Other': IconBuildingStore,
+  'Home Services':              IconHome,
+  'Automotive':                 IconCar,
+  'Personal Care':              IconScissors,
+  'Health & Medical':           IconStethoscope,
+  'Professional Services':      IconBriefcase,
+  'Housing & Rentals':          IconKey,
+  'Food & Drink':               IconToolsKitchen2,
+  'Shopping':                   IconShoppingBag,
+  'Churches':                   IconBuildingChurch,
+  'Schools & Education':        IconSchool,
+  'Government & Public Services': IconBuildingBank,
+  'Events & Community':         IconCalendarEvent,
+  'Parks & Recreation':         IconTrees,
+  'Other':                      IconBuildingStore,
 };
 
 const categoryIconColor: Record<string, string> = {
-  'Home Services': 'text-blue-600',
-  'Auto': 'text-indigo-600',
-  'Personal Care': 'text-pink-600',
-  'Healthcare': 'text-emerald-600',
-  'Professional Services': 'text-amber-600',
-  'Rentals': 'text-purple-600',
-  'Restaurants': 'text-red-600',
-  'Churches & Faith': 'text-violet-600',
-  'Other': 'text-slate-500',
+  'Home Services':              'text-blue-600',
+  'Automotive':                 'text-indigo-600',
+  'Personal Care':              'text-pink-600',
+  'Health & Medical':           'text-emerald-600',
+  'Professional Services':      'text-amber-600',
+  'Housing & Rentals':          'text-purple-600',
+  'Food & Drink':               'text-red-600',
+  'Shopping':                   'text-orange-600',
+  'Churches':                   'text-violet-600',
+  'Schools & Education':        'text-cyan-600',
+  'Government & Public Services': 'text-slate-600',
+  'Events & Community':         'text-rose-600',
+  'Parks & Recreation':         'text-green-600',
+  'Other':                      'text-slate-500',
 };
 
 function providerImage(p: Provider): string | null {
@@ -69,11 +79,11 @@ const STOP_WORDS = new Set([
 // Maps common search terms to the category they imply
 const KEYWORD_CATEGORY: Record<string, string> = {
   // Auto
-  'oil': 'Auto', 'tire': 'Auto', 'tires': 'Auto', 'brake': 'Auto', 'brakes': 'Auto',
-  'transmission': 'Auto', 'exhaust': 'Auto', 'mechanic': 'Auto', 'alignment': 'Auto',
-  'windshield': 'Auto', 'detailing': 'Auto', 'inspection': 'Auto',
-  'battery': 'Auto', 'radiator': 'Auto', 'alternator': 'Auto', 'coolant': 'Auto',
-  'filter': 'Auto', 'spark': 'Auto', 'muffler': 'Auto', 'axle': 'Auto', 'clutch': 'Auto',
+  'oil': 'Automotive', 'tire': 'Automotive', 'tires': 'Automotive', 'brake': 'Automotive', 'brakes': 'Automotive',
+  'transmission': 'Automotive', 'exhaust': 'Automotive', 'mechanic': 'Automotive', 'alignment': 'Automotive',
+  'windshield': 'Automotive', 'detailing': 'Automotive', 'inspection': 'Automotive',
+  'battery': 'Automotive', 'radiator': 'Automotive', 'alternator': 'Automotive', 'coolant': 'Automotive',
+  'filter': 'Automotive', 'spark': 'Automotive', 'muffler': 'Automotive', 'axle': 'Automotive', 'clutch': 'Automotive',
   // Home Services
   'plumber': 'Home Services', 'plumbing': 'Home Services',
   'electrician': 'Home Services', 'electrical': 'Home Services', 'electric': 'Home Services', 'wiring': 'Home Services',
@@ -97,19 +107,19 @@ const KEYWORD_CATEGORY: Record<string, string> = {
   'nails': 'Personal Care', 'manicure': 'Personal Care', 'pedicure': 'Personal Care',
   'massage': 'Personal Care', 'spa': 'Personal Care', 'waxing': 'Personal Care',
   // Healthcare
-  'doctor': 'Healthcare', 'dentist': 'Healthcare', 'dental': 'Healthcare', 'clinic': 'Healthcare',
-  'therapy': 'Healthcare', 'therapist': 'Healthcare', 'chiropractor': 'Healthcare', 'vision': 'Healthcare',
+  'doctor': 'Health & Medical', 'dentist': 'Health & Medical', 'dental': 'Health & Medical', 'clinic': 'Health & Medical',
+  'therapy': 'Health & Medical', 'therapist': 'Health & Medical', 'chiropractor': 'Health & Medical', 'vision': 'Health & Medical',
   // Restaurants
-  'restaurant': 'Restaurants', 'food': 'Restaurants', 'pizza': 'Restaurants', 'burger': 'Restaurants',
-  'cafe': 'Restaurants', 'diner': 'Restaurants', 'takeout': 'Restaurants', 'delivery': 'Restaurants',
+  'restaurant': 'Food & Drink', 'food': 'Food & Drink', 'pizza': 'Food & Drink', 'burger': 'Food & Drink',
+  'cafe': 'Food & Drink', 'diner': 'Food & Drink', 'takeout': 'Food & Drink', 'delivery': 'Food & Drink',
   // Rentals
-  'rental': 'Rentals', 'apartment': 'Rentals', 'house': 'Rentals', 'storage': 'Rentals',
+  'rental': 'Housing & Rentals', 'apartment': 'Housing & Rentals', 'house': 'Housing & Rentals', 'storage': 'Housing & Rentals',
   // Churches & Faith
-  'church': 'Churches & Faith', 'churches': 'Churches & Faith', 'chapel': 'Churches & Faith',
-  'ministry': 'Churches & Faith', 'pastor': 'Churches & Faith', 'worship': 'Churches & Faith',
-  'congregation': 'Churches & Faith', 'parish': 'Churches & Faith', 'cathedral': 'Churches & Faith',
-  'baptist': 'Churches & Faith', 'methodist': 'Churches & Faith', 'catholic': 'Churches & Faith',
-  'protestant': 'Churches & Faith', 'evangelical': 'Churches & Faith', 'faith': 'Churches & Faith',
+  'church': 'Churches', 'churches': 'Churches', 'chapel': 'Churches',
+  'ministry': 'Churches', 'pastor': 'Churches', 'worship': 'Churches',
+  'congregation': 'Churches', 'parish': 'Churches', 'cathedral': 'Churches',
+  'baptist': 'Churches', 'methodist': 'Churches', 'catholic': 'Churches',
+  'protestant': 'Churches', 'evangelical': 'Churches', 'faith': 'Churches',
 };
 
 function fuzzyMatchToken(token: string, fields: string, fieldWords: string[]): boolean {
@@ -126,14 +136,19 @@ function fuzzyMatchToken(token: string, fields: string, fieldWords: string[]): b
 }
 
 const CAT_LABELS: Record<string, { heading: string; noun: string; addBtn: string }> = {
-  'Restaurants':            { heading: 'Local Restaurants',         noun: 'restaurants',    addBtn: 'Add a Restaurant' },
-  'Home Services':          { heading: 'Home Service Providers',    noun: 'providers',      addBtn: 'Add a Provider' },
-  'Auto':                   { heading: 'Auto Services',             noun: 'shops',          addBtn: 'Add a Shop' },
-  'Personal Care':          { heading: 'Personal Care Providers',   noun: 'providers',      addBtn: 'Add a Provider' },
-  'Healthcare':             { heading: 'Healthcare Providers',      noun: 'providers',      addBtn: 'Add a Provider' },
-  'Professional Services':  { heading: 'Professional Services',     noun: 'providers',      addBtn: 'Add a Provider' },
-  'Rentals':                { heading: 'Rental Listings',           noun: 'listings',       addBtn: 'Add a Listing' },
-  'Churches & Faith':       { heading: 'Local Churches',            noun: 'churches',       addBtn: 'Add a Church' },
+  'Food & Drink':                   { heading: 'Food & Drink',                    noun: 'restaurants',  addBtn: 'Add a Restaurant' },
+  'Shopping':                       { heading: 'Local Shopping',                  noun: 'shops',        addBtn: 'Add a Shop' },
+  'Home Services':                  { heading: 'Home Service Providers',          noun: 'providers',    addBtn: 'Add a Provider' },
+  'Automotive':                     { heading: 'Automotive Services',             noun: 'shops',        addBtn: 'Add a Shop' },
+  'Personal Care':                  { heading: 'Personal Care Providers',         noun: 'providers',    addBtn: 'Add a Provider' },
+  'Health & Medical':               { heading: 'Health & Medical',                noun: 'providers',    addBtn: 'Add a Provider' },
+  'Professional Services':          { heading: 'Professional Services',           noun: 'providers',    addBtn: 'Add a Provider' },
+  'Housing & Rentals':              { heading: 'Housing & Rentals',               noun: 'businesses',   addBtn: 'Add a Business' },
+  'Churches':                       { heading: 'Local Churches',                  noun: 'churches',     addBtn: 'Add a Church' },
+  'Schools & Education':            { heading: 'Schools & Education',             noun: 'schools',      addBtn: 'Add a School' },
+  'Government & Public Services':   { heading: 'Government & Public Services',    noun: 'listings',     addBtn: 'Add a Listing' },
+  'Events & Community':             { heading: 'Events & Community',              noun: 'listings',     addBtn: 'Add a Listing' },
+  'Parks & Recreation':             { heading: 'Parks & Recreation',              noun: 'parks',        addBtn: 'Add a Park' },
 };
 
 function catLabel(category: string, key: 'heading' | 'noun' | 'addBtn'): string {
@@ -141,12 +156,12 @@ function catLabel(category: string, key: 'heading' | 'noun' | 'addBtn'): string 
 }
 
 function hireAgainLabel(category: string): string {
-  if (category === 'Restaurants') return 'would return';
+  if (category === 'Food & Drink') return 'would return';
   if (category === 'Personal Care') return 'would book again';
-  if (category === 'Healthcare') return 'would return';
-  if (category === 'Rentals') return 'would rent again';
-  if (category === 'Auto') return 'would use again';
-  if (category === 'Churches & Faith') return 'would attend again';
+  if (category === 'Health & Medical') return 'would return';
+  if (category === 'Housing & Rentals') return 'would rent again';
+  if (category === 'Automotive') return 'would use again';
+  if (category === 'Churches') return 'would attend again';
   return 'would hire again';
 }
 
@@ -193,7 +208,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
   const denomination = searchParams.get('denom') || 'All';
 
   const towns: Town[] = tenant.towns;
-  const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Churches & Faith'];
+  const categories: Category[] = ['Food & Drink', 'Shopping', 'Home Services', 'Automotive', 'Personal Care', 'Health & Medical', 'Professional Services', 'Housing & Rentals', 'Churches', 'Schools & Education', 'Government & Public Services', 'Events & Community', 'Parks & Recreation'];
 
   function updateParam(key: string, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -223,7 +238,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   const denominations = useMemo(() => {
     const denoms = providers
-      .filter(p => p.category === 'Churches & Faith' && p.subcategory)
+      .filter(p => p.category === 'Churches' && p.subcategory)
       .map(p => p.subcategory as string);
     return ['All', ...Array.from(new Set(denoms)).sort()];
   }, [providers]);
@@ -232,7 +247,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     return providers.filter(p => {
       const matchCat = category === 'All' || p.category === category;
       const matchTown = town === 'All' || p.town === town;
-      const matchDenom = denomination === 'All' || p.category !== 'Churches & Faith' || p.subcategory === denomination;
+      const matchDenom = denomination === 'All' || p.category !== 'Churches' || p.subcategory === denomination;
       const matchQuery = !query ? true : (() => {
         const allTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
         const tokens = allTokens.filter(t => !STOP_WORDS.has(t));
@@ -338,7 +353,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               options={[{ value: 'All', label: 'Everywhere' }, ...towns.map(t => ({ value: t, label: t }))]}
             />
           </div>
-          {category === 'Churches & Faith' ? (
+          {category === 'Churches' ? (
             <div className="flex-1 min-w-0">
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Denomination</label>
               <CustomSelect
@@ -406,7 +421,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{p.name}</h3>
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
-                    {p.category === 'Churches & Faith' ? null : p.reviewCount > 0 ? (
+                    {p.category === 'Churches' ? null : p.reviewCount > 0 ? (
                       <>
                         <div className="flex items-center text-amber-500 font-bold">
                           <i className="fas fa-star mr-1 text-xs"></i>

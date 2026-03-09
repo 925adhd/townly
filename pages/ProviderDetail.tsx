@@ -27,29 +27,39 @@ function formatPhone(raw: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-const categories: Category[] = ['Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Churches & Faith'];
+const categories: Category[] = ['Food & Drink', 'Shopping', 'Home Services', 'Automotive', 'Personal Care', 'Health & Medical', 'Professional Services', 'Housing & Rentals', 'Churches', 'Schools & Education', 'Government & Public Services', 'Events & Community', 'Parks & Recreation'];
 const towns: Town[] = tenant.towns;
 
 const categoryIcon: Record<string, string> = {
   'Home Services': 'fa-house-chimney',
-  'Auto': 'fa-car',
+  'Automotive': 'fa-car',
   'Personal Care': 'fa-scissors',
-  'Healthcare': 'fa-stethoscope',
+  'Health & Medical': 'fa-stethoscope',
   'Professional Services': 'fa-briefcase',
-  'Rentals': 'fa-key',
-  'Restaurants': 'fa-utensils',
-  'Churches & Faith': 'fa-church',
+  'Housing & Rentals': 'fa-key',
+  'Food & Drink': 'fa-utensils',
+  'Shopping': 'fa-bag-shopping',
+  'Churches': 'fa-church',
+  'Schools & Education': 'fa-school',
+  'Government & Public Services': 'fa-building-columns',
+  'Events & Community': 'fa-calendar',
+  'Parks & Recreation': 'fa-tree',
 };
 
 const categoryIconColor: Record<string, string> = {
   'Home Services': 'text-blue-300',
-  'Auto': 'text-indigo-300',
+  'Automotive': 'text-indigo-300',
   'Personal Care': 'text-pink-300',
-  'Healthcare': 'text-emerald-300',
+  'Health & Medical': 'text-emerald-300',
   'Professional Services': 'text-amber-300',
-  'Rentals': 'text-purple-300',
-  'Restaurants': 'text-red-300',
-  'Churches & Faith': 'text-violet-300',
+  'Housing & Rentals': 'text-purple-300',
+  'Food & Drink': 'text-red-300',
+  'Shopping': 'text-orange-300',
+  'Churches': 'text-violet-300',
+  'Schools & Education': 'text-cyan-300',
+  'Government & Public Services': 'text-slate-300',
+  'Events & Community': 'text-rose-300',
+  'Parks & Recreation': 'text-green-300',
 };
 
 function providerImage(provider: Provider): string | null {
@@ -97,7 +107,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
       <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-5">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{provider.category === 'Churches & Faith' ? 'Claim This Listing' : 'Claim This Business'}</h2>
+            <h2 className="text-lg font-bold text-slate-900">{provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}</h2>
             <p className="text-slate-500 text-sm mt-0.5">{provider.name}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
@@ -757,7 +767,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
               )}
               {provider.claimStatus === 'claimed' && (
                 <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
-                  <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>{provider.category === 'Churches & Faith' ? 'Verified Listing' : 'Verified Business'}
+                  <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>{provider.category === 'Churches' ? 'Verified Listing' : 'Verified Business'}
                 </span>
               )}
               {provider.listingTier === 'featured' && (
@@ -835,14 +845,14 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {provider.claimStatus !== 'claimed' && user && !claimSubmitted && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches & Faith' ? 'Do you represent this church?' : 'Is this your business?'}</p>
-            <p className="text-slate-500 text-xs mt-0.5">{provider.category === 'Churches & Faith' ? 'Claim it for free to keep your info up to date.' : 'Claim it for free to update your info and respond to reviews.'}</p>
+            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your business?'}</p>
+            <p className="text-slate-500 text-xs mt-0.5">{provider.category === 'Churches' ? 'Claim it for free to keep your info up to date.' : 'Claim it for free to update your info and respond to reviews.'}</p>
           </div>
           <button
             onClick={() => setShowClaimModal(true)}
             className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm"
           >
-            {provider.category === 'Churches & Faith' ? 'Claim This Listing' : 'Claim This Business'}
+            {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
           </button>
         </div>
       )}
@@ -850,7 +860,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {provider.claimStatus !== 'claimed' && !user && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches & Faith' ? 'Do you represent this church?' : 'Is this your business?'}</p>
+            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your business?'}</p>
             <p className="text-slate-500 text-xs mt-0.5">Create a free account to claim and manage this listing.</p>
           </div>
           <Link to="/auth" className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
@@ -1007,7 +1017,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       )}
 
       {/* Stats Cards */}
-      {provider.category !== 'Churches & Faith' && <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {provider.category !== 'Churches' && <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
           {providerReviews.length > 0 ? (
             <>
@@ -1032,10 +1042,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
             <>
               <div className="text-3xl font-bold text-blue-600 mb-1">{provider.hireAgainPercent}%</div>
               <div className="text-emerald-600 text-xs font-bold mb-1">
-                {provider.category === 'Restaurants' || provider.category === 'Healthcare' ? 'Would return' :
+                {provider.category === 'Food & Drink' || provider.category === 'Health & Medical' ? 'Would return' :
                  provider.category === 'Personal Care' ? 'Would book again' :
-                 provider.category === 'Rentals' ? 'Would rent again' :
-                 provider.category === 'Auto' ? 'Would use again' :
+                 provider.category === 'Housing & Rentals' ? 'Would rent again' :
+                 provider.category === 'Automotive' ? 'Would use again' :
                  'Would hire again'}
               </div>
               <div className="text-slate-400 text-xs font-medium uppercase tracking-wider">Customer Trust</div>
@@ -1056,7 +1066,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       </div>}
 
       {/* Reviews Section */}
-      {provider.category !== 'Churches & Faith' && <div className="space-y-4">
+      {provider.category !== 'Churches' && <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900">Neighbor Reviews</h2>
           <Link
