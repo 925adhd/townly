@@ -98,7 +98,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                 name="search"
                 autoComplete="off"
                 placeholder="Search businesses, events..."
-                className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
+                className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:border-orange-400/50 focus:shadow-[0_0_0_2px_rgba(249,115,22,0.10)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -107,11 +107,11 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                 name="search"
                 autoComplete="off"
                 placeholder="Search businesses, events, or services in your town..."
-                className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
+                className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:border-orange-400/50 focus:shadow-[0_0_0_2px_rgba(249,115,22,0.10)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-sm"></i>
               <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
                 Search
               </button>
