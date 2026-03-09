@@ -171,9 +171,10 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   // Sync local input if URL changes externally (e.g. browser back)
   useEffect(() => { setLocalQuery(query); }, [query]);
-  const category = (searchParams.get('cat') as Category) || 'All';
-  const town     = (searchParams.get('town') as Town) || 'All';
-  const sortBy   = (searchParams.get('sort') as 'rating' | 'reviews' | 'newest') || 'rating';
+  const category     = (searchParams.get('cat') as Category) || 'All';
+  const town         = (searchParams.get('town') as Town) || 'All';
+  const sortBy       = (searchParams.get('sort') as 'rating' | 'reviews' | 'newest') || 'rating';
+  const denomination = searchParams.get('denom') || 'All';
 
   const towns: Town[] = tenant.towns;
   const categories: Category[] = ['Restaurants', 'Home Services', 'Auto', 'Personal Care', 'Healthcare', 'Professional Services', 'Rentals', 'Churches & Faith'];
@@ -204,10 +205,18 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     }
   }, []);
 
+  const denominations = useMemo(() => {
+    const denoms = providers
+      .filter(p => p.category === 'Churches & Faith' && p.subcategory)
+      .map(p => p.subcategory as string);
+    return ['All', ...Array.from(new Set(denoms)).sort()];
+  }, [providers]);
+
   const filteredProviders = useMemo(() => {
     return providers.filter(p => {
       const matchCat = category === 'All' || p.category === category;
       const matchTown = town === 'All' || p.town === town;
+      const matchDenom = denomination === 'All' || p.category !== 'Churches & Faith' || p.subcategory === denomination;
       const matchQuery = !query ? true : (() => {
         const allTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
         const tokens = allTokens.filter(t => !STOP_WORDS.has(t));
@@ -219,7 +228,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
           KEYWORD_CATEGORY[token] === p.category
         );
       })();
-      return matchCat && matchTown && matchQuery;
+      return matchCat && matchTown && matchDenom && matchQuery;
     }).sort((a, b) => {
       // Paid placements always float above organic results
       const aFeatured = a.listingTier === 'featured' ? 1 : 0;
@@ -240,7 +249,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       }
       return a.name.localeCompare(b.name);
     });
-  }, [providers, category, town, sortBy, query]);
+  }, [providers, category, town, sortBy, query, denomination]);
 
   function handleProviderClick() {
     sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
@@ -256,14 +265,14 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Local Businesses</h1>
-          <p className="text-slate-500">Found {filteredProviders.length} businesses matching your criteria</p>
+          <h1 className="text-2xl font-bold text-slate-900">{category === 'Churches & Faith' ? 'Local Churches' : 'Local Businesses'}</h1>
+          <p className="text-slate-500">Found {filteredProviders.length} {category === 'Churches & Faith' ? 'churches' : 'businesses'} matching your criteria</p>
         </div>
         {user && (
           <div className="flex gap-2">
             <Link to="/add-provider" className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold flex items-center shadow-sm hover:bg-slate-50">
               <i className="fas fa-plus mr-2 text-blue-600"></i>
-              Add a Business
+              {category === 'Churches & Faith' ? 'Add a Church' : 'Add a Business'}
             </Link>
           </div>
         )}
@@ -309,18 +318,29 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
             options={[{ value: 'All', label: 'Everywhere' }, ...towns.map(t => ({ value: t, label: t }))]}
           />
         </div>
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Sort By</label>
-          <CustomSelect
-            value={sortBy}
-            onChange={(v) => updateParam('sort', v)}
-            options={[
-              { value: 'rating', label: 'Highest Rated' },
-              { value: 'reviews', label: 'Most Reviewed' },
-              { value: 'newest', label: 'Recently Added' },
-            ]}
-          />
-        </div>
+        {category === 'Churches & Faith' ? (
+          <div className="flex-1 min-w-[150px]">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Denomination</label>
+            <CustomSelect
+              value={denomination}
+              onChange={(v) => updateParam('denom', v)}
+              options={denominations.map(d => ({ value: d, label: d === 'All' ? 'All Denominations' : d }))}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 min-w-[150px]">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Sort By</label>
+            <CustomSelect
+              value={sortBy}
+              onChange={(v) => updateParam('sort', v)}
+              options={[
+                { value: 'rating', label: 'Highest Rated' },
+                { value: 'reviews', label: 'Most Reviewed' },
+                { value: 'newest', label: 'Recently Added' },
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4">
@@ -365,11 +385,8 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
                     )}
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{p.name}</h3>
-                  {p.subcategory && <p className="text-slate-500 text-sm mb-1">{p.subcategory}</p>}
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
-                    {p.category === 'Churches & Faith' ? (
-                      <span className="text-slate-400 text-xs italic">Community directory listing</span>
-                    ) : p.reviewCount > 0 ? (
+                    {p.category === 'Churches & Faith' ? null : p.reviewCount > 0 ? (
                       <>
                         <div className="flex items-center text-amber-500 font-bold">
                           <i className="fas fa-star mr-1 text-xs"></i>

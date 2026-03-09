@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home as HomeIcon, Car, Scissors, Stethoscope, UtensilsCrossed, Key, Church } from 'lucide-react';
+import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
 import { Provider, LostFoundPost, CommunityAlert } from '../types';
 import { getCurrentTenant } from '../tenants';
 
@@ -19,12 +19,12 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
   const navigate = useNavigate();
 
   const categories = [
-    { name: 'Home Services', label: 'Home Services', icon: HomeIcon, color: 'bg-blue-100 text-blue-600' },
-    { name: 'Personal Care', label: 'Personal Care', icon: Scissors, color: 'bg-pink-100 text-pink-600' },
-    { name: 'Auto', label: 'Auto', icon: Car, color: 'bg-indigo-100 text-indigo-600' },
-    { name: 'Healthcare', label: 'Healthcare', icon: Stethoscope, color: 'bg-emerald-100 text-emerald-600' },
-    { name: 'Restaurants', label: 'Restaurants', icon: UtensilsCrossed, color: 'bg-red-100 text-red-600' },
-    { name: 'Churches & Faith', label: 'Churches & Faith', icon: Church, color: 'bg-violet-100 text-violet-600' },
+    { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
+    { name: 'Personal Care', label: 'Personal Care', icon: IconScissors, color: 'bg-pink-100 text-pink-600' },
+    { name: 'Auto', label: 'Auto', icon: IconCar, color: 'bg-indigo-100 text-indigo-600' },
+    { name: 'Healthcare', label: 'Healthcare', icon: IconStethoscope, color: 'bg-emerald-100 text-emerald-600' },
+    { name: 'Restaurants', label: 'Restaurants', icon: IconToolsKitchen2, color: 'bg-red-100 text-red-600' },
+    { name: 'Churches & Faith', label: 'Churches & Faith', icon: IconBuildingChurch, color: 'bg-violet-100 text-violet-600' },
   ];
 
   const handleSearch = (e: React.FormEvent) => {
@@ -42,7 +42,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
 
       {/* Hero Section */}
       <section
-        className="text-center md:text-left relative overflow-hidden rounded-3xl text-white px-4 py-8 md:px-10 md:py-14"
+        className="text-center relative overflow-hidden rounded-3xl text-white px-4 py-8 md:px-16 md:py-16"
         style={{ backgroundImage: "url('/images/lakebackground.png')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
       >
         {/* Dark overlay */}
@@ -51,53 +51,54 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
           style={{ background: 'linear-gradient(to right, rgba(10, 25, 50, 0.85), rgba(10, 25, 50, 0.60))' }}
         />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:gap-10">
+        {/* Content — mobile: stacked (logo top, content below) | desktop: centered column */}
+        <div className="relative z-10 flex flex-col items-center mx-auto w-full md:max-w-7xl">
 
           {/* Logo */}
-          <div className="flex-shrink-0 mb-4 md:mb-0 max-w-[187px] md:max-w-[360px] mx-auto md:mx-0">
+          <div className="max-w-[187px] mx-auto mb-4 md:max-w-[220px] md:mb-5">
             <img src="/images/townly.png" alt={tenant.displayName} className="w-full h-auto drop-shadow-2xl" />
           </div>
 
-          <div className="flex flex-col items-center md:items-start max-w-2xl">
-          <h1 className="text-xl md:text-4xl font-bold text-white mb-2 leading-tight">
-            What's happening in your town?
-          </h1>
-          <p className="text-white/75 text-sm md:text-base mb-6 font-medium leading-relaxed">
-            Discover local events, businesses, and updates from your neighbors.
-          </p>
+          {/* Text + actions */}
+          <div className="flex flex-col items-center w-full md:max-w-3xl">
+            <h1 className="text-xl md:text-5xl font-bold text-white leading-tight mb-2 md:mb-3">
+              What's happening in your town?
+            </h1>
+            <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-6">
+              Discover local events, businesses, and updates from your neighbors.
+            </p>
 
-          {/* CTA Buttons */}
-          <div className="hidden md:flex flex-row items-start gap-3 mb-6">
-            <Link
-              to="/spotlights"
-              className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-5 py-2 rounded-xl font-semibold text-sm shadow transition-all hover:scale-105 active:scale-95"
-            >
-              Browse Events
-            </Link>
-            <Link
-              to="/directory"
-              className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white/85 px-5 py-2 rounded-xl font-medium text-sm transition-all hover:scale-105 active:scale-95"
-            >
-              Find Local Businesses
-            </Link>
-          </div>
+            {/* CTA Buttons — hidden on mobile */}
+            <div className="hidden md:flex flex-row justify-center gap-3 mb-5">
+              <Link
+                to="/spotlights"
+                className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow transition-all hover:scale-105 active:scale-95"
+              >
+                Browse Events
+              </Link>
+              <Link
+                to="/directory"
+                className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white/85 px-6 py-2.5 rounded-xl font-medium text-sm transition-all hover:scale-105 active:scale-95"
+              >
+                Find Local Businesses
+              </Link>
+            </div>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="w-full relative mt-3 md:mt-0">
-            <input
-              type="text"
-              name="search"
-              placeholder="Search local businesses..."
-              className="w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
-              Search
-            </button>
-          </form>
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="w-full relative mt-3 md:mt-0 md:max-w-2xl">
+              <input
+                type="text"
+                name="search"
+                placeholder="Search businesses, events, or services in your town..."
+                className="w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:ring-2 focus:ring-orange-500 focus:bg-white text-white focus:text-slate-900 outline-none transition-all placeholder:text-slate-400 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
+                Search
+              </button>
+            </form>
           </div>
         </div>
       </section>
@@ -205,8 +206,8 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               to={`/directory?cat=${encodeURIComponent(cat.name)}`}
               className="group flex flex-col items-center p-4 md:p-6 bg-white border border-slate-100 rounded-2xl md:rounded-3xl shadow-sm hover:shadow-lg hover:border-orange-100 hover:-translate-y-1 transition-all duration-200 text-center"
             >
-              <div className={`${cat.color} w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-2 md:mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
-                {(() => { const Icon = cat.icon; return <Icon className="w-6 h-6 md:w-7 md:h-7" />; })()}
+              <div className={`${cat.color} bg-opacity-60 w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-2 md:mb-3 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200`}>
+                {(() => { const Icon = cat.icon; return <Icon className="w-7 h-7 md:w-8 md:h-8" stroke={1.5} />; })()}
               </div>
               <span className="font-semibold text-slate-700 text-xs md:text-sm leading-tight">{cat.label}</span>
             </Link>
