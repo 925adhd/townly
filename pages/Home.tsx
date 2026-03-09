@@ -50,7 +50,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
       {/* Hero Section */}
       <section
         className="text-center relative overflow-hidden rounded-3xl text-white px-4 py-8 md:px-16 md:py-16"
-        style={{ backgroundImage: "url('/images/lakebackground.png')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
+        style={{ backgroundImage: "url('/images/lakebackground.webp')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
       >
         {/* Dark overlay */}
         <div
@@ -63,7 +63,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
 
           {/* Logo */}
           <div className="max-w-[187px] mx-auto mb-4 md:max-w-[220px] md:mb-5">
-            <img src="/images/townly.png" alt={tenant.displayName} className="w-full h-auto drop-shadow-2xl" />
+            <img src="/images/townly.webp" alt={tenant.displayName} className="w-full h-auto drop-shadow-2xl" />
           </div>
 
           {/* Text + actions */}

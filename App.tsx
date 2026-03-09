@@ -91,7 +91,7 @@ const App: React.FC = () => {
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
                 <img
-                  src="/images/chair-icon.png"
+                  src="/images/chair-icon.webp"
                   alt={tenant.displayName}
                   className={`h-10 w-auto object-contain chair-icon${chairRocking ? ' rocking' : ''}`}
                   onClick={(e) => {
