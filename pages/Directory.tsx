@@ -54,6 +54,7 @@ interface DirectoryProps {
 }
 
 const SCROLL_KEY = 'directory_scroll';
+const FILTER_KEY = 'directory_filters';
 
 function levenshtein(a: string, b: string): number {
   const dp: number[] = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -203,8 +204,11 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     }
   };
 
-  // All filter state lives in the URL so back-navigation restores it
-  const query    = searchParams.get('q') || '';
+  // HashRouter stores params in the hash, not window.location.search.
+  // useSearchParams may not parse them correctly on back-navigation, so read from the hash directly.
+  const _hp = new URLSearchParams(window.location.hash.split('?')[1] || '');
+
+  const query    = searchParams.get('q') || _hp.get('q') || '';
 
   // Debounce search input → only update URL (and trigger filter) after typing stops
   useEffect(() => {
@@ -214,10 +218,10 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   // Sync local input if URL changes externally (e.g. browser back)
   useEffect(() => { setLocalQuery(query); }, [query]);
-  const category     = (searchParams.get('cat') as Category) || 'All';
-  const town         = (searchParams.get('town') as Town) || 'All';
-  const sortBy       = (searchParams.get('sort') as 'rating' | 'reviews' | 'newest') || 'rating';
-  const denomination = searchParams.get('denom') || 'All';
+  const category     = ((searchParams.get('cat') || _hp.get('cat')) as Category) || 'All';
+  const town         = ((searchParams.get('town') || _hp.get('town')) as Town) || 'All';
+  const sortBy       = ((searchParams.get('sort') || _hp.get('sort')) as 'rating' | 'reviews' | 'newest') || 'rating';
+  const denomination = searchParams.get('denom') || _hp.get('denom') || 'All';
 
   const towns: Town[] = tenant.towns;
   const categories: Category[] = ['Food & Drink', 'Shopping', 'Home Services', 'Automotive', 'Personal Care', 'Health & Medical', 'Professional Services', 'Housing & Rentals', 'Churches', 'Schools & Education', 'Government & Public Services', 'Events & Community', 'Parks & Recreation'];
@@ -232,7 +236,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     setSearchParams(next, { replace: true });
   }
 
-  // Restore scroll position when returning from a detail page
+  // Restore scroll position and filters when returning from a detail page
   const didRestore = useRef(false);
   useEffect(() => {
     if (didRestore.current) return;
@@ -241,6 +245,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
       window.scrollTo(0, 0);
       return;
     }
+    sessionStorage.removeItem(FILTER_KEY);
     const saved = sessionStorage.getItem(SCROLL_KEY);
     if (saved) {
       sessionStorage.removeItem(SCROLL_KEY);
@@ -296,6 +301,9 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   function handleProviderClick() {
     sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+    const filterStr = window.location.hash.split('?')[1] || '';
+    if (filterStr) sessionStorage.setItem(FILTER_KEY, filterStr);
+    else sessionStorage.removeItem(FILTER_KEY);
   }
 
   return (

@@ -744,10 +744,13 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <Link to="/directory" className="inline-flex items-center text-slate-500 hover:text-blue-600 font-medium text-sm transition-colors">
+      <button
+        onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/directory')}
+        className="inline-flex items-center text-slate-500 hover:text-blue-600 font-medium text-sm transition-colors"
+      >
         <i className="fas fa-arrow-left mr-2"></i>
         Back to Directory
-      </Link>
+      </button>
 
       {/* Header Info */}
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-row gap-4">
