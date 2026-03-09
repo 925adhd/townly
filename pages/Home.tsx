@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
 import { Provider, LostFoundPost, CommunityAlert } from '../types';
@@ -21,9 +21,24 @@ const isRecentlyAdded = (addedAt: Date) => (now.getTime() - addedAt.getTime()) <
 // Hardcoded event metadata — update dates when events change
 const featuredEvent = { date: new Date('2026-04-02'), addedAt: new Date('2026-03-08') };
 
+const PRELOAD_IMAGES = ['/images/lakebackground.webp', '/images/townly.webp'];
+
 const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => {
   const [search, setSearch] = useState('');
+  const [imagesReady, setImagesReady] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let loaded = 0;
+    PRELOAD_IMAGES.forEach((src) => {
+      const img = new Image();
+      img.onload = img.onerror = () => {
+        loaded++;
+        if (loaded === PRELOAD_IMAGES.length) setImagesReady(true);
+      };
+      img.src = src;
+    });
+  }, []);
 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
@@ -43,6 +58,14 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const latestLF = sortedPosts[0];
+
+  if (!imagesReady) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <i className="fas fa-spinner fa-spin text-3xl text-orange-500"></i>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
