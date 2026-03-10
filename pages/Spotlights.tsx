@@ -429,8 +429,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
       {/* Submit Event Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pb-20 sm:pb-4" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 overflow-y-auto max-h-[80vh] sm:max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">Post a Community Event</h3>
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
