@@ -77,8 +77,31 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function tagColor(tag: string): string {
+    const t = tag.toLowerCase();
+    if (t.includes('free')) return 'bg-emerald-100 text-emerald-700';
+    if (t.includes('community')) return 'bg-blue-100 text-blue-700';
+    if (t.includes('grand opening') || t.includes('business')) return 'bg-amber-100 text-amber-700';
+    if (t.includes('music')) return 'bg-purple-100 text-purple-700';
+    if (t.includes('food')) return 'bg-orange-100 text-orange-700';
+    if (t.includes('outdoor')) return 'bg-green-100 text-green-700';
+    if (t.includes('fundraiser')) return 'bg-rose-100 text-rose-700';
+    return 'bg-slate-100 text-slate-600';
+  }
+
+  const [eventSearch, setEventSearch] = useState('');
+
   const dbSpotlight = weekSubmissions.find(s => s.type === 'spotlight') ?? null;
   const dbFeatured = weekSubmissions.filter(s => s.type === 'featured');
+
+  const searchQ = eventSearch.trim().toLowerCase();
+  function matchesSearch(fields: (string | undefined | null)[]): boolean {
+    if (!searchQ) return true;
+    return fields.some(f => f?.toLowerCase().includes(searchQ));
+  }
+  const filteredSpotlight = dbSpotlight && matchesSearch([dbSpotlight.title, dbSpotlight.description, dbSpotlight.location, dbSpotlight.town, ...(dbSpotlight.tags ?? [])]) ? dbSpotlight : null;
+  const filteredFeatured = dbFeatured.filter((s: SpotlightBooking) => matchesSearch([s.title, s.description, s.location, s.town, ...(s.tags ?? [])]));
+  const filteredEvents = events.filter((ev: CommunityEvent) => matchesSearch([ev.title, ev.description, ev.location, ev.town]));
 
   return (
     <div className="space-y-10 pb-10 -mt-6 md:mt-0">
@@ -89,6 +112,27 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <p className="text-slate-500 text-sm">Events and announcements happening around {tenant.name} this week.</p>
       </div>
 
+      {/* Search */}
+      <div className="relative -mt-7">
+        <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+        <input
+          type="text"
+          value={eventSearch}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventSearch(e.target.value)}
+          placeholder="Search events…"
+          className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-sm"
+        />
+        {eventSearch && (
+          <button
+            type="button"
+            onClick={() => setEventSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            <i className="fas fa-times text-xs"></i>
+          </button>
+        )}
+      </div>
+
       {/* Current Spotlights */}
       <div>
         <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
@@ -96,41 +140,59 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         </p>
         <div className="grid gap-4">
 
-          {dbSpotlight ? (
+          {filteredSpotlight ? (
             /* ── DB-driven spotlight ── */
-            <div className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
-              {dbSpotlight.imageUrl && (
+            <div
+              className={`rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60 ${filteredSpotlight.flyerUrl ? 'cursor-pointer' : ''}`}
+              onClick={() => filteredSpotlight.flyerUrl && setDbFlyerUrl(filteredSpotlight.flyerUrl)}
+            >
+              {filteredSpotlight.imageUrl && (
                 <button
-                  onClick={() => dbSpotlight.flyerUrl && setDbFlyerUrl(dbSpotlight.flyerUrl)}
-                  className={`w-full block transition-opacity focus:outline-none ${dbSpotlight.flyerUrl ? 'hover:opacity-95 cursor-pointer' : 'cursor-default'}`}
-                  aria-label={dbSpotlight.flyerUrl ? 'View full flyer' : undefined}
+                  onClick={() => filteredSpotlight.flyerUrl && setDbFlyerUrl(filteredSpotlight.flyerUrl)}
+                  className={`w-full block transition-opacity focus:outline-none ${filteredSpotlight.flyerUrl ? 'hover:opacity-95 cursor-pointer' : 'cursor-default'}`}
+                  aria-label={filteredSpotlight.flyerUrl ? 'View full flyer' : undefined}
                 >
                   <img
-                    src={dbSpotlight.imageUrl}
-                    alt={dbSpotlight.title}
+                    src={filteredSpotlight.imageUrl}
+                    alt={filteredSpotlight.title}
                     loading="lazy"
                     className="w-full max-h-[260px] object-cover object-top"
                   />
                 </button>
               )}
               <div className="p-7 flex flex-col gap-3">
-                {dbSpotlight.eventDate && (
-                  <span className="text-slate-400 text-xs font-medium">{formatEventDate(dbSpotlight.eventDate)}</span>
+                {filteredSpotlight.eventDate && (
+                  <span className="text-slate-400 text-xs font-medium">{formatEventDate(filteredSpotlight.eventDate)}</span>
                 )}
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base leading-tight">{dbSpotlight.title}</h3>
-                  {dbSpotlight.location && (
+                  <h3 className="font-bold text-slate-900 text-base leading-tight">{filteredSpotlight.title}</h3>
+                  {filteredSpotlight.location && (
                     <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
-                      <i className="fas fa-map-marker-alt text-orange-400"></i> {dbSpotlight.location}
-                      {dbSpotlight.town && <span className="text-slate-300 mx-1">·</span>}
-                      {dbSpotlight.town}
+                      <i className="fas fa-map-marker-alt text-orange-400"></i> {filteredSpotlight.location}
+                      {filteredSpotlight.town && <span className="text-slate-300 mx-1">·</span>}
+                      {filteredSpotlight.town}
                     </p>
                   )}
                 </div>
-                <p className="text-slate-500 text-sm leading-relaxed">{dbSpotlight.description}</p>
-                {dbSpotlight.flyerUrl && (
+                <p className="text-slate-500 text-sm leading-relaxed">{filteredSpotlight.description}</p>
+                {(filteredSpotlight.eventTime || (filteredSpotlight.tags && filteredSpotlight.tags.length > 0)) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {filteredSpotlight.eventTime && (
+                      <>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <i className="fas fa-clock text-amber-400"></i> {filteredSpotlight.eventTime}
+                        </div>
+                        {filteredSpotlight.tags && filteredSpotlight.tags.length > 0 && <span className="text-slate-200">·</span>}
+                      </>
+                    )}
+                    {filteredSpotlight.tags?.map((tag: string) => (
+                      <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tagColor(tag)}`}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {filteredSpotlight.flyerUrl && (
                   <button
-                    onClick={() => setDbFlyerUrl(dbSpotlight.flyerUrl!)}
+                    onClick={() => setDbFlyerUrl(filteredSpotlight.flyerUrl!)}
                     className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
                   >
                     <i className="fas fa-file-image text-[10px]"></i> View Flyer
@@ -140,7 +202,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
           ) : (
             /* ── Hardcoded fallback spotlight ── */
-            <div id="disaster-summit" className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
+            <div
+              id="disaster-summit"
+              className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60 cursor-pointer"
+              onClick={() => setFlyerOpen(true)}
+            >
               <button
                 onClick={() => setFlyerOpen(true)}
                 className="w-full block hover:opacity-95 transition-opacity focus:outline-none"
@@ -192,10 +258,14 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <p className="text-slate-400 text-xs mb-4 px-1">Paid listings from local businesses and organizations this week.</p>
         <div className="grid md:grid-cols-2 gap-4">
 
-          {dbFeatured.length > 0 ? (
+          {filteredFeatured.length > 0 ? (
             /* ── DB-driven featured cards ── */
-            dbFeatured.map(sub => (
-              <div key={sub.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+            filteredFeatured.map((sub: SpotlightBooking) => (
+              <div
+                key={sub.id}
+                className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm ${sub.flyerUrl ? 'cursor-pointer' : ''}`}
+                onClick={() => sub.flyerUrl && setDbFlyerUrl(sub.flyerUrl!)}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
                   {sub.eventDate && <span className="text-slate-400 text-xs">{formatEventDate(sub.eventDate)}</span>}
@@ -211,6 +281,21 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   </p>
                 )}
                 <p className="text-slate-500 text-xs leading-relaxed">{sub.description}</p>
+                {(sub.eventTime || (sub.tags && sub.tags.length > 0)) && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {sub.eventTime && (
+                      <>
+                        <div className="flex items-center gap-1 text-xs text-slate-400">
+                          <i className="fas fa-clock text-amber-400 text-[10px]"></i> {sub.eventTime}
+                        </div>
+                        {sub.tags && sub.tags.length > 0 && <span className="text-slate-200">·</span>}
+                      </>
+                    )}
+                    {sub.tags?.map((tag: string) => (
+                      <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tagColor(tag)}`}>{tag}</span>
+                    ))}
+                  </div>
+                )}
                 {sub.flyerUrl && (
                   <button
                     onClick={() => setDbFlyerUrl(sub.flyerUrl!)}
@@ -225,7 +310,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             /* ── Hardcoded fallback featured cards ── */
             <>
               {/* Kids Entrepreneur Fair */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm cursor-pointer" onClick={() => setEntrepreneurOpen(true)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
                   <span className="text-slate-400 text-xs">Mar 27, 2026</span>
@@ -255,7 +340,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </div>
 
               {/* UPS Store Ribbon Cutting */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm cursor-pointer" onClick={() => setUpsOpen(true)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
                   <span className="text-slate-400 text-xs">Mar 2, 2026</span>
@@ -291,10 +376,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* ── Community Events ── */}
       <div>
         <div className="flex items-center justify-between mb-1 px-1">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
-            <p className="text-slate-400 text-xs mt-0.5">Free events posted by neighbors and organizations. <em>Community posts are text-only unless upgraded to Featured.</em></p>
-          </div>
+          <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
           {user ? (
             <button
               onClick={() => { setShowForm(true); setSubmitted(false); }}
@@ -311,6 +393,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </Link>
           )}
         </div>
+        <p className="text-slate-400 text-xs mb-3 px-1">Free · text-only unless upgraded to Featured.</p>
 
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
@@ -321,14 +404,14 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
         {loadingEvents ? (
           <div className="text-center py-8 text-slate-400 text-sm">Loading events...</div>
-        ) : events.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
             <i className="fas fa-calendar-plus text-2xl mb-3 block text-slate-200"></i>
-            No community events yet. Be the first to post one!
+            {searchQ ? 'No events match your search.' : <><div>No community events yet.</div><div className="mt-1">Be the first to post one →</div></>}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {events.map(ev => (
+            {filteredEvents.map((ev: CommunityEvent) => (
               <div key={ev.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">Community Event</span>
@@ -361,7 +444,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-xl font-bold text-slate-900">Weekly Spotlight</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The most visible placement on Townly. Your event is pinned at the very top of the <strong>Home page and Events page</strong> for every neighbor who visits this week.
+              The most visible placement on Townly. Your event is pinned at the very top of the <strong>Home page and Events page</strong> for everyone in {tenant.name} who visits this week.
             </p>
             <div className="pt-1">
               <span className="text-3xl font-bold text-amber-600">$25</span>
@@ -369,7 +452,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <ul className="space-y-1.5 text-sm text-slate-600">
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the Home page and Events page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Gold highlighted spotlight card that stands out</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Amber-gold highlighted spotlight card that stands out</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large banner image displayed on the event listing</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Clickable flyer image for full details</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Thumbnail preview shown on the home page</li>

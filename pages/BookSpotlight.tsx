@@ -80,12 +80,34 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const [bookedWeeks, setBookedWeeks] = useState<{ spotlight: string[]; featured: { week: string; count: number }[] } | null>(null);
   const [weekStart, setWeekStart] = useState('');
   const [title, setTitle] = useState('');
+  const [teaser, setTeaser] = useState('');
   const [desc, setDesc] = useState('');
   const [eventDate, setEventDate] = useState('');
-  const [eventTime, setEventTime] = useState('');
+  const [noDate, setNoDate] = useState(false);   // "No specific date"
+  const [allDay, setAllDay] = useState(false);         // event runs all day
+  const [noSetTime, setNoSetTime] = useState(false);   // no specific time at all
+  const [noTown, setNoTown] = useState(false);   // "No physical location"
+  // Structured time picker state — combined into eventTime string on submit
+  const [startHour, setStartHour] = useState('');
+  const [startMin, setStartMin] = useState('00');
+  const [startAmPm, setStartAmPm] = useState('AM');
+  const [endHour, setEndHour] = useState('');
+  const [endMin, setEndMin] = useState('00');
+  const [endAmPm, setEndAmPm] = useState('PM');
+  const [hasEndTime, setHasEndTime] = useState(false);
+  // Derived formatted string e.g. "4:30 – 6:30 PM" or "10:00 AM"
+  function buildEventTime(): string {
+    if (!startHour) return '';
+    const start = `${startHour}:${startMin} ${startAmPm}`;
+    if (!hasEndTime || !endHour) return start;
+    // Omit redundant AM/PM on start if both share the same period
+    const startLabel = startAmPm === endAmPm ? `${startHour}:${startMin}` : start;
+    return `${startLabel} – ${endHour}:${endMin} ${endAmPm}`;
+  }
+  const eventTime = buildEventTime();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [location, setLocation] = useState('');
-  const [town, setTown] = useState(tenant.towns[0] ?? '');
+  const [town, setTown] = useState('');
   // Images
   const [sameImage, setSameImage] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -101,6 +123,11 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [previewFlyerOpen, setPreviewFlyerOpen] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -141,6 +168,23 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
     if (ref.current) ref.current.value = '';
   }
 
+  function tagColor(tag: string): string {
+    const t = tag.toLowerCase();
+    if (t.includes('free')) return 'bg-emerald-100 text-emerald-700';
+    if (t.includes('community')) return 'bg-blue-100 text-blue-700';
+    if (t.includes('grand opening') || t.includes('business')) return 'bg-amber-100 text-amber-700';
+    if (t.includes('music')) return 'bg-purple-100 text-purple-700';
+    if (t.includes('food')) return 'bg-orange-100 text-orange-700';
+    if (t.includes('outdoor')) return 'bg-green-100 text-green-700';
+    if (t.includes('fundraiser')) return 'bg-rose-100 text-rose-700';
+    return 'bg-slate-100 text-slate-600';
+  }
+
+  function formatEventDate(dateStr: string) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!tos) { setError('Please agree to the content policy.'); return; }
@@ -167,6 +211,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         user.name, user.email ?? '', '',
         bannerUrl, thumbnailUrl, flyerUrl,
         selectedTags,
+        bookingType === 'spotlight' ? teaser : undefined,
       );
       setSuccess(true);
       window.scrollTo(0, 0);
@@ -205,9 +250,18 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         >
           <i className="fas fa-arrow-left text-sm"></i>
         </button>
+        {bookingType === 'spotlight' ? (
+          <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-star text-amber-500"></i>
+          </div>
+        ) : (
+          <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+            <i className="fas fa-bullhorn text-slate-400"></i>
+          </div>
+        )}
         <div>
           <h1 className="text-xl font-bold text-slate-900">
-            {bookingType === 'spotlight' ? '⭐ Book a Weekly Spotlight' : '📣 Get Featured This Week'}
+            {bookingType === 'spotlight' ? 'Book a Weekly Spotlight' : 'Get Featured This Week'}
           </h1>
           <p className="text-xs text-slate-400">
             {bookingType === 'spotlight' ? '$25 / week · Only 1 available per week' : '$5 / week · Up to 5 available per week'}
@@ -219,9 +273,10 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
 
         {/* Week */}
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
             Select Week <span className="text-red-400">*</span>
           </label>
+          <p className="text-xs text-slate-400 mb-2">Weeks available up to 2 months in advance.</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {getUpcomingWeeks().map(week => {
               const iso = weekIsoDate(week);
@@ -274,52 +329,167 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           />
         </div>
 
-        {/* Description */}
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-            Description <span className="text-red-400">*</span>
-          </label>
-          <textarea
-            required
-            rows={3}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
-            placeholder="What should people know?"
-            value={desc}
-            onChange={e => setDesc(e.target.value)}
-          />
-        </div>
+        {/* Description — spotlight gets two fields; featured gets one */}
+        {bookingType === 'spotlight' ? (
+          <>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+                Home Page Teaser <span className="text-red-400">*</span>
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">Short hook shown on the home page preview — keep it punchy. Max 120 characters.</p>
+              <textarea
+                required
+                rows={2}
+                maxLength={120}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
+                placeholder="e.g. Free admission. Open to all ages. Don't miss it!"
+                value={teaser}
+                onChange={e => setTeaser(e.target.value)}
+              />
+              <p className="text-[11px] text-slate-400 text-right mt-0.5">{teaser.length}/120</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+                Full Description <span className="text-red-400">*</span>
+              </label>
+              <p className="text-[11px] text-slate-400 mb-2">Shown on the Events page. Include all the details. Max 600 characters.</p>
+              <textarea
+                required
+                rows={4}
+                maxLength={600}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
+                placeholder="What's happening, who should come, what to expect…"
+                value={desc}
+                onChange={e => setDesc(e.target.value)}
+              />
+              <p className="text-[11px] text-slate-400 text-right mt-0.5">{desc.length}/600</p>
+            </div>
+          </>
+        ) : (
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+              Description <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              required
+              rows={3}
+              maxLength={600}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
+              placeholder="What should people know?"
+              value={desc}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDesc(e.target.value)}
+            />
+            <p className="text-[11px] text-slate-400 text-right mt-0.5">{desc.length}/600</p>
+          </div>
+        )}
 
         {/* Date + Time + Town */}
         <div className="grid grid-cols-2 gap-3">
+
+          {/* Event Date */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Date</label>
-            <input
-              type="date"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-              value={eventDate}
-              onChange={e => setEventDate(e.target.value)}
-            />
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Date <span className="text-red-400">*</span></label>
+            {!noDate ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (eventDate) {
+                    const [y, m] = eventDate.split('-').map(Number);
+                    setCalYear(y); setCalMonth(m - 1);
+                  }
+                  setDatePickerOpen(true);
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-left flex items-center gap-2 hover:border-orange-300 focus:ring-2 focus:ring-orange-400 outline-none transition-colors"
+              >
+                <i className="fas fa-calendar text-amber-400 text-xs flex-shrink-0"></i>
+                <span className={eventDate ? 'text-slate-900 font-medium' : 'text-slate-400'}>
+                  {eventDate ? formatEventDate(eventDate) : 'Tap to set date…'}
+                </span>
+                {eventDate && <i className="fas fa-pencil-alt text-slate-300 text-[10px] ml-auto"></i>}
+              </button>
+            ) : (
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-400 italic">No specific date</div>
+            )}
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={noDate}
+                onChange={e => { setNoDate(e.target.checked); if (e.target.checked) setEventDate(''); }}
+                className="accent-orange-500"
+              />
+              <span className="text-xs text-slate-500">No specific date (ongoing or recurring)</span>
+            </label>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Time</label>
-            <input
-              type="text"
-              placeholder="e.g. 4:30 – 6:30 PM"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-              value={eventTime}
-              onChange={e => setEventTime(e.target.value)}
-            />
+
+          {/* Event Time */}
+          <div className="col-span-2 sm:col-span-1">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Time <span className="text-red-400">*</span></label>
+            {!(allDay || noSetTime) ? (
+              <button
+                type="button"
+                onClick={() => setTimePickerOpen(true)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-left flex items-center gap-2 hover:border-orange-300 focus:ring-2 focus:ring-orange-400 outline-none transition-colors"
+              >
+                <i className="fas fa-clock text-amber-400 text-xs flex-shrink-0"></i>
+                <span className={eventTime ? 'text-slate-900 font-medium' : 'text-slate-400'}>
+                  {eventTime || 'Tap to set time…'}
+                </span>
+                {eventTime && <i className="fas fa-pencil-alt text-slate-300 text-[10px] ml-auto"></i>}
+              </button>
+            ) : (
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-400 italic">
+                {allDay ? 'All day' : 'No set time'}
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5 mt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allDay}
+                  onChange={e => { setAllDay(e.target.checked); if (e.target.checked) { setNoSetTime(false); setStartHour(''); setHasEndTime(false); setEndHour(''); } }}
+                  className="accent-orange-500"
+                />
+                <span className="text-xs text-slate-500">All day</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={noSetTime}
+                  onChange={e => { setNoSetTime(e.target.checked); if (e.target.checked) { setAllDay(false); setStartHour(''); setHasEndTime(false); setEndHour(''); } }}
+                  className="accent-orange-500"
+                />
+                <span className="text-xs text-slate-500">No set time</span>
+              </label>
+            </div>
           </div>
+
+          {/* Town */}
           <div className="col-span-2 md:col-span-1">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
-            <select
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-              value={town}
-              onChange={e => setTown(e.target.value)}
-            >
-              {tenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town <span className="text-red-400">*</span></label>
+            {!noTown ? (
+              <select
+                disabled={noTown}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none disabled:opacity-40"
+                value={town}
+                onChange={e => setTown(e.target.value)}
+              >
+                <option value="">Select a town…</option>
+                {tenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            ) : (
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-400 italic">No physical location</div>
+            )}
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={noTown}
+                onChange={e => { setNoTown(e.target.checked); if (e.target.checked) setTown(''); }}
+                className="accent-orange-500"
+              />
+              <span className="text-xs text-slate-500">Online or no specific location</span>
+            </label>
           </div>
+
         </div>
 
         {/* Tags / Pills */}
@@ -352,7 +522,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue</label>
           <input
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-            placeholder="e.g. Courthouse Square, Leitchfield"
+            placeholder="e.g. Centre on Main or 425 S. Main St — no need to include the town"
             value={location}
             onChange={e => setLocation(e.target.value)}
           />
@@ -360,27 +530,41 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
 
         {/* Images */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Images{bookingType === 'spotlight' && <span className="text-red-400 ml-1">*</span>}
-            </p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={sameImage}
-                onChange={e => setSameImage(e.target.checked)}
-                className="accent-orange-500"
-              />
-              <span className="text-xs text-slate-500">I only have one image</span>
-            </label>
-          </div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            {bookingType === 'spotlight' ? 'Images' : 'Image'}{bookingType === 'spotlight' && <span className="text-red-400 ml-1">*</span>}
+          </p>
 
           {/* Hidden file inputs */}
           <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={makeImageHandler(setBannerFile, setBannerPreview)} />
           <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={makeImageHandler(setThumbFile, setThumbPreview)} />
           <input ref={flyerRef} type="file" accept="image/*" className="hidden" onChange={makeImageHandler(setFlyerFile, setFlyerPreview)} />
 
-          {sameImage ? (
+          {/* Spotlight only: "same image" toggle — shown before the slots */}
+          {bookingType === 'spotlight' && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sameImage}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSameImage(e.target.checked)}
+                className="accent-orange-500"
+              />
+              <span className="text-xs text-slate-500">I only have one image (use for all slots)</span>
+            </label>
+          )}
+
+          {bookingType === 'featured' ? (
+            /* Featured: single flyer image only */
+            <ImageUploadSlot
+              label="Flyer / Image"
+              sublabel="Shown on the card and opens full-size when tapped"
+              preview={flyerPreview}
+              onPick={() => flyerRef.current?.click()}
+              onClear={() => clearImage(setFlyerFile, setFlyerPreview, flyerRef)}
+              aspectHint="Any aspect ratio · portrait recommended"
+              aspectClass="max-h-48"
+            />
+          ) : sameImage ? (
+            /* Spotlight — same image for all slots */
             <ImageUploadSlot
               label="Image"
               sublabel="Used for banner, thumbnail, and flyer"
@@ -390,6 +574,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
               aspectHint="Any aspect ratio"
             />
           ) : (
+            /* Spotlight — separate images */
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ImageUploadSlot
                 label="Banner — 16:9 landscape"
@@ -422,6 +607,158 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           )}
         </div>
 
+        {/* Live Preview */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Card Preview</p>
+            <span className="text-[10px] text-slate-300 font-medium">Updates as you fill in the form</span>
+          </div>
+
+          {bookingType === 'spotlight' ? (
+            <div className="space-y-4">
+              {/* Spotlight — Home page preview */}
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Home page</p>
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
+                <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100 bg-amber-100/60">
+                  {(sameImage ? bannerPreview : thumbPreview || bannerPreview) ? (
+                    <img
+                      src={sameImage ? bannerPreview : (thumbPreview || bannerPreview)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: 'center 15%' }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-amber-300">
+                      <i className="fas fa-image text-xl"></i>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col flex-1 gap-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Weekly Spotlight</span>
+                  </div>
+                  {eventDate && (
+                    <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
+                      <i className="fas fa-calendar text-amber-500 text-[10px]"></i>
+                      {formatEventDate(eventDate)}
+                      {(eventTime || allDay || noSetTime) && (
+                        <span className="text-amber-600"> · {allDay ? 'All day' : noSetTime ? 'No set time' : eventTime}</span>
+                      )}
+                    </span>
+                  )}
+                  <h3 className="font-bold text-slate-900 text-xl leading-tight">
+                    {title || <span className="text-slate-300 italic font-normal text-base">Your event title…</span>}
+                  </h3>
+                  {(location || town) && (
+                    <p className="text-slate-500 text-xs flex items-center gap-1">
+                      <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i>
+                      {location}{location && town && <span className="text-slate-300 mx-1">·</span>}{town}
+                    </p>
+                  )}
+                  <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">
+                    {desc || <span className="italic text-slate-300">Your description will appear here…</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Spotlight — Events page card */}
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest pt-1">Events page</p>
+              <div className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
+                {bannerPreview ? (
+                  <img src={bannerPreview} alt="preview" className="w-full max-h-[260px] object-cover object-top" />
+                ) : (
+                  <div className="w-full h-32 bg-amber-100/60 flex items-center justify-center text-amber-300">
+                    <i className="fas fa-image text-3xl"></i>
+                  </div>
+                )}
+                <div className="p-7 flex flex-col gap-3">
+                  {eventDate && (
+                    <span className="text-slate-400 text-xs font-medium">{formatEventDate(eventDate)}</span>
+                  )}
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base leading-tight">
+                      {title || <span className="text-slate-300 italic font-normal">Your event title…</span>}
+                    </h3>
+                    {(location || town) && (
+                      <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="fas fa-map-marker-alt text-orange-400"></i>
+                        {location}{location && town && <span className="text-slate-300 mx-1">·</span>}{town}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-slate-500 text-sm leading-relaxed">
+                    {desc || <span className="italic text-slate-300">Your description will appear here…</span>}
+                  </p>
+                  {(eventTime || allDay || noSetTime || selectedTags.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(eventTime || allDay || noSetTime) && (
+                        <>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <i className="fas fa-clock text-amber-400"></i>
+                            {allDay ? 'All day' : noSetTime ? 'No set time' : eventTime}
+                          </div>
+                          {selectedTags.length > 0 && <span className="text-slate-200">·</span>}
+                        </>
+                      )}
+                      {selectedTags.map((tag: string) => (
+                        <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tagColor(tag)}`}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  {flyerPreview && (
+                    <button type="button" onClick={() => setPreviewFlyerOpen(true)} className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1">
+                      <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
+                {eventDate && <span className="text-slate-400 text-xs">{formatEventDate(eventDate)}</span>}
+              </div>
+              {flyerPreview && (
+                <img src={flyerPreview} alt="preview" className="w-full max-h-[160px] object-cover rounded-xl" />
+              )}
+              <h3 className="font-bold text-slate-900 text-sm leading-tight">
+                {title || <span className="text-slate-300 italic font-normal">Your event title…</span>}
+              </h3>
+              {(location || town) && (
+                <p className="text-slate-500 text-xs flex items-center gap-1">
+                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i>
+                  {location}{location && town && <span className="text-slate-300 mx-1">·</span>}{town}
+                </p>
+              )}
+              <p className="text-slate-500 text-xs leading-relaxed">
+                {desc || <span className="italic text-slate-300">Your description will appear here…</span>}
+              </p>
+              {(eventTime || allDay || noSetTime || selectedTags.length > 0) && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(eventTime || allDay || noSetTime) && (
+                    <>
+                      <div className="flex items-center gap-1 text-xs text-slate-400">
+                        <i className="fas fa-clock text-amber-400 text-[10px]"></i>
+                        {allDay ? 'All day' : noSetTime ? 'No set time' : eventTime}
+                      </div>
+                      {selectedTags.length > 0 && <span className="text-slate-200">·</span>}
+                    </>
+                  )}
+                  {selectedTags.map((tag: string) => (
+                    <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tagColor(tag)}`}>{tag}</span>
+                  ))}
+                </div>
+              )}
+              {flyerPreview && (
+                <button type="button" onClick={() => setPreviewFlyerOpen(true)} className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1">
+                  <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* ToS */}
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" checked={tos} onChange={e => setTos(e.target.checked)} className="mt-0.5 flex-shrink-0 accent-orange-500" />
@@ -445,13 +782,209 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
 
         <button
           type="submit"
-          disabled={submitting || !tos || !weekStart}
+          disabled={submitting || !tos || !weekStart || (!town && !noTown) || (!eventDate && !noDate) || (!eventTime && !allDay && !noSetTime)}
           className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl shadow-sm transition-colors text-sm"
         >
           {submitting ? 'Submitting...' : `Submit for Review — ${bookingType === 'spotlight' ? '$25' : '$5'}`}
         </button>
 
       </form>
+
+      {/* Date Picker Modal */}
+      {datePickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 pb-8 sm:pb-4" onClick={() => setDatePickerOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900">Event Date</h3>
+              <button type="button" onClick={() => setDatePickerOpen(false)} className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            {/* Month navigation */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear((y: number) => y - 1); } else setCalMonth((m: number) => m - 1); }}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+              >
+                <i className="fas fa-chevron-left text-xs"></i>
+              </button>
+              <span className="font-bold text-slate-900 text-sm">
+                {new Date(calYear, calMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                type="button"
+                onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear((y: number) => y + 1); } else setCalMonth((m: number) => m + 1); }}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+              >
+                <i className="fas fa-chevron-right text-xs"></i>
+              </button>
+            </div>
+
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-1">
+              {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                <div key={d} className="text-center text-[10px] font-bold text-slate-400 py-1">{d}</div>
+              ))}
+              {/* Leading empty cells */}
+              {Array.from({ length: new Date(calYear, calMonth, 1).getDay() }).map((_, i) => (
+                <div key={`e${i}`} />
+              ))}
+              {/* Day buttons */}
+              {Array.from({ length: new Date(calYear, calMonth + 1, 0).getDate() }, (_, i) => i + 1).map(day => {
+                const iso = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const isSelected = eventDate === iso;
+                const isToday = iso === new Date().toLocaleDateString('en-CA');
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setEventDate(iso)}
+                    className={`w-full aspect-square rounded-xl text-sm font-semibold transition-all flex items-center justify-center ${
+                      isSelected
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : isToday
+                        ? 'bg-amber-50 text-amber-700 border border-amber-300'
+                        : 'hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected date preview */}
+            {eventDate && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+                <i className="fas fa-calendar text-amber-400"></i>
+                <span className="font-semibold text-slate-800">{formatEventDate(eventDate)}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setDatePickerOpen(false)}
+              disabled={!eventDate}
+              className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+            >
+              {eventDate ? 'Confirm' : 'Select a date to continue'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Time Picker Modal */}
+      {timePickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 pb-8 sm:pb-4" onClick={() => setTimePickerOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900">Event Time</h3>
+              <button type="button" onClick={() => setTimePickerOpen(false)} className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            {/* Start time */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Start Time</p>
+              <div className="grid grid-cols-6 gap-1.5">
+                {['1','2','3','4','5','6','7','8','9','10','11','12'].map(h => (
+                  <button key={h} type="button" onClick={() => setStartHour(h)}
+                    className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${startHour === h ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                    {h}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {['00','15','30','45'].map(m => (
+                  <button key={m} type="button" onClick={() => setStartMin(m)}
+                    className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${startMin === m ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                    :{m}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['AM','PM'] as const).map(p => (
+                  <button key={p} type="button" onClick={() => setStartAmPm(p)}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${startAmPm === p ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* End time */}
+            {!hasEndTime ? (
+              <button type="button" onClick={() => setHasEndTime(true)} className="text-xs text-orange-500 hover:text-orange-600 font-semibold flex items-center gap-1">
+                <i className="fas fa-plus text-[10px]"></i> Add end time
+              </button>
+            ) : (
+              <div className="space-y-3 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">End Time</p>
+                  <button type="button" onClick={() => { setHasEndTime(false); setEndHour(''); }} className="text-[11px] text-slate-400 hover:text-red-400 font-semibold">Remove</button>
+                </div>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {['1','2','3','4','5','6','7','8','9','10','11','12'].map(h => (
+                    <button key={h} type="button" onClick={() => setEndHour(h)}
+                      className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${endHour === h ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                      {h}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {['00','15','30','45'].map(m => (
+                    <button key={m} type="button" onClick={() => setEndMin(m)}
+                      className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${endMin === m ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                      :{m}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['AM','PM'] as const).map(p => (
+                    <button key={p} type="button" onClick={() => setEndAmPm(p)}
+                      className={`py-2.5 rounded-xl text-sm font-bold transition-all ${endAmPm === p ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Live preview inside modal */}
+            {eventTime && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+                <i className="fas fa-clock text-amber-400"></i>
+                <span className="font-semibold text-slate-800">{eventTime}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setTimePickerOpen(false)}
+              disabled={!startHour}
+              className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+            >
+              {startHour ? 'Confirm' : 'Select an hour to continue'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Preview flyer lightbox */}
+      {previewFlyerOpen && flyerPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setPreviewFlyerOpen(false)}>
+          <div className="relative max-w-lg w-full" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <button onClick={() => setPreviewFlyerOpen(false)} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10">
+              <i className="fas fa-times text-sm"></i>
+            </button>
+            <img src={flyerPreview} alt="Flyer preview" className="w-full rounded-2xl shadow-2xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

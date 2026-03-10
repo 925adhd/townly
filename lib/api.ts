@@ -1345,6 +1345,7 @@ export async function submitSpotlightBooking(
   thumbnailUrl?: string,
   flyerUrl?: string,
   tags?: string[],
+  teaser?: string,
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
@@ -1354,7 +1355,8 @@ export async function submitSpotlightBooking(
     tenant_id: tenant.id,
     type,
     title: sanitize(title, 200),
-    description: sanitize(description, 2000),
+    teaser: teaser ? sanitize(teaser, 120) : null,
+    description: sanitize(description, 600),
     week_start: weekStart,
     event_date: eventDate || null,
     event_time: eventTime ? sanitize(eventTime, 50) : null,
@@ -1381,7 +1383,13 @@ export async function submitSpotlightBooking(
 /** Fetch approved submissions for the current week (public — used to render Events page). */
 export async function fetchCurrentWeekSubmissions(): Promise<SpotlightBooking[]> {
   const tenant = getCurrentTenant();
-  const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
+  // Compute the current week's Sunday in Central Time (America/Chicago)
+  // so the cutover always happens at exactly 12:00 AM CT, not the visitor's local time.
+  const centralDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); // YYYY-MM-DD
+  const [y, m, d] = centralDateStr.split('-').map(Number);
+  const centralDate = new Date(y, m - 1, d);
+  centralDate.setDate(centralDate.getDate() - centralDate.getDay()); // rewind to Sunday
+  const weekStart = centralDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
   const { data, error } = await supabase
     .from('paid_submissions')
     .select('*')
@@ -1430,6 +1438,7 @@ export async function updateSpotlightBooking(
   id: string,
   updates: {
     title?: string;
+    teaser?: string;
     description?: string;
     eventDate?: string;
     eventTime?: string;
@@ -1442,7 +1451,8 @@ export async function updateSpotlightBooking(
 ): Promise<SpotlightBooking> {
   const payload: Record<string, any> = {};
   if (updates.title !== undefined) payload.title = sanitize(updates.title, 150);
-  if (updates.description !== undefined) payload.description = sanitize(updates.description, 1000);
+  if (updates.teaser !== undefined) payload.teaser = updates.teaser ? sanitize(updates.teaser, 120) : null;
+  if (updates.description !== undefined) payload.description = sanitize(updates.description, 600);
   if (updates.eventDate !== undefined) payload.event_date = updates.eventDate || null;
   if (updates.eventTime !== undefined) payload.event_time = updates.eventTime ? sanitize(updates.eventTime, 50) : null;
   if (updates.tags !== undefined) payload.tags = updates.tags;
@@ -1462,6 +1472,7 @@ function mapSpotlightBooking(row: Record<string, any>): SpotlightBooking {
     tenantId: row.tenant_id,
     type: row.type,
     title: row.title,
+    teaser: row.teaser ?? undefined,
     description: row.description,
     eventDate: row.event_date ?? undefined,
     eventTime: row.event_time ?? undefined,

@@ -205,7 +205,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                       <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {currentSpotlight.location}
                     </p>
                   )}
-                  <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">{currentSpotlight.description}</p>
+                  <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">{currentSpotlight.teaser ?? currentSpotlight.description}</p>
                 </>
               ) : (
                 <>
@@ -251,7 +251,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
             </div>
 
             {/* Lost & Found Card */}
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+            <Link to="/lost-found" className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               {latestLF ? (
                 <>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest self-start mb-2 ${
@@ -264,9 +264,9 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                     <i className="fas fa-map-marker-alt mr-1 text-orange-400"></i>
                     {latestLF.locationDescription}
                   </p>
-                  <Link to="/lost-found" className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold hover:underline">
+                  <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
                     View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
-                  </Link>
+                  </span>
                 </>
               ) : (
                 <>
@@ -276,9 +276,12 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                   <p className="text-slate-400 text-xs leading-relaxed mt-1">
                     No lost or found items reported today.
                   </p>
+                  <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
+                    View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
+                  </span>
                 </>
               )}
-            </div>
+            </Link>
 
           </div>
         </div>

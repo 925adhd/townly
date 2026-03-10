@@ -133,7 +133,8 @@ export interface SpotlightBooking {
   tenantId: string;
   type: 'spotlight' | 'featured';
   title: string;
-  description: string;
+  teaser?: string;       // short home-page hook (≤120 chars)
+  description: string;   // full events-page copy
   eventDate?: string;
   eventTime?: string;
   tags?: string[];

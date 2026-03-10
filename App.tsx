@@ -56,7 +56,7 @@ const App: React.FC = () => {
   // Sync auth session
   useEffect(() => {
     const loadUser = async (supabaseUser: { id: string; user_metadata?: any; email?: string }) => {
-      const name = supabaseUser.user_metadata?.name || supabaseUser.email || 'Neighbor';
+      const name = supabaseUser.user_metadata?.name || supabaseUser.email || 'User';
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
@@ -116,8 +116,8 @@ const App: React.FC = () => {
             </Link>
 
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Businesses</Link>
               <Link to="/spotlights" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
+              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Businesses</Link>
               <Link to="/lost-found" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Lost & Found</Link>
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
@@ -191,9 +191,9 @@ const App: React.FC = () => {
               <i className="fas fa-search text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Businesses</span>
             </Link>
-            <Link to="/lost-found" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
-              <i className="fas fa-paw text-lg"></i>
-              <span className="text-[10px] mt-1 font-medium">Lost/Found</span>
+            <Link to="/spotlights" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+              <i className="fas fa-calendar-alt text-lg"></i>
+              <span className="text-[10px] mt-1 font-medium">Events</span>
             </Link>
             <Link to="/ask" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
               <i className="fas fa-comments text-lg"></i>
