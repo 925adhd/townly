@@ -1341,6 +1341,8 @@ export async function submitSpotlightBooking(
   contactEmail: string,
   contactPhone: string,
   imageUrl: string,
+  thumbnailUrl?: string,
+  flyerUrl?: string,
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
@@ -1359,6 +1361,8 @@ export async function submitSpotlightBooking(
     contact_email: sanitize(contactEmail, 200),
     contact_phone: sanitize(contactPhone, 30),
     image_url: imageUrl || null,
+    thumbnail_url: thumbnailUrl || null,
+    flyer_url: flyerUrl || null,
     submitted_by: session.user.id,
     submitted_by_name: session.user.user_metadata?.full_name || session.user.email || 'Unknown',
     status: 'pending_review',
@@ -1409,6 +1413,8 @@ function mapSpotlightBooking(row: Record<string, any>): SpotlightBooking {
     location: row.location ?? undefined,
     town: row.town ?? undefined,
     imageUrl: row.image_url ?? undefined,
+    thumbnailUrl: row.thumbnail_url ?? undefined,
+    flyerUrl: row.flyer_url ?? undefined,
     contactName: row.contact_name,
     contactEmail: row.contact_email,
     contactPhone: row.contact_phone ?? undefined,

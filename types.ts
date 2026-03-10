@@ -137,7 +137,9 @@ export interface SpotlightBooking {
   eventDate?: string;
   location?: string;
   town?: string;
-  imageUrl?: string;
+  imageUrl?: string;      // banner (16:9, Events page card)
+  thumbnailUrl?: string;  // square (1:1, Home page preview)
+  flyerUrl?: string;      // portrait (3:4, clickable full flyer)
   contactName: string;
   contactEmail: string;
   contactPhone?: string;
