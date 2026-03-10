@@ -103,7 +103,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               What's happening in your town?
             </h1>
             <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-6">
-              Discover local events, businesses, and updates from your neighbors.
+              Discover local events, businesses, and updates from the community.
             </p>
 
             {/* CTA Buttons — hidden on mobile */}
@@ -315,7 +315,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
           <h2 className="text-xl md:text-3xl font-bold text-slate-900 mb-3 md:mb-4">Your Voice Helps This Community</h2>
           <p className="text-slate-500 mb-5 md:mb-8 text-sm md:text-base leading-[1.6]">
             Know a business worth listing? Add them to the directory.<br />
-            Looking for a local business? Ask your neighbors.
+            Looking for a local business? Ask the community.
           </p>
           <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3">
             <Link to="/add-provider" className="w-full md:w-auto text-center bg-blue-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-2xl font-bold shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">

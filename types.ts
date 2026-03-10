@@ -135,6 +135,8 @@ export interface SpotlightBooking {
   title: string;
   description: string;
   eventDate?: string;
+  eventTime?: string;
+  tags?: string[];
   location?: string;
   town?: string;
   imageUrl?: string;      // banner (16:9, Events page card)

@@ -1335,6 +1335,7 @@ export async function submitSpotlightBooking(
   description: string,
   weekStart: string,
   eventDate: string,
+  eventTime: string,
   location: string,
   town: string,
   contactName: string,
@@ -1343,6 +1344,7 @@ export async function submitSpotlightBooking(
   imageUrl: string,
   thumbnailUrl?: string,
   flyerUrl?: string,
+  tags?: string[],
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
@@ -1355,6 +1357,8 @@ export async function submitSpotlightBooking(
     description: sanitize(description, 2000),
     week_start: weekStart,
     event_date: eventDate || null,
+    event_time: eventTime ? sanitize(eventTime, 50) : null,
+    tags: tags ?? [],
     location: sanitize(location, 300),
     town: sanitize(town, 100),
     contact_name: sanitize(contactName, 100),
@@ -1417,6 +1421,41 @@ export async function updateSpotlightBookingStatus(
   if (error) throw new Error(error.message);
 }
 
+export async function deleteSpotlightBooking(id: string): Promise<void> {
+  const { error } = await supabase.from('paid_submissions').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateSpotlightBooking(
+  id: string,
+  updates: {
+    title?: string;
+    description?: string;
+    eventDate?: string;
+    eventTime?: string;
+    tags?: string[];
+    location?: string;
+    town?: string;
+    weekStart?: string;
+    adminNotes?: string;
+  }
+): Promise<SpotlightBooking> {
+  const payload: Record<string, any> = {};
+  if (updates.title !== undefined) payload.title = sanitize(updates.title, 150);
+  if (updates.description !== undefined) payload.description = sanitize(updates.description, 1000);
+  if (updates.eventDate !== undefined) payload.event_date = updates.eventDate || null;
+  if (updates.eventTime !== undefined) payload.event_time = updates.eventTime ? sanitize(updates.eventTime, 50) : null;
+  if (updates.tags !== undefined) payload.tags = updates.tags;
+  if (updates.location !== undefined) payload.location = sanitize(updates.location, 200);
+  if (updates.town !== undefined) payload.town = updates.town;
+  if (updates.weekStart !== undefined) payload.week_start = updates.weekStart;
+  if (updates.adminNotes !== undefined) payload.admin_notes = sanitize(updates.adminNotes, 500);
+
+  const { data, error } = await supabase.from('paid_submissions').update(payload).eq('id', id).select().single();
+  if (error) throw error;
+  return mapSpotlightBooking(data);
+}
+
 function mapSpotlightBooking(row: Record<string, any>): SpotlightBooking {
   return {
     id: row.id,
@@ -1425,6 +1464,8 @@ function mapSpotlightBooking(row: Record<string, any>): SpotlightBooking {
     title: row.title,
     description: row.description,
     eventDate: row.event_date ?? undefined,
+    eventTime: row.event_time ?? undefined,
+    tags: row.tags ?? [],
     location: row.location ?? undefined,
     town: row.town ?? undefined,
     imageUrl: row.image_url ?? undefined,

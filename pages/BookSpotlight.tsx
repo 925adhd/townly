@@ -82,6 +82,8 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [location, setLocation] = useState('');
   const [town, setTown] = useState(tenant.towns[0] ?? '');
   // Images
@@ -161,9 +163,10 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
       await submitSpotlightBooking(
         bookingType,
         title, desc, weekStart,
-        eventDate, location, town,
+        eventDate, eventTime, location, town,
         user.name, user.email ?? '', '',
         bannerUrl, thumbnailUrl, flyerUrl,
+        selectedTags,
       );
       setSuccess(true);
       window.scrollTo(0, 0);
@@ -280,13 +283,13 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             required
             rows={3}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
-            placeholder="What should neighbors know?"
+            placeholder="What should people know?"
             value={desc}
             onChange={e => setDesc(e.target.value)}
           />
         </div>
 
-        {/* Date + Town */}
+        {/* Date + Time + Town */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Date</label>
@@ -298,6 +301,16 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             />
           </div>
           <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Time</label>
+            <input
+              type="text"
+              placeholder="e.g. 4:30 – 6:30 PM"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
+              value={eventTime}
+              onChange={e => setEventTime(e.target.value)}
+            />
+          </div>
+          <div className="col-span-2 md:col-span-1">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
             <select
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
@@ -306,6 +319,31 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             >
               {tenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
+          </div>
+        </div>
+
+        {/* Tags / Pills */}
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tags <span className="font-normal normal-case">(optional)</span></label>
+          <div className="flex flex-wrap gap-2">
+            {['Free Admission', 'All Ages Welcome', 'Family Friendly', 'Community Event', 'Live Music', 'Food & Drinks', 'Outdoor Event', 'Fundraiser', 'Grand Opening', 'Business Event'].map(tag => {
+              const active = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setSelectedTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag])}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    active
+                      ? 'bg-orange-100 border-orange-400 text-orange-700'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600'
+                  }`}
+                >
+                  {active && <i className="fas fa-check mr-1 text-[10px]"></i>}
+                  {tag}
+                </button>
+              );
+            })}
           </div>
         </div>
 

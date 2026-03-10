@@ -95,7 +95,7 @@ const CreateLostFound: React.FC<CreateLostFoundProps> = ({ setPosts, user }) => 
   return (
     <div className="max-w-xl mx-auto pb-10">
       <h1 className="text-2xl font-bold mb-2">Create an Alert</h1>
-      <p className="text-slate-500 mb-6">Reach your neighbors quickly. Include as much detail as possible.</p>
+      <p className="text-slate-500 mb-6">Reach locals quickly. Include as much detail as possible.</p>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-5 text-slate-900">
         <div>

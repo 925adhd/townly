@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, formatWeekRange } from '../lib/api';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -59,6 +59,9 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
   const [actingBooking, setActingBooking] = useState<string | null>(null);
   const [bookingsError, setBookingsError] = useState('');
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
+  const [editingBooking, setEditingBooking] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<{ title: string; description: string; eventDate: string; eventTime: string; tags: string[]; location: string; town: string; weekStart: string; adminNotes: string }>({ title: '', description: '', eventDate: '', eventTime: '', tags: [], location: '', town: '', weekStart: '', adminNotes: '' });
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Community alerts
   const [alertTitle, setAlertTitle] = useState('');
@@ -261,6 +264,65 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
       setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'rejected' } : b));
     } catch (e: any) {
       setBookingsError(e.message || 'Failed to reject booking.');
+    } finally {
+      setActingBooking(null);
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    setConfirmDeleteId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
+    setActingBooking(id);
+    setBookingsError('');
+    try {
+      await deleteSpotlightBooking(id);
+      setBookings(prev => prev.filter(b => b.id !== id));
+    } catch (e: any) {
+      setBookingsError(e.message || 'Failed to delete booking.');
+    } finally {
+      setActingBooking(null);
+    }
+  };
+
+  const handleStartEdit = (b: SpotlightBooking) => {
+    setEditingBooking(b.id);
+    setEditFields({
+      title: b.title,
+      description: b.description,
+      eventDate: b.eventDate ?? '',
+      eventTime: b.eventTime ?? '',
+      tags: b.tags ?? [],
+      location: b.location ?? '',
+      town: b.town ?? '',
+      weekStart: b.weekStart,
+      adminNotes: b.adminNotes ?? '',
+    });
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    setActingBooking(id);
+    setBookingsError('');
+    try {
+      const updated = await updateSpotlightBooking(id, {
+        title: editFields.title,
+        description: editFields.description,
+        eventDate: editFields.eventDate,
+        eventTime: editFields.eventTime,
+        tags: editFields.tags,
+        location: editFields.location,
+        town: editFields.town,
+        weekStart: editFields.weekStart,
+        adminNotes: editFields.adminNotes,
+      });
+      setBookings(prev => prev.map(b => b.id === id ? updated : b));
+      setEditingBooking(null);
+    } catch (e: any) {
+      setBookingsError(e.message || 'Failed to save changes.');
     } finally {
       setActingBooking(null);
     }
@@ -696,9 +758,17 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
 
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
                     {b.eventDate && <span><i className="fas fa-calendar mr-1"></i>{b.eventDate}</span>}
+                    {b.eventTime && <span><i className="fas fa-clock mr-1"></i>{b.eventTime}</span>}
                     {b.location && <span><i className="fas fa-map-marker-alt mr-1"></i>{b.location}</span>}
                     {b.town && <span><i className="fas fa-city mr-1"></i>{b.town}</span>}
                   </div>
+                  {b.tags && b.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {b.tags.map(tag => (
+                        <span key={tag} className="bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-full">{tag}</span>
+                      ))}
+                    </div>
+                  )}
 
                   {b.imageUrl && (
                     <img src={b.imageUrl} alt="" className="w-full h-28 object-cover rounded-xl border border-slate-100" />
@@ -713,38 +783,124 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                     <p className="text-xs text-slate-400 italic">Admin note: {b.adminNotes}</p>
                   )}
 
-                  {b.status === 'pending_review' && (
-                    <div className="space-y-2 pt-1">
-                      <input
-                        type="text"
-                        placeholder="Rejection reason (optional)"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-300"
-                        value={rejectNotes[b.id] ?? ''}
-                        onChange={e => setRejectNotes(prev => ({ ...prev, [b.id]: e.target.value }))}
-                      />
+                  {editingBooking === b.id ? (
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Edit Booking</p>
+                      <input type="text" placeholder="Title" value={editFields.title} onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                      <textarea rows={2} placeholder="Description" value={editFields.description} onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="date" placeholder="Event date" value={editFields.eventDate} onChange={e => setEditFields(f => ({ ...f, eventDate: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                        <input type="text" placeholder="Event time (e.g. 4:30 – 6:30 PM)" value={editFields.eventTime} onChange={e => setEditFields(f => ({ ...f, eventTime: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                        <input type="date" placeholder="Week start" value={editFields.weekStart} onChange={e => setEditFields(f => ({ ...f, weekStart: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                        <input type="text" placeholder="Location" value={editFields.location} onChange={e => setEditFields(f => ({ ...f, location: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                        <input type="text" placeholder="Town" value={editFields.town} onChange={e => setEditFields(f => ({ ...f, town: e.target.value }))} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Tags</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['Free Admission', 'All Ages Welcome', 'Family Friendly', 'Community Event', 'Live Music', 'Food & Drinks', 'Outdoor Event', 'Fundraiser', 'Grand Opening', 'Business Event'].map(tag => {
+                            const active = editFields.tags.includes(tag);
+                            return (
+                              <button key={tag} type="button" onClick={() => setEditFields(f => ({ ...f, tags: active ? f.tags.filter(t => t !== tag) : [...f.tags, tag] }))}
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all ${active ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-blue-300'}`}>
+                                {tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <input type="text" placeholder="Admin notes" value={editFields.adminNotes} onChange={e => setEditFields(f => ({ ...f, adminNotes: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
                       <div className="flex gap-2">
-                        <button
-                          disabled={actingBooking === b.id}
-                          onClick={() => handleApproveBooking(b.id)}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors"
-                        >
-                          {actingBooking === b.id ? 'Working...' : 'Approve & Publish'}
+                        <button disabled={actingBooking === b.id} onClick={() => handleSaveEdit(b.id)} className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors">
+                          {actingBooking === b.id ? 'Saving...' : 'Save Changes'}
                         </button>
-                        <button
-                          disabled={actingBooking === b.id}
-                          onClick={() => handleRejectBooking(b.id)}
-                          className="flex-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-600 text-xs font-bold py-2 rounded-xl border border-red-200 transition-colors"
-                        >
-                          Reject
+                        <button onClick={() => setEditingBooking(null)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold py-2 rounded-xl transition-colors">
+                          Cancel
                         </button>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      {b.status === 'pending_review' && (
+                        <div className="space-y-2 pt-1">
+                          <input
+                            type="text"
+                            placeholder="Rejection reason (optional)"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-300"
+                            value={rejectNotes[b.id] ?? ''}
+                            onChange={e => setRejectNotes(prev => ({ ...prev, [b.id]: e.target.value }))}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              disabled={actingBooking === b.id}
+                              onClick={() => handleApproveBooking(b.id)}
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors"
+                            >
+                              {actingBooking === b.id ? 'Working...' : 'Approve & Publish'}
+                            </button>
+                            <button
+                              disabled={actingBooking === b.id}
+                              onClick={() => handleRejectBooking(b.id)}
+                              className="flex-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-600 text-xs font-bold py-2 rounded-xl border border-red-200 transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-1 border-t border-slate-100">
+                        <button
+                          onClick={() => handleStartEdit(b)}
+                          className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold py-2 rounded-xl transition-colors"
+                        >
+                          <i className="fas fa-pencil mr-1.5"></i>Edit
+                        </button>
+                        <button
+                          disabled={actingBooking === b.id}
+                          onClick={() => handleDeleteBooking(b.id)}
+                          className="flex-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-600 text-xs font-bold py-2 rounded-xl transition-colors"
+                        >
+                          <i className="fas fa-trash mr-1.5"></i>Delete
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
             </div>
           )}
         </>
+      )}
+
+      {/* Delete confirmation modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-3xl shadow-xl p-6 max-w-sm w-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-trash text-red-600"></i>
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Delete Booking</h3>
+                <p className="text-slate-500 text-sm">This cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm py-2.5 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-2.5 rounded-xl transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

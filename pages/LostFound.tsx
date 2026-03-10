@@ -199,7 +199,7 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Community Lost & Found</h1>
-          <p className="text-slate-500">Helping neighbors reunite with pets and property.</p>
+          <p className="text-slate-500">Helping the community reunite with pets and property.</p>
         </div>
         <Link to="/lost-found/new" className="bg-orange-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-colors flex items-center justify-center">
           <i className="fas fa-plus mr-2"></i>
@@ -487,7 +487,7 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
             <div className="text-4xl text-emerald-300 mb-3"><i className="fas fa-handshake"></i></div>
             <p className="text-slate-500 font-medium">No active posts right now.</p>
             <p className="text-slate-400 font-medium text-sm">That's a good sign.</p>
-            <p className="text-slate-400 text-sm mt-1">If something goes missing, your neighbors will see it here.</p>
+            <p className="text-slate-400 text-sm mt-1">If something goes missing, locals will see it here.</p>
           </div>
         )}
       </div>
