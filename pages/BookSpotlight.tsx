@@ -38,7 +38,7 @@ function ImageUploadSlot({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-slate-500 mb-1">
+      <p className="text-xs font-semibold text-slate-500 mb-1 min-h-[2.5rem]">
         {label}
         {sublabel && <span className="font-normal text-slate-400"> — {sublabel}</span>}
       </p>
@@ -420,17 +420,6 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
               />
             </div>
           )}
-        </div>
-
-        {/* Contact */}
-        <div className="space-y-3">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Contact Info</p>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-600 flex items-center gap-2 flex-wrap">
-            <span className="font-medium">{user.name}</span>
-            <span className="text-slate-300">·</span>
-            <span>{user.email}</span>
-          </div>
-
         </div>
 
         {/* ToS */}
