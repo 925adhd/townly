@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
-import { Provider, LostFoundPost, CommunityAlert } from '../types';
+import { Provider, LostFoundPost, CommunityAlert, SpotlightBooking } from '../types';
+import { fetchCurrentWeekSubmissions } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -26,6 +27,7 @@ const PRELOAD_IMAGES = ['/images/lakebackground.webp', '/images/townly.webp'];
 const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => {
   const [search, setSearch] = useState('');
   const [imagesReady, setImagesReady] = useState(false);
+  const [currentSpotlight, setCurrentSpotlight] = useState<SpotlightBooking | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +40,12 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
       };
       img.src = src;
     });
+  }, []);
+
+  useEffect(() => {
+    fetchCurrentWeekSubmissions()
+      .then(subs => setCurrentSpotlight(subs.find(s => s.type === 'spotlight') ?? null))
+      .catch(console.error);
   }, []);
 
   const categories = [
@@ -162,29 +170,57 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
           {/* Spotlight Card — accent bar style */}
           <Link to="/spotlights" className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
             {/* Thumbnail */}
-            <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
-              <img src="/images/disastersummit.jpg" alt="" loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 15%' }} />
-            </div>
+            {(currentSpotlight?.thumbnailUrl || currentSpotlight?.imageUrl || !currentSpotlight) && (
+              <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
+                <img
+                  src={currentSpotlight ? (currentSpotlight.thumbnailUrl || currentSpotlight.imageUrl) : '/images/disastersummit.jpg'}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: 'center 15%' }}
+                />
+              </div>
+            )}
             <div className="flex flex-col flex-1 gap-1.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Weekly Spotlight</span>
-                {isToday(featuredEvent.date) && (
+                {!currentSpotlight && isToday(featuredEvent.date) && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest bg-orange-500 text-white">Happening Today</span>
                 )}
-                {isRecentlyAdded(featuredEvent.addedAt) && !isToday(featuredEvent.date) && (
+                {!currentSpotlight && isRecentlyAdded(featuredEvent.addedAt) && !isToday(featuredEvent.date) && (
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-widest bg-emerald-500 text-white">New</span>
                 )}
               </div>
-              <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
-                <i className="fas fa-calendar text-amber-500 text-[10px]"></i> Apr 2, 2026 · 4:30–6:30 PM
-              </span>
-              <h3 className="font-bold text-slate-900 text-xl leading-tight">Disaster Preparedness Summit</h3>
-              <p className="text-slate-500 text-xs flex items-center gap-1">
-                <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {tenant.name} Extension Office · Leitchfield
-              </p>
-              <p className="text-slate-600 text-sm leading-relaxed mt-1">
-                Keynote, panels &amp; resource expo with local emergency officials. Free admission, all ages welcome.
-              </p>
+              {currentSpotlight ? (
+                <>
+                  {currentSpotlight.eventDate && (
+                    <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
+                      <i className="fas fa-calendar text-amber-500 text-[10px]"></i>
+                      {new Date(currentSpotlight.eventDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  )}
+                  <h3 className="font-bold text-slate-900 text-xl leading-tight">{currentSpotlight.title}</h3>
+                  {currentSpotlight.location && (
+                    <p className="text-slate-500 text-xs flex items-center gap-1">
+                      <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {currentSpotlight.location}
+                    </p>
+                  )}
+                  <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">{currentSpotlight.description}</p>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
+                    <i className="fas fa-calendar text-amber-500 text-[10px]"></i> Apr 2, 2026 · 4:30–6:30 PM
+                  </span>
+                  <h3 className="font-bold text-slate-900 text-xl leading-tight">Disaster Preparedness Summit</h3>
+                  <p className="text-slate-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {tenant.name} Extension Office · Leitchfield
+                  </p>
+                  <p className="text-slate-600 text-sm leading-relaxed mt-1">
+                    Keynote, panels &amp; resource expo with local emergency officials. Free admission, all ages welcome.
+                  </p>
+                </>
+              )}
             </div>
             <div className="mt-4 md:mt-0 md:flex-shrink-0">
               <span className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-6 py-3 rounded-xl shadow-sm whitespace-nowrap">

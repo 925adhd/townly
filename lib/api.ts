@@ -1374,6 +1374,21 @@ export async function submitSpotlightBooking(
   return mapSpotlightBooking(data);
 }
 
+/** Fetch approved submissions for the current week (public — used to render Events page). */
+export async function fetchCurrentWeekSubmissions(): Promise<SpotlightBooking[]> {
+  const tenant = getCurrentTenant();
+  const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('paid_submissions')
+    .select('*')
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'approved')
+    .eq('week_start', weekStart)
+    .order('type', { ascending: true }); // 'featured' before 'spotlight' alphabetically; reorder in UI
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapSpotlightBooking);
+}
+
 /** Admin: fetch all non-rejected submissions ordered by week. */
 export async function fetchSpotlightBookings(): Promise<SpotlightBooking[]> {
   await requireAdmin();

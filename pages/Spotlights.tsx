@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CommunityEvent } from '../types';
-import { fetchApprovedCommunityEvents, submitCommunityEvent } from '../lib/api';
+import { CommunityEvent, SpotlightBooking } from '../types';
+import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -24,6 +24,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const [flyerOpen, setFlyerOpen] = useState(false);
   const [upsOpen, setUpsOpen] = useState(false);
   const [entrepreneurOpen, setEntrepreneurOpen] = useState(false);
+  // DB-driven flyer lightbox — stores the image URL to show, or null
+  const [dbFlyerUrl, setDbFlyerUrl] = useState<string | null>(null);
+
+  // Current-week paid submissions
+  const [weekSubmissions, setWeekSubmissions] = useState<SpotlightBooking[]>([]);
 
   // Community events
   const [events, setEvents] = useState<CommunityEvent[]>([]);
@@ -45,6 +50,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       .then(setEvents)
       .catch(console.error)
       .finally(() => setLoadingEvents(false));
+    fetchCurrentWeekSubmissions()
+      .then(setWeekSubmissions)
+      .catch(console.error);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +77,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  const dbSpotlight = weekSubmissions.find(s => s.type === 'spotlight') ?? null;
+  const dbFeatured = weekSubmissions.filter(s => s.type === 'featured');
+
   return (
     <div className="space-y-10 pb-10 -mt-6 md:mt-0">
 
@@ -83,52 +94,94 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
           <i className="fas fa-star text-[9px]"></i> Weekly Spotlight
         </p>
-<div className="grid gap-4">
+        <div className="grid gap-4">
 
-          {/* Disaster Preparedness Summit */}
-          <div id="disaster-summit" className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
-            <button
-              onClick={() => setFlyerOpen(true)}
-              className="w-full block hover:opacity-95 transition-opacity focus:outline-none"
-              aria-label="View full flyer"
-            >
-              <img
-                src="/images/disastersummit.jpg"
-                alt="Grayson County Disaster Preparedness Summit flyer"
-                loading="lazy"
-                className="w-full max-h-[260px] object-cover object-top"
-              />
-            </button>
-            <div className="p-7 flex flex-col gap-3">
-              <div className="flex flex-col gap-2">
-                <span className="text-slate-400 text-xs font-medium">Apr 2, 2026</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base leading-tight">Grayson County Disaster Preparedness Summit</h3>
-                <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
-                  <i className="fas fa-map-marker-alt text-orange-400"></i> Grayson County Extension Office · 64 Quarry Rd, Leitchfield
-                </p>
-              </div>
-              <p className="text-slate-500 text-sm leading-relaxed">
-                Join the 2nd Annual Community Disaster Preparedness Summit — designed to help individuals, families, and organizations prepare for emergencies. Featuring a keynote from UK meteorologist Matt Dixon, panel discussions with local emergency officials, and a resource expo with interactive booths.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <i className="fas fa-clock text-amber-400"></i> 4:30 – 6:30 PM
+          {dbSpotlight ? (
+            /* ── DB-driven spotlight ── */
+            <div className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
+              {dbSpotlight.imageUrl && (
+                <button
+                  onClick={() => dbSpotlight.flyerUrl && setDbFlyerUrl(dbSpotlight.flyerUrl)}
+                  className={`w-full block transition-opacity focus:outline-none ${dbSpotlight.flyerUrl ? 'hover:opacity-95 cursor-pointer' : 'cursor-default'}`}
+                  aria-label={dbSpotlight.flyerUrl ? 'View full flyer' : undefined}
+                >
+                  <img
+                    src={dbSpotlight.imageUrl}
+                    alt={dbSpotlight.title}
+                    loading="lazy"
+                    className="w-full max-h-[260px] object-cover object-top"
+                  />
+                </button>
+              )}
+              <div className="p-7 flex flex-col gap-3">
+                {dbSpotlight.eventDate && (
+                  <span className="text-slate-400 text-xs font-medium">{formatEventDate(dbSpotlight.eventDate)}</span>
+                )}
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base leading-tight">{dbSpotlight.title}</h3>
+                  {dbSpotlight.location && (
+                    <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="fas fa-map-marker-alt text-orange-400"></i> {dbSpotlight.location}
+                      {dbSpotlight.town && <span className="text-slate-300 mx-1">·</span>}
+                      {dbSpotlight.town}
+                    </p>
+                  )}
                 </div>
-                <span className="text-slate-200">·</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Free Admission</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Community Event</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">All Ages Welcome</span>
+                <p className="text-slate-500 text-sm leading-relaxed">{dbSpotlight.description}</p>
+                {dbSpotlight.flyerUrl && (
+                  <button
+                    onClick={() => setDbFlyerUrl(dbSpotlight.flyerUrl!)}
+                    className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                  >
+                    <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                  </button>
+                )}
               </div>
+            </div>
+          ) : (
+            /* ── Hardcoded fallback spotlight ── */
+            <div id="disaster-summit" className="rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60">
               <button
                 onClick={() => setFlyerOpen(true)}
-                className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                className="w-full block hover:opacity-95 transition-opacity focus:outline-none"
+                aria-label="View full flyer"
               >
-                <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                <img
+                  src="/images/disastersummit.jpg"
+                  alt="Grayson County Disaster Preparedness Summit flyer"
+                  loading="lazy"
+                  className="w-full max-h-[260px] object-cover object-top"
+                />
               </button>
+              <div className="p-7 flex flex-col gap-3">
+                <span className="text-slate-400 text-xs font-medium">Apr 2, 2026</span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base leading-tight">Grayson County Disaster Preparedness Summit</h3>
+                  <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="fas fa-map-marker-alt text-orange-400"></i> Grayson County Extension Office · 64 Quarry Rd, Leitchfield
+                  </p>
+                </div>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  Join the 2nd Annual Community Disaster Preparedness Summit — designed to help individuals, families, and organizations prepare for emergencies. Featuring a keynote from UK meteorologist Matt Dixon, panel discussions with local emergency officials, and a resource expo with interactive booths.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <i className="fas fa-clock text-amber-400"></i> 4:30 – 6:30 PM
+                  </div>
+                  <span className="text-slate-200">·</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Free Admission</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Community Event</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">All Ages Welcome</span>
+                </div>
+                <button
+                  onClick={() => setFlyerOpen(true)}
+                  className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                >
+                  <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
       </div>
@@ -139,64 +192,98 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <p className="text-slate-400 text-xs mb-4 px-1">Paid listings from local businesses and organizations this week.</p>
         <div className="grid md:grid-cols-2 gap-4">
 
-          {/* Kids Entrepreneur Fair */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
-              <span className="text-slate-400 text-xs">Mar 27, 2026</span>
-            </div>
-            <h3 className="font-bold text-slate-900 text-sm leading-tight">2nd Annual Kids Entrepreneur Fair</h3>
-            <p className="text-slate-500 text-xs flex items-center gap-1">
-              <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> Centre on Main · 425 S. Main Street, Leitchfield
-            </p>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              Grades K–12 showcase their businesses, hosted by YP of Grayson County. Kids get 30 min of early shopping before public viewing. Awards voted by peers prior to the event.
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <i className="fas fa-clock text-amber-400 text-[10px]"></i> 5:00 – 7:00 PM
+          {dbFeatured.length > 0 ? (
+            /* ── DB-driven featured cards ── */
+            dbFeatured.map(sub => (
+              <div key={sub.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
+                  {sub.eventDate && <span className="text-slate-400 text-xs">{formatEventDate(sub.eventDate)}</span>}
+                </div>
+                {sub.imageUrl && (
+                  <img src={sub.imageUrl} alt={sub.title} loading="lazy" className="w-full max-h-[160px] object-cover rounded-xl" />
+                )}
+                <h3 className="font-bold text-slate-900 text-sm leading-tight">{sub.title}</h3>
+                {sub.location && (
+                  <p className="text-slate-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {sub.location}
+                    {sub.town && <><span className="text-slate-300 mx-1">·</span>{sub.town}</>}
+                  </p>
+                )}
+                <p className="text-slate-500 text-xs leading-relaxed">{sub.description}</p>
+                {sub.flyerUrl && (
+                  <button
+                    onClick={() => setDbFlyerUrl(sub.flyerUrl!)}
+                    className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                  >
+                    <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                  </button>
+                )}
               </div>
-              <span className="text-slate-200">·</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Free Entry</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Grades K–12</span>
-            </div>
-            <p className="text-[10px] text-slate-400 italic">Limited booths · Must register in advance</p>
-            <button
-              onClick={() => setEntrepreneurOpen(true)}
-              className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
-            >
-              <i className="fas fa-file-image text-[10px]"></i> View Flyer
-            </button>
-          </div>
+            ))
+          ) : (
+            /* ── Hardcoded fallback featured cards ── */
+            <>
+              {/* Kids Entrepreneur Fair */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
+                  <span className="text-slate-400 text-xs">Mar 27, 2026</span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm leading-tight">2nd Annual Kids Entrepreneur Fair</h3>
+                <p className="text-slate-500 text-xs flex items-center gap-1">
+                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> Centre on Main · 425 S. Main Street, Leitchfield
+                </p>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Grades K–12 showcase their businesses, hosted by YP of Grayson County. Kids get 30 min of early shopping before public viewing. Awards voted by peers prior to the event.
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <i className="fas fa-clock text-amber-400 text-[10px]"></i> 5:00 – 7:00 PM
+                  </div>
+                  <span className="text-slate-200">·</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Free Entry</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Grades K–12</span>
+                </div>
+                <p className="text-[10px] text-slate-400 italic">Limited booths · Must register in advance</p>
+                <button
+                  onClick={() => setEntrepreneurOpen(true)}
+                  className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                >
+                  <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                </button>
+              </div>
 
-          {/* UPS Store Ribbon Cutting */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
-              <span className="text-slate-400 text-xs">Mar 2, 2026</span>
-            </div>
-            <h3 className="font-bold text-slate-900 text-sm leading-tight">Ribbon Cutting – The UPS Store (Leitchfield)</h3>
-            <p className="text-slate-500 text-xs flex items-center gap-1">
-              <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> 52 Public Square · Leitchfield, KY 42754
-            </p>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              Join the Grayson County Chamber of Commerce for a ribbon cutting ceremony celebrating The UPS Store's Leitchfield location. Come welcome the new business and support local growth.
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <i className="fas fa-clock text-amber-400 text-[10px]"></i> 10:00 AM
+              {/* UPS Store Ribbon Cutting */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
+                  <span className="text-slate-400 text-xs">Mar 2, 2026</span>
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm leading-tight">Ribbon Cutting – The UPS Store (Leitchfield)</h3>
+                <p className="text-slate-500 text-xs flex items-center gap-1">
+                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> 52 Public Square · Leitchfield, KY 42754
+                </p>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Join the Grayson County Chamber of Commerce for a ribbon cutting ceremony celebrating The UPS Store's Leitchfield location. Come welcome the new business and support local growth.
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <i className="fas fa-clock text-amber-400 text-[10px]"></i> 10:00 AM
+                  </div>
+                  <span className="text-slate-200">·</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chamber Event</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Business Opening</span>
+                </div>
+                <button
+                  onClick={() => setUpsOpen(true)}
+                  className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                >
+                  <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                </button>
               </div>
-              <span className="text-slate-200">·</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chamber Event</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Business Opening</span>
-            </div>
-            <button
-              onClick={() => setUpsOpen(true)}
-              className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
-            >
-              <i className="fas fa-file-image text-[10px]"></i> View Flyer
-            </button>
-          </div>
+            </>
+          )}
 
         </div>
       </div>
@@ -351,7 +438,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </button>
             </div>
             <p className="text-xs text-slate-400">Free to post. Events are reviewed before going live.</p>
-            <p className="text-xs text-slate-300">Free posts are text-only. <a href="mailto:hello@townlyapp.io?subject=Featured Post Inquiry" className="underline hover:text-slate-400 transition-colors">Upgrade to Featured</a> to include an image.</p>
+            <p className="text-xs text-slate-300">Free posts are text-only. <Link to={user ? '/book/featured' : '/auth?signup=true'} className="underline hover:text-slate-400 transition-colors" onClick={() => setShowForm(false)}>Upgrade to Featured</Link> to include an image.</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Title</label>
@@ -453,6 +540,18 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <i className="fas fa-times text-sm"></i>
             </button>
             <img src="/images/ups.jpg" alt="Ribbon Cutting – The UPS Store Leitchfield" className="w-full rounded-2xl shadow-2xl" />
+          </div>
+        </div>
+      )}
+
+      {/* DB submission flyer modal */}
+      {dbFlyerUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setDbFlyerUrl(null)}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setDbFlyerUrl(null)} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors z-10" aria-label="Close flyer">
+              <i className="fas fa-times text-sm"></i>
+            </button>
+            <img src={dbFlyerUrl} alt="Event flyer" className="w-full rounded-2xl shadow-2xl" />
           </div>
         </div>
       )}

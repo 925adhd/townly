@@ -595,13 +595,13 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 </li>
               </ul>
               {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && (
-                <a
-                  href={`mailto:hello@townlyapp.io?subject=Category Leader – ${encodeURIComponent(provider.name)}`}
+                <Link
+                  to="/book/featured"
                   className="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors shadow-sm"
                 >
-                  <i className="fas fa-envelope text-[10px]"></i>
+                  <i className="fas fa-star text-[10px]"></i>
                   Reserve My Spot
-                </a>
+                </Link>
               )}
             </div>
           </div>

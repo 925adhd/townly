@@ -84,9 +84,8 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const [eventDate, setEventDate] = useState('');
   const [location, setLocation] = useState('');
   const [town, setTown] = useState(tenant.towns[0] ?? '');
-  const [contactPhone, setContactPhone] = useState('');
   // Images
-  const [sameImage, setSameImage] = useState(true);
+  const [sameImage, setSameImage] = useState(false);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState('');
   const [thumbFile, setThumbFile] = useState<File | null>(null);
@@ -163,7 +162,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         bookingType,
         title, desc, weekStart,
         eventDate, location, town,
-        user.name, user.email ?? '', contactPhone,
+        user.name, user.email ?? '', '',
         bannerUrl, thumbnailUrl, flyerUrl,
       );
       setSuccess(true);
@@ -194,7 +193,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   }
 
   return (
-    <div className="max-w-lg mx-auto pb-10">
+    <div className="max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto pb-10">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -220,7 +219,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Select Week <span className="text-red-400">*</span>
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {getUpcomingWeeks().map(week => {
               const iso = weekIsoDate(week);
               const label = formatWeekRange(week);
@@ -334,7 +333,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
                 onChange={e => setSameImage(e.target.checked)}
                 className="accent-orange-500"
               />
-              <span className="text-xs text-slate-500">Use same image for all</span>
+              <span className="text-xs text-slate-500">I only have one image</span>
             </label>
           </div>
 
@@ -344,16 +343,16 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           <input ref={flyerRef} type="file" accept="image/*" className="hidden" onChange={makeImageHandler(setFlyerFile, setFlyerPreview)} />
 
           {sameImage ? (
-            // Single upload used for all 3
             <ImageUploadSlot
-              label="Image (banner · thumbnail · flyer)"
+              label="Image"
+              sublabel="Used for banner, thumbnail, and flyer"
               preview={bannerPreview}
               onPick={() => bannerRef.current?.click()}
               onClear={() => clearImage(setBannerFile, setBannerPreview, bannerRef)}
               aspectHint="Any aspect ratio"
             />
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ImageUploadSlot
                 label="Banner — 16:9 landscape"
                 sublabel="Shown on the Events page card"
@@ -393,16 +392,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             <span className="text-slate-300">·</span>
             <span>{user.email}</span>
           </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Phone <span className="text-slate-300">(optional)</span></label>
-            <input
-              type="tel"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
-              placeholder="Best number to reach you"
-              value={contactPhone}
-              onChange={e => setContactPhone(e.target.value)}
-            />
-          </div>
+
         </div>
 
         {/* ToS */}

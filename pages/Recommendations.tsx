@@ -191,7 +191,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       {notice && (
         <div className="bg-orange-50 border border-orange-200 text-orange-700 text-sm font-medium px-4 py-3 rounded-xl flex items-center justify-between">
           <span>{notice}</span>
