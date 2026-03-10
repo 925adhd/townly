@@ -84,7 +84,7 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, reviews, setReviews, u
   return (
     <div className="max-w-2xl mx-auto pb-10">
       <h1 className="text-2xl font-bold mb-2">Write a Review</h1>
-      <p className="text-slate-500 mb-6">Sharing your experience with <strong>{provider.name}</strong> helps neighbors.</p>
+      <p className="text-slate-500 mb-6">Sharing your experience with <strong>{provider.name}</strong> helps the community.</p>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-6 text-slate-900">
         <div>

@@ -9,6 +9,9 @@ import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
+// TODO: Replace with your Stripe payment link when ready
+const FEATURED_STRIPE_LINK = '';
+
 interface ProviderDetailProps {
   providers: Provider[];
   setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
@@ -289,6 +292,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [featuredSlots, setFeaturedSlots] = useState<number | null>(null);
   const [stats, setStats] = useState<ListingStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [showFeaturedPreview, setShowFeaturedPreview] = useState(false);
 
   useEffect(() => {
     fetchFeaturedCount(provider.category, provider.town).then(count => setFeaturedSlots(count));
@@ -571,7 +575,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                   </span>
                   <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                     Be one of the three featured businesses at the top of your category in the Townly directory.<br />
-                    When neighbors search for services, your business appears first.
+                    When locals search for services, your business appears first.
                   </p>
                 </div>
                 <div className="flex-shrink-0 text-right">
@@ -582,7 +586,8 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
               <ul className="space-y-1 text-xs text-slate-600">
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Locked Top 3 placement in your category</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Always visible to local customers</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct contact links</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Amber-gold highlighted card — visually stands out from standard listings</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct call &amp; website buttons shown inline in the directory</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Priority exposure in the directory</li>
                 <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-[10px]"></i>
                   {provider.listingTier === 'featured' ? (
@@ -594,14 +599,84 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                   )}
                 </li>
               </ul>
+
+              {/* Preview toggle */}
+              <button
+                type="button"
+                onClick={() => setShowFeaturedPreview((p: boolean) => !p)}
+                className="w-full flex items-center justify-between text-xs text-amber-700 font-semibold py-1.5 px-3 bg-amber-100/60 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <i className="fas fa-eye text-[10px]"></i>
+                  {showFeaturedPreview ? 'Hide preview' : 'See how you\u2019d appear in the directory'}
+                </span>
+                <i className={`fas fa-chevron-${showFeaturedPreview ? 'up' : 'down'} text-[10px]`}></i>
+              </button>
+
+              {/* Directory card mock */}
+              {showFeaturedPreview && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-0.5">Directory preview</p>
+                  {/* Card row */}
+                  <div className="p-4 border bg-amber-50 border-amber-300 border-l-4 rounded-t-2xl flex flex-row items-center gap-4 shadow-sm pointer-events-none select-none">
+                    <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
+                      {provider.image
+                        ? <img src={provider.image} alt={provider.name} className="w-full h-full object-cover" />
+                        : <i className={`fas ${categoryIcon[provider.category] ?? 'fa-store'} text-2xl ${categoryIconColor[provider.category] ?? 'text-slate-300'}`}></i>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1 mb-0.5">
+                        <span className="font-bold text-slate-900 text-sm truncate">{provider.name}</span>
+                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200 flex-shrink-0">Sponsored</span>
+                      </div>
+                      <p className="text-xs text-slate-500 truncate">{provider.category}{provider.town ? ` · ${provider.town}` : ''}</p>
+                      {provider.description && (
+                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{provider.description}</p>
+                      )}
+                    </div>
+                    <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
+                  </div>
+                  {/* Contact bar (shown when phone or website is set) */}
+                  {(provider.phone || provider.website) && (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap pointer-events-none select-none">
+                      {provider.phone && (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
+                          <i className="fas fa-phone text-[10px]"></i>Call
+                        </span>
+                      )}
+                      {provider.website && (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
+                          <i className="fas fa-globe text-[10px]"></i>Website
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-slate-400 text-center pt-0.5">This is how your listing appears to customers in the directory.</p>
+                </div>
+              )}
+
               {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && (
-                <Link
-                  to="/book/featured"
-                  className="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors shadow-sm"
-                >
-                  <i className="fas fa-star text-[10px]"></i>
-                  Reserve My Spot
-                </Link>
+                FEATURED_STRIPE_LINK ? (
+                  <a
+                    href={FEATURED_STRIPE_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors shadow-sm"
+                  >
+                    <i className="fas fa-star text-[10px]"></i>
+                    Reserve My Spot
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 bg-amber-200 text-amber-400 font-bold px-4 py-2.5 rounded-xl text-xs cursor-not-allowed"
+                  >
+                    <i className="fas fa-star text-[10px]"></i>
+                    Reserve My Spot — Coming Soon
+                  </button>
+                )
               )}
             </div>
           </div>
@@ -1071,7 +1146,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {/* Reviews Section */}
       {provider.category !== 'Churches' && <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-900">Neighbor Reviews</h2>
+          <h2 className="text-xl font-bold text-slate-900">Local Reviews</h2>
           <Link
             to={`/review/${provider.id}`}
             className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors"
@@ -1194,7 +1269,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
           ))}
           {providerReviews.length === 0 && (
             <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-               <p className="text-slate-500 italic">No reviews yet. Be the first to help your neighbors!</p>
+               <p className="text-slate-500 italic">No reviews yet. Be the first to leave one!</p>
             </div>
           )}
         </div>
