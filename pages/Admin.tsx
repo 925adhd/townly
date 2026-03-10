@@ -281,128 +281,68 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
 
   return (
     <div className="max-w-3xl mx-auto pb-10 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Admin</h1>
           <p className="text-slate-500 text-sm mt-0.5">Manage submissions and flagged content</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {pending.length > 0 && (
-            <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-full">
               {pending.length} pending
             </span>
           )}
           {flagged.length > 0 && (
-            <span className="bg-red-100 text-red-600 text-xs font-bold px-3 py-1 rounded-full">
+            <span className="bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full">
               {flagged.length} flagged
             </span>
           )}
           {claims.length > 0 && (
-            <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
               {claims.length} claims
             </span>
           )}
           {pendingEvents.length > 0 && (
-            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">
               {pendingEvents.length} events
             </span>
           )}
           {communityAlert && (
-            <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
+            <span className="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full">
               1 alert live
             </span>
           )}
         </div>
       </div>
 
-      {/* Tab nav */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
-            activeTab === 'pending'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <i className="fas fa-clock mr-2"></i>
-          Pending
-          {pending.length > 0 && (
-            <span className="ml-2 bg-orange-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{pending.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('flagged')}
-          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
-            activeTab === 'flagged'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <i className="fas fa-flag mr-2"></i>
-          Flagged
-          {flagged.length > 0 && (
-            <span className="ml-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{flagged.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('claims')}
-          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
-            activeTab === 'claims'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <i className="fas fa-store mr-2"></i>
-          Claims
-          {claims.length > 0 && (
-            <span className="ml-2 bg-blue-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{claims.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('events')}
-          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
-            activeTab === 'events'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <i className="fas fa-calendar mr-2"></i>
-          Events
-          {pendingEvents.length > 0 && (
-            <span className="ml-2 bg-purple-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{pendingEvents.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('alerts')}
-          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
-            activeTab === 'alerts'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <i className="fas fa-triangle-exclamation mr-2"></i>
-          Alerts
-          {communityAlert && (
-            <span className="ml-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">1</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('bookings')}
-          className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
-            activeTab === 'bookings'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <i className="fas fa-star mr-2"></i>
-          Bookings
-          {bookings.filter(b => b.status === 'pending_review').length > 0 && (
-            <span className="ml-2 bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-              {bookings.filter(b => b.status === 'pending_review').length}
-            </span>
-          )}
-        </button>
+      {/* Tab nav — scrollable on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-max min-w-full">
+          {([
+            { key: 'pending', icon: 'fa-clock', label: 'Pending', badge: pending.length, badgeColor: 'bg-orange-500' },
+            { key: 'flagged', icon: 'fa-flag', label: 'Flagged', badge: flagged.length, badgeColor: 'bg-red-500' },
+            { key: 'claims', icon: 'fa-store', label: 'Claims', badge: claims.length, badgeColor: 'bg-blue-500' },
+            { key: 'events', icon: 'fa-calendar', label: 'Events', badge: pendingEvents.length, badgeColor: 'bg-purple-500' },
+            { key: 'alerts', icon: 'fa-triangle-exclamation', label: 'Alerts', badge: communityAlert ? 1 : 0, badgeColor: 'bg-red-500' },
+            { key: 'bookings', icon: 'fa-star', label: 'Bookings', badge: bookings.filter(b => b.status === 'pending_review').length, badgeColor: 'bg-amber-500' },
+          ] as const).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl transition-all ${
+                activeTab === tab.key
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <i className={`fas ${tab.icon} mr-1.5`}></i>
+              {tab.label}
+              {tab.badge > 0 && (
+                <span className={`ml-1.5 ${tab.badgeColor} text-white text-[10px] font-black px-1.5 py-0.5 rounded-full`}>{tab.badge}</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Pending Providers Tab */}
