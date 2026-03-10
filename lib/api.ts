@@ -1127,6 +1127,29 @@ export async function rejectCommunityEvent(id: string): Promise<void> {
   await supabase.from('audit_log').insert({ actor_id: adminId, action: 'reject_event', target_table: 'community_events', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
+export async function deleteCommunityEvent(id: string): Promise<void> {
+  const adminId = await requireAdmin();
+  const { error } = await supabase
+    .from('community_events')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw new Error('Failed to delete event.');
+  await supabase.from('audit_log').insert({ actor_id: adminId, action: 'delete_event', target_table: 'community_events', target_id: id, tenant_id: getCurrentTenant().id });
+}
+
+export async function deleteOwnCommunityEvent(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated.');
+  const { error } = await supabase
+    .from('community_events')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw new Error('Failed to delete event.');
+}
+
 // ── Community Alerts ──────────────────────────────────────────────────────────
 
 function mapCommunityAlert(row: any): CommunityAlert {
@@ -1328,7 +1351,44 @@ export async function fetchBookedWeeks(): Promise<{
   return { spotlight: spotlightWeeks, featured };
 }
 
-/** Submit a spotlight or featured booking (pre-payment). */
+// ── Stripe helpers ────────────────────────────────────────────────────────────
+
+/** Creates a Stripe Checkout Session and returns the redirect URL + session ID. */
+export async function createCheckoutSession(
+  type: 'spotlight' | 'featured',
+  successUrl: string,
+  cancelUrl: string,
+): Promise<{ url: string; sessionId: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated.');
+  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+    body: { type, successUrl, cancelUrl },
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return data as { url: string; sessionId: string };
+}
+
+/** Verifies a Stripe Checkout Session was paid. */
+export async function verifyStripeSession(
+  sessionId: string,
+): Promise<{ paid: boolean; amountTotal: number; type: string | null }> {
+  const { data, error } = await supabase.functions.invoke('verify-stripe-session', {
+    body: { sessionId },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return data as { paid: boolean; amountTotal: number; type: string | null };
+}
+
+// ── Spotlight booking ─────────────────────────────────────────────────────────
+
+/** Submit a spotlight or featured booking.
+ *  Pass stripeSessionId once payment is verified — sets payment_status to 'paid'.
+ *  Requires the stripe_session_id column to exist on paid_submissions:
+ *    ALTER TABLE paid_submissions ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
+ */
 export async function submitSpotlightBooking(
   type: 'spotlight' | 'featured',
   title: string,
@@ -1346,12 +1406,13 @@ export async function submitSpotlightBooking(
   flyerUrl?: string,
   tags?: string[],
   teaser?: string,
+  stripeSessionId?: string,
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
   const tenant = getCurrentTenant();
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     tenant_id: tenant.id,
     type,
     title: sanitize(title, 200),
@@ -1372,7 +1433,8 @@ export async function submitSpotlightBooking(
     submitted_by: session.user.id,
     submitted_by_name: session.user.user_metadata?.full_name || session.user.email || 'Unknown',
     status: 'pending_review',
-    payment_status: 'unpaid',
+    payment_status: stripeSessionId ? 'paid' : 'unpaid',
+    ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
   };
 
   const { data, error } = await supabase.from('paid_submissions').insert(payload).select().single();

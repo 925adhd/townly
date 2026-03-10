@@ -19,6 +19,7 @@ import Recommendations from './pages/Recommendations';
 import Auth from './pages/Auth';
 import Spotlights from './pages/Spotlights';
 import BookSpotlight from './pages/BookSpotlight';
+import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
 import { supabase } from './lib/supabase';
 import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlert, signOut } from './lib/api';
@@ -175,6 +176,7 @@ const App: React.FC = () => {
               <Route path="/auth" element={<Auth />} />
               <Route path="/spotlights" element={<Spotlights user={user} />} />
               <Route path="/book/:type" element={<BookSpotlight user={user} />} />
+              <Route path="/book/success" element={<BookingSuccess user={user} />} />
               <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} />} />
             </Routes>
           )}

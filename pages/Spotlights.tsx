@@ -2,13 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CommunityEvent, SpotlightBooking } from '../types';
-import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions } from '../lib/api';
+import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions, deleteCommunityEvent, deleteOwnCommunityEvent } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
 interface SpotlightsProps {
-  user: { id: string; name: string; email?: string } | null;
+  user: { id: string; name: string; email?: string; role?: string } | null;
 }
 
 const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
@@ -54,6 +54,28 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       .then(setWeekSubmissions)
       .catch(console.error);
   }, []);
+
+  const isAdmin = user?.role === 'admin';
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm('Delete this community event? This cannot be undone.')) return;
+    try {
+      await deleteCommunityEvent(id);
+      setEvents(prev => prev.filter(ev => ev.id !== id));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete event.');
+    }
+  };
+
+  const handleDeleteOwnEvent = async (id: string) => {
+    if (!confirm('Remove your event? This cannot be undone.')) return;
+    try {
+      await deleteOwnCommunityEvent(id);
+      setEvents(prev => prev.filter(ev => ev.id !== id));
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove event.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,31 +128,31 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   return (
     <div className="space-y-10 pb-10 -mt-6 md:mt-0">
 
-      {/* Header */}
-      <div className="pt-2 pb-3 md:pt-4 md:pb-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Around Town</h1>
-        <p className="text-slate-500 text-sm">Events and announcements happening around {tenant.name} this week.</p>
-      </div>
-
-      {/* Search */}
-      <div className="relative -mt-7">
-        <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
-        <input
-          type="text"
-          value={eventSearch}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventSearch(e.target.value)}
-          placeholder="Search events…"
-          className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-sm"
-        />
-        {eventSearch && (
-          <button
-            type="button"
-            onClick={() => setEventSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            <i className="fas fa-times text-xs"></i>
-          </button>
-        )}
+      {/* Header + Search */}
+      <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-3">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Around Town</h1>
+          <p className="text-slate-500 text-sm">Events and announcements happening around {tenant.name} this week.</p>
+        </div>
+        <div className="relative">
+          <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+          <input
+            type="text"
+            value={eventSearch}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventSearch(e.target.value)}
+            placeholder="Search events…"
+            className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-sm"
+          />
+          {eventSearch && (
+            <button
+              type="button"
+              onClick={() => setEventSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <i className="fas fa-times text-xs"></i>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Current Spotlights */}
@@ -200,7 +222,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 )}
               </div>
             </div>
-          ) : (
+          ) : !searchQ ? (
             /* ── Hardcoded fallback spotlight ── */
             <div
               id="disaster-summit"
@@ -247,7 +269,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
 
         </div>
       </div>
@@ -306,7 +328,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 )}
               </div>
             ))
-          ) : (
+          ) : !searchQ ? (
             /* ── Hardcoded fallback featured cards ── */
             <>
               {/* Kids Entrepreneur Fair */}
@@ -368,7 +390,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </button>
               </div>
             </>
-          )}
+          ) : null}
 
         </div>
       </div>
@@ -415,7 +437,26 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <div key={ev.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">Community Event</span>
-                  <span className="text-slate-400 text-xs">{formatEventDate(ev.eventDate)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-xs">{formatEventDate(ev.eventDate)}</span>
+                    {isAdmin ? (
+                      <button
+                        onClick={() => handleDeleteEvent(ev.id)}
+                        className="text-slate-300 hover:text-red-500 transition-colors"
+                        title="Delete event (admin)"
+                      >
+                        <i className="fas fa-trash-alt text-xs"></i>
+                      </button>
+                    ) : user?.id === ev.userId ? (
+                      <button
+                        onClick={() => handleDeleteOwnEvent(ev.id)}
+                        className="text-slate-300 hover:text-red-400 transition-colors"
+                        title="Remove your event"
+                      >
+                        <i className="fas fa-trash-alt text-xs"></i>
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
                 <h3 className="font-bold text-slate-900 text-sm leading-tight">{ev.title}</h3>
                 <p className="text-slate-500 text-xs flex items-center gap-1">

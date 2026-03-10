@@ -128,8 +128,8 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                 type="text"
                 name="search"
                 autoComplete="off"
-                placeholder="Search businesses, events..."
-                className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:border-orange-400/50 focus:shadow-[0_0_0_2px_rgba(249,115,22,0.10)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
+                placeholder="Search local businesses..."
+                className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -137,8 +137,8 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
                 type="text"
                 name="search"
                 autoComplete="off"
-                placeholder="Search businesses, events, or services in your town..."
-                className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:border-orange-400/50 focus:shadow-[0_0_0_2px_rgba(249,115,22,0.10)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
+                placeholder="Search local businesses and services..."
+                className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

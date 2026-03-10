@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { fetchBookedWeeks, uploadSpotlightImage, submitSpotlightBooking, getWeekStart, formatWeekRange } from '../lib/api';
+import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -122,7 +122,6 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const [tos, setTos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [previewFlyerOpen, setPreviewFlyerOpen] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -192,7 +191,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
     setSubmitting(true);
     setError('');
     try {
-      // Upload images
+      // Upload images first so URLs are ready before redirecting
       const uploadIf = async (f: File | null) => f ? uploadSpotlightImage(f) : '';
       let bannerUrl = '', thumbnailUrl = '', flyerUrl = '';
       if (sameImage) {
@@ -204,40 +203,31 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           uploadIf(flyerFile),
         ]);
       }
-      await submitSpotlightBooking(
-        bookingType,
+
+      // Save booking data so BookingSuccess can submit it after payment
+      sessionStorage.setItem('townly_pending_booking', JSON.stringify({
+        type: bookingType,
         title, desc, weekStart,
         eventDate, eventTime, location, town,
-        user.name, user.email ?? '', '',
-        bannerUrl, thumbnailUrl, flyerUrl,
+        contactName: user.name,
+        contactEmail: user.email ?? '',
+        imageUrl: bannerUrl,
+        thumbnailUrl,
+        flyerUrl,
         selectedTags,
-        bookingType === 'spotlight' ? teaser : undefined,
-      );
-      setSuccess(true);
-      window.scrollTo(0, 0);
+        teaser: bookingType === 'spotlight' ? teaser : undefined,
+      }));
+
+      const origin = window.location.origin;
+      const successUrl = `${origin}/#/book/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${origin}/#/book/${bookingType}`;
+      const { url } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
+      window.location.href = url;
     } catch (err: any) {
-      setError(err.message || 'Failed to submit. Please try again.');
-    } finally {
+      setError(err.message || 'Failed to initiate payment. Please try again.');
       setSubmitting(false);
     }
-  }
-
-  if (success) {
-    return (
-      <div className="max-w-lg mx-auto pt-10 text-center space-y-4 px-4">
-        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
-          <i className="fas fa-check text-emerald-500 text-2xl"></i>
-        </div>
-        <h2 className="text-xl font-bold text-slate-900">Submission Received!</h2>
-        <p className="text-slate-500 text-sm leading-relaxed">
-          We'll review your submission and contact you at <strong>{user.email}</strong> to confirm payment and publish your post.
-        </p>
-        <p className="text-xs text-slate-400">Payment: {bookingType === 'spotlight' ? '$25' : '$5'} — we'll send an invoice to your email within 1 business day.</p>
-        <Link to="/spotlights" className="inline-block mt-4 bg-slate-900 text-white font-bold px-6 py-3 rounded-xl text-sm">
-          Back to Events
-        </Link>
-      </div>
-    );
+    // Note: setSubmitting(false) intentionally omitted on success — page is navigating away
   }
 
   return (
@@ -772,20 +762,22 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         )}
 
         {/* Payment note */}
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 flex items-start gap-2">
-          <i className="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500 flex items-start gap-2">
+          <i className="fas fa-lock mt-0.5 flex-shrink-0 text-slate-400"></i>
           <span>
-            Payment ({bookingType === 'spotlight' ? '$25' : '$5'}) will be collected after review.
-            We'll email you an invoice within 1 business day.
+            You'll be taken to Stripe's secure checkout to pay{' '}
+            <strong>{bookingType === 'spotlight' ? '$25' : '$5'}</strong>.
+            Your booking is submitted after payment is confirmed.
           </span>
         </div>
 
         <button
-          type="submit"
-          disabled={submitting || !tos || !weekStart || (!town && !noTown) || (!eventDate && !noDate) || (!eventTime && !allDay && !noSetTime)}
-          className="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl shadow-sm transition-colors text-sm"
+          type="button"
+          disabled
+          className="w-full bg-slate-200 text-slate-400 font-bold py-4 rounded-xl text-sm cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {submitting ? 'Submitting...' : `Submit for Review — ${bookingType === 'spotlight' ? '$25' : '$5'}`}
+          <i className="fas fa-clock text-xs"></i>
+          Online Booking Coming Soon
         </button>
 
       </form>
