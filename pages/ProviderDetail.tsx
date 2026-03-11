@@ -245,13 +245,13 @@ const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user,
                   onClick={() => setRequestType(t)}
                   className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${requestType === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
                 >
-                  {t === 'update' ? 'Update Info' : 'Remove Listing'}
+                  {t === 'update' ? 'Update Info' : 'Request Removal'}
                 </button>
               ))}
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                {requestType === 'update' ? 'What needs to be updated?' : 'Why should this listing be removed?'}
+                {requestType === 'update' ? 'What needs to be updated?' : 'Why are you requesting removal?'}
               </label>
               <textarea
                 value={message}

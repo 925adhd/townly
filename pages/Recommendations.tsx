@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { RecommendationRequest, RecommendationResponse, Town } from '../types';
 import { addRequest, resolveRequest, unresolveRequest, deleteRequest, deleteResponse, fetchAllRecommendationResponses, addResponse, fetchUserVotedResponseIds, toggleResponseVote, submitReport } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
@@ -93,7 +94,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
       });
       setResponses(prev => {
         const updated: Record<string, RecommendationResponse[]> = {};
-        for (const [reqId, resps] of Object.entries(prev)) {
+        for (const [reqId, resps] of Object.entries(prev) as [string, RecommendationResponse[]][]) {
           updated[reqId] = resps.map(r =>
             r.id === responseId ? { ...r, voteCount: newCount } : r
           );
@@ -206,12 +207,21 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         </div>
         <div className="flex items-center justify-center md:justify-start gap-3">
           {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
-            >
-              Post a Request
-            </button>
+            user ? (
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
+              >
+                Post a Request
+              </button>
+            ) : (
+              <Link
+                to="/auth?signup=true"
+                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
+              >
+                Post a Request
+              </Link>
+            )
           )}
         </div>
       </div>

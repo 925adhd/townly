@@ -82,6 +82,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     await signOut();
     setUser(null);
+    window.location.hash = '/';
   };
 
   return (
