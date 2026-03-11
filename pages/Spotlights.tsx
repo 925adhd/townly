@@ -414,6 +414,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           ) : (
             <Link
               to="/auth?signup=true"
+              state={{ from: location.pathname }}
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
               <i className="fas fa-plus text-[10px]"></i> Post

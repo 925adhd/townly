@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { RecommendationRequest, RecommendationResponse, Town } from '../types';
 import { addRequest, resolveRequest, unresolveRequest, deleteRequest, deleteResponse, fetchAllRecommendationResponses, addResponse, fetchUserVotedResponseIds, toggleResponseVote, submitReport } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
@@ -15,6 +15,7 @@ interface RecommendationsProps {
 }
 
 const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests, user }) => {
+  const location = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [service, setService] = useState('');
   const [desc, setDesc] = useState('');
@@ -217,6 +218,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
             ) : (
               <Link
                 to="/auth?signup=true"
+                state={{ from: location.pathname }}
                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
               >
                 Post a Request

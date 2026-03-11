@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Provider, Category, Town } from '../types';
 import { addProvider } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
@@ -25,6 +25,7 @@ function formatPhone(raw: string): string {
 
 const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [name, setName] = useState('');
   const [cat, setCat] = useState<Category>('Home Services');
   const [sub, setSub] = useState('');
@@ -44,10 +45,10 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
       </div>
       <h2 className="text-xl font-bold text-slate-900 mb-2">Add your business to {tenant.name}</h2>
       <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to list your business and connect with your community.</p>
-      <Link to="/auth?signup=true" className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
+      <Link to="/auth?signup=true" state={{ from: location.pathname }} className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
         Create Free Account
       </Link>
-      <Link to="/auth" className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+      <Link to="/auth" state={{ from: location.pathname }} className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
         Already have an account? Sign in
       </Link>
     </div>

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { LostFoundPost, LostFoundType, Town } from '../types';
 import { updateLostFoundStatus, updateLostFoundPost, deleteLostFoundPost, submitReport } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
@@ -25,6 +25,7 @@ function formatPhone(raw: string): string {
 }
 
 const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<LostFoundType | 'all'>('all');
   const [townDropdownOpen, setTownDropdownOpen] = useState(false);
   const townDropdownRef = useRef<HTMLDivElement>(null);
@@ -203,6 +204,7 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
         </div>
         <Link
           to={user ? '/lost-found/new' : '/auth?signup=true'}
+          state={user ? undefined : { from: location.pathname }}
           className="bg-orange-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-colors flex items-center justify-center"
         >
           <i className="fas fa-plus mr-2"></i>

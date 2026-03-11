@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
 import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -691,6 +691,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
 
 const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders, reviews, setReviews, user }) => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const provider = providers.find(p => p.id === id);
   const providerReviews = reviews.filter(r => r.providerId === id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -941,7 +942,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
             <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your business?'}</p>
             <p className="text-slate-500 text-xs mt-0.5">Create a free account to claim and manage this listing.</p>
           </div>
-          <Link to="/auth" className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
+          <Link to="/auth" state={{ from: location.pathname }} className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
             Sign Up to Claim
           </Link>
         </div>

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { fetchMyBookings, updateMyBooking, uploadSpotlightImage } from '../lib/api';
 import type { SpotlightBooking } from '../types';
 
@@ -56,6 +56,7 @@ function initEdit(b: SpotlightBooking): EditState {
 }
 
 const MyBookings: React.FC<Props> = ({ user }) => {
+  const location = useLocation();
   const [bookings, setBookings] = useState<SpotlightBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,7 +78,7 @@ const MyBookings: React.FC<Props> = ({ user }) => {
     return (
       <div className="max-w-lg mx-auto pt-16 text-center space-y-4 px-4">
         <p className="text-slate-500 text-sm">You must be logged in to view your bookings.</p>
-        <Link to="/auth?signup=true" className="inline-block bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm">Sign In</Link>
+        <Link to="/auth?signup=true" state={{ from: location.pathname }} className="inline-block bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm">Sign In</Link>
       </div>
     );
   }

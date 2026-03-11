@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LostFoundPost, LostFoundType, Town } from '../types';
 import { addLostFoundPost } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
@@ -25,6 +25,7 @@ function formatPhone(raw: string): string {
 
 const CreateLostFound: React.FC<CreateLostFoundProps> = ({ setPosts, user }) => {
   const navigate = useNavigate();
+  const routeLocation = useLocation();
   const [type, setType] = useState<LostFoundType>('lost_pet');
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -55,10 +56,10 @@ const CreateLostFound: React.FC<CreateLostFoundProps> = ({ setPosts, user }) => 
       </div>
       <h2 className="text-xl font-bold text-slate-900 mb-2">Post a Lost & Found Alert</h2>
       <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to post alerts and help reunite the community with lost pets and property.</p>
-      <Link to="/auth?signup=true" className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
+      <Link to="/auth?signup=true" state={{ from: routeLocation.pathname }} className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
         Create Free Account
       </Link>
-      <Link to="/auth" className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+      <Link to="/auth" state={{ from: routeLocation.pathname }} className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
         Already have an account? Sign in
       </Link>
     </div>
