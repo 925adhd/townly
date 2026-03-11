@@ -168,3 +168,15 @@ export interface ContentReport {
   reason: string;
   createdAt: string;
 }
+
+export interface EarlyAccessRequest {
+  id: string;
+  providerId: string;
+  providerName: string;
+  category: string;
+  userId: string;
+  userName: string;
+  contactEmail: string;
+  status: 'pending' | 'contacted' | 'approved';
+  createdAt: string;
+}

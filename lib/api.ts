@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking } from '../types';
+import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 // ── Security helpers ──────────────────────────────────────────────────────────
@@ -1646,4 +1646,75 @@ function mapSpotlightBooking(row: Record<string, any>): SpotlightBooking {
     adminNotes: row.admin_notes ?? undefined,
     createdAt: row.created_at,
   };
+}
+
+// ── Early Access Requests ────────────────────────────────────────────────────
+
+export async function submitEarlyAccessRequest(providerId: string, providerName: string, category: string, contactEmail: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated.');
+  const profile = await supabase.from('profiles').select('name').eq('id', user.id).single();
+  const userName = profile.data?.name ?? 'Unknown';
+  const { error } = await supabase.from('early_access_requests').insert({
+    provider_id: providerId,
+    provider_name: providerName,
+    category,
+    user_id: user.id,
+    user_name: userName,
+    contact_email: contactEmail,
+    tenant_id: getCurrentTenant().id,
+  });
+  if (error) throw new Error('Failed to submit request.');
+}
+
+export async function fetchEarlyAccessRequests(): Promise<EarlyAccessRequest[]> {
+  await requireAdmin();
+  const { data, error } = await supabase
+    .from('early_access_requests')
+    .select('*')
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error('Failed to fetch requests.');
+  return (data ?? []).map(r => ({
+    id: r.id,
+    providerId: r.provider_id,
+    providerName: r.provider_name,
+    category: r.category,
+    userId: r.user_id,
+    userName: r.user_name,
+    contactEmail: r.contact_email ?? '',
+    status: r.status,
+    createdAt: r.created_at,
+  }));
+}
+
+export async function updateEarlyAccessStatus(id: string, status: EarlyAccessRequest['status']): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabase
+    .from('early_access_requests')
+    .update({ status })
+    .eq('id', id);
+  if (error) throw new Error('Failed to update status.');
+}
+
+export async function checkEarlyAccessRequest(providerId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from('early_access_requests')
+    .select('id')
+    .eq('provider_id', providerId)
+    .eq('user_id', user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  return !!data;
+}
+
+export async function deleteEarlyAccessRequest(id: string): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabase
+    .from('early_access_requests')
+    .delete()
+    .eq('id', id);
+  if (error) throw new Error('Failed to delete request.');
 }

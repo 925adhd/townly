@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
@@ -293,10 +293,20 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [stats, setStats] = useState<ListingStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [showFeaturedPreview, setShowFeaturedPreview] = useState(false);
+  const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
+  const [earlyAccessLoading, setEarlyAccessLoading] = useState(false);
+  const [earlyAccessError, setEarlyAccessError] = useState('');
+  const [earlyAccessEmail, setEarlyAccessEmail] = useState('');
 
   useEffect(() => {
     fetchFeaturedCount(provider.category, provider.town).then(count => setFeaturedSlots(count));
   }, [provider.category, provider.town]);
+
+  useEffect(() => {
+    checkEarlyAccessRequest(provider.id).then(exists => {
+      if (exists) setEarlyAccessSubmitted(true);
+    });
+  }, [provider.id]);
 
   useEffect(() => {
     if (!open || stats) return;
@@ -337,6 +347,21 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
       setError(err.message || 'Failed to save changes.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEarlyAccessRequest = async () => {
+    if (!provider) return;
+    if (!earlyAccessEmail.trim()) { setEarlyAccessError('Please enter a contact email.'); return; }
+    setEarlyAccessLoading(true);
+    setEarlyAccessError('');
+    try {
+      await submitEarlyAccessRequest(provider.id, provider.name, provider.category, earlyAccessEmail.trim());
+      setEarlyAccessSubmitted(true);
+    } catch (err: any) {
+      setEarlyAccessError(err.message || 'Failed to submit request.');
+    } finally {
+      setEarlyAccessLoading(false);
     }
   };
 
@@ -567,15 +592,18 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
           {/* Visibility upgrade */}
           <div className="border-t border-emerald-200 pt-4 space-y-3">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Visibility Upgrade</p>
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 text-xs px-3 py-2 rounded-xl leading-relaxed">
+              <i className="fas fa-flask mr-1.5 text-blue-400"></i>
+              <span className="font-semibold">Currently in early access</span> — this feature is being piloted with a small group of businesses before a full launch.
+            </div>
             <div className={`border rounded-2xl p-5 space-y-3 ${provider.listingTier === 'featured' ? 'bg-amber-100 border-amber-400' : featuredSlots !== null && featuredSlots >= 3 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-gradient-to-br from-amber-50 to-orange-50/60 border-amber-300'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <span className="font-bold text-slate-900 text-base flex items-center gap-1.5">
-                    <i className="fas fa-bolt text-amber-500 text-sm"></i>Category Leader
+                    <i className="fas fa-bolt text-amber-500 text-sm"></i>Top of Category Placement
                   </span>
                   <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    Be one of the three featured businesses at the top of your category in the Townly directory.<br />
-                    When locals search for services, your business appears first.
+                    Be one of the three businesses shown first when locals browse services in your category on Townly.
                   </p>
                 </div>
                 <div className="flex-shrink-0 text-right">
@@ -584,10 +612,10 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 </div>
               </div>
               <ul className="space-y-1 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Locked Top 3 placement in your category</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Top 3 placement in your category</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Always visible to local customers</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Amber-gold highlighted card — visually stands out from standard listings</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct call &amp; website buttons shown inline in the directory</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Amber-gold highlighted listing that stands out</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct call and website buttons</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Priority exposure in the directory</li>
                 <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-[10px]"></i>
                   {provider.listingTier === 'featured' ? (
@@ -595,7 +623,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                   ) : featuredSlots !== null && featuredSlots >= 3 ? (
                     'All 3 spots filled — check back soon'
                   ) : (
-                    `${featuredSlots !== null ? 3 - featuredSlots : '?'} of 3 spots available in ${provider.category}`
+                    'Limited to 3 businesses per category'
                   )}
                 </li>
               </ul>
@@ -667,15 +695,31 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                     <i className="fas fa-star text-[10px]"></i>
                     Reserve My Spot
                   </a>
+                ) : earlyAccessSubmitted ? (
+                  <div className="w-full flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-4 py-2.5 rounded-xl text-xs">
+                    <i className="fas fa-check-circle"></i>
+                    Request submitted — we'll be in touch soon!
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full inline-flex items-center justify-center gap-2 bg-amber-200 text-amber-400 font-bold px-4 py-2.5 rounded-xl text-xs cursor-not-allowed"
-                  >
-                    <i className="fas fa-star text-[10px]"></i>
-                    Reserve My Spot — Coming Soon
-                  </button>
+                  <>
+                    <input
+                      type="email"
+                      value={earlyAccessEmail}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEarlyAccessEmail(e.target.value)}
+                      placeholder="Your contact email"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                    {earlyAccessError && <p className="text-red-500 text-xs text-center">{earlyAccessError}</p>}
+                    <button
+                      type="button"
+                      onClick={handleEarlyAccessRequest}
+                      disabled={earlyAccessLoading}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors shadow-sm disabled:opacity-60"
+                    >
+                      <i className="fas fa-star text-[10px]"></i>
+                      {earlyAccessLoading ? 'Submitting...' : 'Request Early Access'}
+                    </button>
+                  </>
                 )
               )}
             </div>

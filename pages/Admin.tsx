@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange } from '../lib/api';
+import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -24,7 +24,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
 };
 
 const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings' | 'access'>('pending');
 
   // Pending providers
   const [pending, setPending] = useState<Provider[]>([]);
@@ -65,6 +65,13 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
   const [editingBooking, setEditingBooking] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<{ title: string; description: string; eventDate: string; eventTime: string; tags: string[]; location: string; town: string; weekStart: string; adminNotes: string }>({ title: '', description: '', eventDate: '', eventTime: '', tags: [], location: '', town: '', weekStart: '', adminNotes: '' });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Early access requests
+  const [accessRequests, setAccessRequests] = useState<EarlyAccessRequest[]>([]);
+  const [loadingAccess, setLoadingAccess] = useState(false);
+  const [accessLoaded, setAccessLoaded] = useState(false);
+  const [accessError, setAccessError] = useState('');
+  const [confirmDeleteAccessId, setConfirmDeleteAccessId] = useState<string | null>(null);
 
   // Community alerts
   const [alertTitle, setAlertTitle] = useState('');
@@ -118,6 +125,16 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
         .finally(() => setLoadingEvents(false));
     }
   }, [activeTab, eventsLoaded]);
+
+  useEffect(() => {
+    if (activeTab === 'access' && !accessLoaded) {
+      setLoadingAccess(true);
+      fetchEarlyAccessRequests()
+        .then(data => { setAccessRequests(data); setAccessLoaded(true); })
+        .catch(e => setAccessError(e.message || 'Failed to load requests.'))
+        .finally(() => setLoadingAccess(false));
+    }
+  }, [activeTab, accessLoaded]);
 
   if (!user || user.role !== 'admin') {
     return (
@@ -361,13 +378,11 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-10 space-y-6">
-      <div className="flex items-start justify-between gap-2 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Admin</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Manage submissions and flagged content</p>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="max-w-5xl mx-auto pb-10 space-y-6">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-slate-900">Admin</h1>
+        <p className="text-slate-500 text-sm mt-0.5">Manage submissions and flagged content</p>
+        <div className="flex items-center justify-center gap-1.5 flex-wrap mt-2">
           {pending.length > 0 && (
             <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-full">
               {pending.length} pending
@@ -398,7 +413,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
 
       {/* Tab nav — scrollable on mobile */}
       <div className="overflow-x-auto -mx-4 px-4">
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-max min-w-full">
+        <div className="flex justify-center gap-1 bg-slate-100 p-1 rounded-2xl w-max min-w-full mx-auto">
           {([
             { key: 'pending', icon: 'fa-clock', label: 'Pending', badge: pending.length, badgeColor: 'bg-orange-500' },
             { key: 'flagged', icon: 'fa-flag', label: 'Flagged', badge: flagged.length, badgeColor: 'bg-red-500' },
@@ -406,6 +421,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
             { key: 'events', icon: 'fa-calendar', label: 'Events', badge: pendingEvents.length, badgeColor: 'bg-purple-500' },
             { key: 'alerts', icon: 'fa-triangle-exclamation', label: 'Alerts', badge: communityAlert ? 1 : 0, badgeColor: 'bg-red-500' },
             { key: 'bookings', icon: 'fa-star', label: 'Bookings', badge: bookings.filter(b => b.status === 'pending_review').length, badgeColor: 'bg-amber-500' },
+            { key: 'access', icon: 'fa-bolt', label: 'Early Access', badge: accessRequests.filter(r => r.status === 'pending').length, badgeColor: 'bg-amber-500' },
           ] as const).map(tab => (
             <button
               key={tab.key}
@@ -972,6 +988,94 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
             </div>
           </div>
         </div>
+      )}
+
+      {/* Early Access Requests Tab */}
+      {activeTab === 'access' && (
+        <>
+          {accessError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl flex items-center justify-between">
+              <span>{accessError}</span>
+              <button onClick={() => setAccessError('')} className="ml-4 font-bold text-lg leading-none">&times;</button>
+            </div>
+          )}
+          {loadingAccess ? (
+            <div className="text-center py-20 text-slate-400 text-sm">Loading...</div>
+          ) : accessRequests.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <i className="fas fa-bolt text-amber-400 text-3xl mb-3"></i>
+              <p className="text-slate-500 font-medium">No early access requests yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {accessRequests.map((req, i) => (
+                <div key={req.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">#{i + 1} in queue</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${req.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : req.status === 'contacted' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {req.status === 'pending' ? 'New' : req.status === 'contacted' ? 'Contacted' : 'Approved'}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-slate-900 text-base">{req.providerName}</h3>
+                      <p className="text-xs text-slate-500">{req.category}</p>
+                      <p className="text-xs text-slate-400">Requested by {req.userName}</p>
+                      {req.contactEmail && (
+                        <p className="text-xs text-slate-500"><i className="fas fa-envelope text-slate-300 mr-1"></i>{req.contactEmail}</p>
+                      )}
+                      <p className="text-xs font-semibold text-slate-500 mt-1">
+                        <i className="fas fa-clock text-slate-300 mr-1"></i>
+                        {new Date(req.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {req.status !== 'contacted' && (
+                        <button
+                          onClick={async () => { await updateEarlyAccessStatus(req.id, 'contacted'); setAccessRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'contacted' } : r)); }}
+                          className="bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Mark Contacted
+                        </button>
+                      )}
+                      {req.status !== 'approved' && (
+                        <button
+                          onClick={async () => { await updateEarlyAccessStatus(req.id, 'approved'); setAccessRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r)); }}
+                          className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {confirmDeleteAccessId === req.id ? (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={async () => { await deleteEarlyAccessRequest(req.id); setAccessRequests((prev: EarlyAccessRequest[]) => prev.filter((r: EarlyAccessRequest) => r.id !== req.id)); setConfirmDeleteAccessId(null); }}
+                            className="bg-red-600 text-white hover:bg-red-700 font-bold text-xs px-3 py-2 rounded-xl transition-colors"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteAccessId(null)}
+                            className="bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold text-xs px-3 py-2 rounded-xl transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteAccessId(req.id)}
+                          className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
