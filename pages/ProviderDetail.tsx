@@ -83,7 +83,6 @@ const PROOF_TYPES = [
   { value: 'google_facebook', label: 'Screenshot of Google Business or Facebook Page showing ownership' },
   { value: 'storefront', label: 'Photo of storefront or signage' },
   { value: 'business_card', label: 'Photo of business card' },
-  { value: 'website', label: 'Screenshot of official website showing the business email/domain' },
 ] as const;
 
 type VerifyOption = 'email' | 'phone' | 'upload';
