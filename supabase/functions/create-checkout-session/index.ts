@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
 
     const amount = type === 'spotlight' ? 2500 : 500; // cents
     const label = type === 'spotlight'
-      ? 'Weekly Spotlight — Townly (one-time, 1 week)'
+      ? 'Weekly Spotlight Post — Townly (one-time, 1 week)'
       : 'Featured Post — Townly (one-time, 1 week)';
 
     const session = await stripe.checkout.sessions.create({
