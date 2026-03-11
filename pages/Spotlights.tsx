@@ -119,7 +119,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const searchQ = eventSearch.trim().toLowerCase();
   function matchesSearch(fields: (string | undefined | null)[]): boolean {
     if (!searchQ) return true;
-    return fields.some(f => f?.toLowerCase().includes(searchQ));
+    const combined = fields.filter(Boolean).join(' ').toLowerCase();
+    return searchQ.split(/\s+/).every(word => combined.includes(word));
   }
   const filteredSpotlight = dbSpotlight && matchesSearch([dbSpotlight.title, dbSpotlight.description, dbSpotlight.location, dbSpotlight.town, ...(dbSpotlight.tags ?? [])]) ? dbSpotlight : null;
   const filteredFeatured = dbFeatured.filter((s: SpotlightBooking) => matchesSearch([s.title, s.description, s.location, s.town, ...(s.tags ?? [])]));
@@ -398,24 +399,24 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* ── Community Events ── */}
       <div>
         <div className="flex items-center justify-between mb-1 px-1">
-          <h2 className="text-xl font-bold text-slate-900">Community Events</h2>
+          <h2 className="text-xl font-bold text-slate-900">Community Board</h2>
           {user ? (
             <button
               onClick={() => { setShowForm(true); setSubmitted(false); }}
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
-              <i className="fas fa-plus text-[10px]"></i> Post Event
+              <i className="fas fa-plus text-[10px]"></i> Post
             </button>
           ) : (
             <Link
               to="/auth?signup=true"
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
-              <i className="fas fa-plus text-[10px]"></i> Post Event
+              <i className="fas fa-plus text-[10px]"></i> Post
             </Link>
           )}
         </div>
-        <p className="text-slate-400 text-xs mb-3 px-1">Free · text-only unless upgraded to Featured.</p>
+        <p className="text-slate-400 text-xs mb-3 px-1">Free · share something the community should know about or show up for. No buying, selling, or gossip.</p>
 
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
@@ -429,7 +430,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         ) : filteredEvents.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
             <i className="fas fa-calendar-plus text-2xl mb-3 block text-slate-200"></i>
-            {searchQ ? 'No events match your search.' : <><div>No community events yet.</div><div className="mt-1">Be the first to post one →</div></>}
+            {searchQ ? 'No posts match your search.' : <><div>Nothing on the community board yet.</div><div className="mt-1">Be the first to post →</div></>}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
