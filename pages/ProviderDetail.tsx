@@ -80,7 +80,7 @@ interface ClaimModalProps {
 }
 
 const PROOF_TYPES = [
-  { value: 'google_facebook', label: 'Screenshot of Google Business or Facebook Page showing ownership' },
+  { value: 'google_facebook', label: 'Screenshot of Google Business Profile or Facebook Page admin panel' },
   { value: 'storefront', label: 'Photo of storefront or signage' },
   { value: 'business_card', label: 'Photo of business card' },
 ] as const;
@@ -178,6 +178,9 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
               placeholder={verifyOption === 'email' ? 'owner@yourbusiness.com' : '(270) 555-0100'}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
+            {verifyOption === 'phone' && (
+              <p className="mt-1.5 text-xs text-slate-400">We'll give you a quick call to verify you're the owner and confirm your claim.</p>
+            )}
           </div>
         )}
 
