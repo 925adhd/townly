@@ -24,16 +24,28 @@ function sanitize(input: string, maxLength: number): string {
  * Returns the normalised href so callers can store it safely.
  */
 function validateUrl(raw: string): string {
-  let href: string;
+  let url: URL;
   try {
-    const url = new URL(raw.trim());
+    url = new URL(raw.trim());
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
-    href = url.href;
   } catch {
     throw new Error('Website/social URL must start with http:// or https://');
   }
-  if (href.length > 500) throw new Error('URL is too long (max 500 characters).');
-  return href;
+  // Block private/loopback ranges to prevent SSRF if URLs are ever fetched server-side
+  const host = url.hostname;
+  if (
+    host === 'localhost' ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    host === '::1'
+  ) {
+    throw new Error('That URL is not allowed.');
+  }
+  if (url.href.length > 500) throw new Error('URL is too long (max 500 characters).');
+  return url.href;
 }
 
 /**
@@ -776,7 +788,8 @@ export async function removeContent(contentType: ReportContentType, contentId: s
 export async function uploadClaimProof(file: File): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be signed in.');
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+  validateImageFile(file);
+  const ext = safeImageExt(file);
   const path = `${session.user.id}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from('claim-proofs').upload(path, file, { upsert: false });
   if (error) throw new Error('Failed to upload proof image.');
@@ -1435,8 +1448,8 @@ export async function createCheckoutSession(
     body: { type, successUrl, cancelUrl },
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
-  if (error) throw new Error(error.message + (data ? ' | ' + JSON.stringify(data) : ''));
-  if (data?.error) throw new Error(data.error);
+  if (error) throw new Error('Failed to create checkout session. Please try again.');
+  if (data?.error) throw new Error('Failed to create checkout session. Please try again.');
   return data as { url: string; sessionId: string };
 }
 
@@ -1480,6 +1493,9 @@ export async function submitSpotlightBooking(
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    throw new Error('Invalid contact email address.');
+  }
   const tenant = getCurrentTenant();
 
   const payload: Record<string, unknown> = {
@@ -1522,7 +1538,10 @@ export async function submitSpotlightBooking(
     if (error.message.includes('paid_submissions_spotlight_week_unique')) {
       throw new Error('WEEK_TAKEN');
     }
-    throw new Error(error.message);
+    if (error.message.includes('FEATURED_WEEK_FULL')) {
+      throw new Error('That week is fully booked for featured posts.');
+    }
+    throw new Error('Failed to save booking. Please contact support@townly.us with your receipt.');
   }
   return mapSpotlightBooking(data);
 }

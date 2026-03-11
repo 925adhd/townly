@@ -56,6 +56,20 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user }) => {
           return;
         }
 
+        // Cross-check: the type and amount must match what Stripe actually charged.
+        // This prevents sessionStorage manipulation (pay $5 for featured, claim spotlight).
+        if (verification.type && verification.type !== booking.type) {
+          setErrorMsg('Payment type mismatch. Please contact support@townly.us with your receipt.');
+          setStage('error');
+          return;
+        }
+        const expectedAmount = booking.type === 'spotlight' ? 2500 : 500;
+        if (typeof verification.amountTotal === 'number' && verification.amountTotal !== expectedAmount) {
+          setErrorMsg('Payment amount mismatch. Please contact support@townly.us with your receipt.');
+          setStage('error');
+          return;
+        }
+
         // 2. Save booking to DB now that payment is confirmed
         setStage('submitting');
         await submitSpotlightBooking(
