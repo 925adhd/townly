@@ -373,7 +373,12 @@ export async function addReview(
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_REVIEWS')) {
+      throw new Error('You\'ve submitted too many reviews today. Please try again tomorrow.');
+    }
+    throw error;
+  }
   return mapReview(data);
 }
 
@@ -741,7 +746,12 @@ export async function submitReport(
     reason: sanitizedReason,
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw new Error('Failed to submit report. Please try again.');
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_REPORTS')) {
+      throw new Error('You\'ve submitted too many reports today. Please try again tomorrow.');
+    }
+    throw new Error('Failed to submit report. Please try again.');
+  }
 }
 
 export async function fetchReports(): Promise<ContentReport[]> {
@@ -828,7 +838,12 @@ export async function submitClaim(
     status: 'pending',
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw new Error('Failed to submit claim. Please try again.');
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_CLAIMS')) {
+      throw new Error('You already have 3 pending claims. Please wait for those to be reviewed before submitting another.');
+    }
+    throw new Error('Failed to submit claim. Please try again.');
+  }
 }
 
 export async function fetchPendingClaims(): Promise<ListingClaim[]> {
@@ -1057,7 +1072,12 @@ export async function submitUpdateRequest(
     reason: `[${requestType.toUpperCase()} REQUEST] ${sanitizedMessage}`,
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw new Error('Failed to submit request. Please try again.');
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_REPORTS')) {
+      throw new Error('You\'ve submitted too many requests today. Please try again tomorrow.');
+    }
+    throw new Error('Failed to submit request. Please try again.');
+  }
 }
 
 // ── Community Events ──────────────────────────────────────────────────────────
@@ -1132,7 +1152,12 @@ export async function submitCommunityEvent(
     town: sanitize(town, 100),
     tenant_id: getCurrentTenant().id,
   });
-  if (error) throw new Error('Failed to submit event. Please try again.');
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_EVENTS')) {
+      throw new Error('You\'ve submitted too many events today. Please try again tomorrow.');
+    }
+    throw new Error('Failed to submit event. Please try again.');
+  }
 }
 
 export async function approveCommunityEvent(id: string): Promise<void> {
