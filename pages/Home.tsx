@@ -15,12 +15,6 @@ interface HomeProps {
   setCommunityAlert: (alert: CommunityAlert | null) => void;
 }
 
-const now = new Date();
-const isToday = (date: Date) => date.toDateString() === now.toDateString();
-const isRecentlyAdded = (addedAt: Date) => (now.getTime() - addedAt.getTime()) < 48 * 60 * 60 * 1000;
-
-// Hardcoded event metadata — update dates when events change
-const featuredEvent = { date: new Date('2026-04-02'), addedAt: new Date('2026-03-08') };
 
 const PRELOAD_IMAGES = ['/images/lakebackground.webp', '/images/townly.webp'];
 
@@ -159,75 +153,59 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
             </span>
-            <h2 className="text-base font-semibold text-slate-900">Upcoming This Week <span className="text-slate-400 font-normal">(3)</span></h2>
+            <h2 className="text-base font-semibold text-slate-900">Upcoming This Week</h2>
           </div>
           <Link to="/spotlights" className="text-amber-700 font-semibold text-xs whitespace-nowrap hover:text-amber-900 hover:underline flex-shrink-0 flex items-center gap-1">See all events <i className="fas fa-arrow-right text-[9px]"></i></Link>
         </div>
-        <p className="text-slate-400 text-xs px-1 mb-2">3 events happening this week in {tenant.name}</p>
+        <p className="text-slate-400 text-xs px-1 mb-2">Events and announcements in {tenant.name} this week.</p>
 
         <div className="space-y-3">
 
           {/* Spotlight Card — accent bar style */}
-          <Link to="/spotlights" className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
-            {/* Thumbnail */}
-            {(currentSpotlight?.thumbnailUrl || currentSpotlight?.imageUrl || !currentSpotlight) && (
-              <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
-                <img
-                  src={currentSpotlight ? (currentSpotlight.thumbnailUrl || currentSpotlight.imageUrl) : '/images/disastersummit.jpg'}
-                  alt=""
-                  loading="lazy"
-                  className="w-full h-full object-cover"
-                  style={{ objectPosition: 'center 15%' }}
-                />
-              </div>
-            )}
-            <div className="flex flex-col flex-1 gap-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Weekly Spotlight</span>
-                {!currentSpotlight && isToday(featuredEvent.date) && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest bg-orange-500 text-white">Happening Today</span>
-                )}
-                {!currentSpotlight && isRecentlyAdded(featuredEvent.addedAt) && !isToday(featuredEvent.date) && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-widest bg-emerald-500 text-white">New</span>
-                )}
-              </div>
-              {currentSpotlight ? (
-                <>
-                  {currentSpotlight.eventDate && (
-                    <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
-                      <i className="fas fa-calendar text-amber-500 text-[10px]"></i>
-                      {new Date(currentSpotlight.eventDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  )}
-                  <h3 className="font-bold text-slate-900 text-xl leading-tight">{currentSpotlight.title}</h3>
-                  {currentSpotlight.location && (
-                    <p className="text-slate-500 text-xs flex items-center gap-1">
-                      <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {currentSpotlight.location}
-                    </p>
-                  )}
-                  <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">{currentSpotlight.teaser ?? currentSpotlight.description}</p>
-                </>
-              ) : (
-                <>
-                  <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
-                    <i className="fas fa-calendar text-amber-500 text-[10px]"></i> Apr 2, 2026 · 4:30–6:30 PM
-                  </span>
-                  <h3 className="font-bold text-slate-900 text-xl leading-tight">Disaster Preparedness Summit</h3>
-                  <p className="text-slate-500 text-xs flex items-center gap-1">
-                    <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {tenant.name} Extension Office · Leitchfield
-                  </p>
-                  <p className="text-slate-600 text-sm leading-relaxed mt-1">
-                    Keynote, panels &amp; resource expo with local emergency officials. Free admission, all ages welcome.
-                  </p>
-                </>
+          {currentSpotlight ? (
+            <Link to="/spotlights" className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
+              {(currentSpotlight.thumbnailUrl || currentSpotlight.imageUrl) && (
+                <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
+                  <img
+                    src={currentSpotlight.thumbnailUrl || currentSpotlight.imageUrl}
+                    alt=""
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: 'center 15%' }}
+                  />
+                </div>
               )}
-            </div>
-            <div className="mt-4 md:mt-0 md:flex-shrink-0">
-              <span className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-6 py-3 rounded-xl shadow-sm whitespace-nowrap">
-                View Details <i className="fas fa-arrow-right text-[10px]"></i>
-              </span>
-            </div>
-          </Link>
+              <div className="flex flex-col flex-1 gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Weekly Spotlight</span>
+                </div>
+                {currentSpotlight.eventDate && (
+                  <span className="text-xs font-medium text-amber-700 flex items-center gap-1.5">
+                    <i className="fas fa-calendar text-amber-500 text-[10px]"></i>
+                    {new Date(currentSpotlight.eventDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                )}
+                <h3 className="font-bold text-slate-900 text-xl leading-tight">{currentSpotlight.title}</h3>
+                {currentSpotlight.location && (
+                  <p className="text-slate-500 text-xs flex items-center gap-1">
+                    <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {currentSpotlight.location}
+                  </p>
+                )}
+                <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">{currentSpotlight.teaser ?? currentSpotlight.description}</p>
+              </div>
+              <div className="mt-4 md:mt-0 md:flex-shrink-0">
+                <span className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-6 py-3 rounded-xl shadow-sm whitespace-nowrap">
+                  View Details <i className="fas fa-arrow-right text-[10px]"></i>
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <Link to="/book/spotlight" className="block bg-white rounded-2xl border border-dashed border-amber-200 px-6 py-5 text-center hover:border-amber-400 transition-colors">
+              <i className="fas fa-star text-amber-300 text-2xl mb-2 block"></i>
+              <p className="font-semibold text-slate-500 text-sm">No spotlight this week</p>
+              <p className="text-xs text-slate-400 mt-1">Be the first — <span className="text-orange-500 font-medium">book a spotlight</span></p>
+            </Link>
+          )}
 
           {/* Second row: community cards */}
           <div className="grid md:grid-cols-2 gap-3">
