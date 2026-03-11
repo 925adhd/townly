@@ -89,7 +89,7 @@ type VerifyOption = 'email' | 'phone' | 'upload';
 
 const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubmitted }) => {
   const [verifyOption, setVerifyOption] = useState<VerifyOption>('email');
-  const [detail, setDetail] = useState(user.email ?? '');
+  const [detail, setDetail] = useState('');
   const [proofType, setProofType] = useState<string>('google_facebook');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
