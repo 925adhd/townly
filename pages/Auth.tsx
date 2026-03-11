@@ -79,17 +79,17 @@ const Auth: React.FC = () => {
           Sign in or create a free account to continue.
         </div>
       )}
-      <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-3 sm:mb-6">
-           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-12 h-12 sm:w-20 sm:h-20 mx-auto mb-1 sm:mb-2 object-contain animate-rock" />
-           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : `Join ${tenant.displayName}`}</h1>
-           <p className="text-orange-600 font-semibold text-sm mt-0.5">{tenant.displayName}</p>
+      <div className="bg-white p-4 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
+        <div className="text-center mb-2 sm:mb-6">
+           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-10 h-10 sm:w-20 sm:h-20 mx-auto mb-1 sm:mb-2 object-contain animate-rock" />
+           <h1 className="text-lg sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : `Join ${tenant.displayName}`}</h1>
+           <p className="text-orange-600 font-semibold text-xs sm:text-sm mt-0.5">{tenant.displayName}</p>
            <p className="text-slate-500 text-sm mt-1 hidden sm:block">
              Sign in to leave reviews and help the community stay safe and connected.
            </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
           {!isLogin && (
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Full Name</label>
@@ -98,7 +98,7 @@ const Auth: React.FC = () => {
                 name="name"
                 autoComplete="name"
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                 placeholder="Enter your name"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -112,7 +112,7 @@ const Auth: React.FC = () => {
               name="email"
               autoComplete="email"
               required
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
               placeholder="you@example.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -126,7 +126,7 @@ const Auth: React.FC = () => {
                 name="password"
                 autoComplete="current-password"
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -150,7 +150,7 @@ const Auth: React.FC = () => {
                   name="confirm-password"
                   autoComplete="new-password"
                   required
-                  className={`w-full bg-slate-50 border rounded-xl px-4 py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none ${confirmPassword && password !== confirmPassword ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
+                  className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 sm:py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none ${confirmPassword && password !== confirmPassword ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
@@ -170,7 +170,7 @@ const Auth: React.FC = () => {
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
               {error}
             </div>
           )}
@@ -178,13 +178,13 @@ const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-600 text-white font-bold py-3 sm:py-4 rounded-xl shadow-lg hover:bg-orange-500 transition-colors transform active:scale-[0.98] disabled:opacity-60"
+            className="w-full bg-orange-600 text-white font-bold py-2.5 sm:py-4 rounded-xl shadow-lg hover:bg-orange-500 transition-colors transform active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <div className="mt-3 sm:mt-8 pt-3 sm:pt-6 border-t border-slate-100 text-center">
+        <div className="mt-2 sm:mt-8 pt-2 sm:pt-6 border-t border-slate-100 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setError(''); setConfirmPassword(''); setShowPassword(false); setShowConfirmPassword(false); }}
             className="text-sm font-semibold text-orange-600"
