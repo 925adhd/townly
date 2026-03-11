@@ -525,7 +525,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-base font-bold text-slate-800">Featured Post</h2>
             <p className="text-slate-500 text-xs leading-relaxed">
-              Boost a community post or event into the weekly featured section so it appears above regular posts for the week.
+              Feature a community post or event for higher visibility this week.
             </p>
             <div className="pt-0.5">
               <span className="text-xl font-bold text-slate-700">$5</span>
@@ -567,10 +567,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            <p className="text-xs text-slate-400">Free to post · reviewed before going live.</p>
+            <p className="text-xs text-slate-400">Free to post · text-only · reviewed before going live.</p>
             <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-2 rounded-xl leading-relaxed space-y-0.5">
-              <p>No business promotion, gossip, or profanity.</p>
-              <p>Promote products or services with <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
+              <p>No selling products or services, gossip, or profanity.</p>
+              <p>Use <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> for higher visibility.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
@@ -616,10 +616,14 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Description</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description</label>
+                  <span className={`text-xs ${eDesc.length > 280 ? 'text-red-400' : 'text-slate-300'}`}>{eDesc.length}/300</span>
+                </div>
                 <textarea
                   required
                   rows={3}
+                  maxLength={300}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                   placeholder="What's happening? Share details the community should know or show up for."
                   value={eDesc}

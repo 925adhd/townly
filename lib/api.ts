@@ -1116,11 +1116,11 @@ export async function approveCommunityEvent(id: string): Promise<void> {
   await supabase.from('audit_log').insert({ actor_id: adminId, action: 'approve_event', target_table: 'community_events', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
-export async function rejectCommunityEvent(id: string): Promise<void> {
+export async function rejectCommunityEvent(id: string, reason?: string): Promise<void> {
   const adminId = await requireAdmin();
   const { error } = await supabase
     .from('community_events')
-    .update({ status: 'rejected' })
+    .update({ status: 'rejected', rejection_reason: reason || null })
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to reject event.');

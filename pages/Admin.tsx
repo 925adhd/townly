@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange } from '../lib/api';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -51,6 +51,9 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [actingEvent, setActingEvent] = useState<string | null>(null);
   const [eventsError, setEventsError] = useState('');
+  const [rejectingEventId, setRejectingEventId] = useState<string | null>(null);
+  const [eventRejectReason, setEventRejectReason] = useState('');
+  const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null);
 
   // Spotlight bookings
   const [bookings, setBookings] = useState<SpotlightBooking[]>([]);
@@ -199,12 +202,28 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
     }
   };
 
+  const handleDeleteEventAdmin = async (id: string) => {
+    setActingEvent(id);
+    setEventsError('');
+    try {
+      await deleteCommunityEvent(id);
+      setPendingEvents(prev => prev.filter(e => e.id !== id));
+      setConfirmDeleteEventId(null);
+    } catch (e: any) {
+      setEventsError(e.message || 'Failed to delete post.');
+    } finally {
+      setActingEvent(null);
+    }
+  };
+
   const handleRejectEvent = async (id: string) => {
     setActingEvent(id);
     setEventsError('');
     try {
-      await rejectCommunityEvent(id);
+      await rejectCommunityEvent(id, eventRejectReason.trim() || undefined);
       setPendingEvents(prev => prev.filter(e => e.id !== id));
+      setRejectingEventId(null);
+      setEventRejectReason('');
     } catch (e: any) {
       setEventsError(e.message || 'Failed to reject event.');
     } finally {
@@ -543,7 +562,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                         <span className="flex items-center gap-1"><i className="fas fa-map-marker-alt text-orange-400"></i> {ev.location}</span>
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full">{ev.town}</span>
                       </div>
-                      <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">{ev.description}</p>
+                      <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100 break-words whitespace-pre-wrap">{ev.description}</p>
                       <p className="text-slate-400 text-xs">Submitted by {ev.userName} · {new Date(ev.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">
@@ -554,13 +573,65 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                       >
                         Approve
                       </button>
-                      <button
-                        onClick={() => handleRejectEvent(ev.id)}
-                        disabled={actingEvent === ev.id}
-                        className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
+                      {rejectingEventId === ev.id ? (
+                        <div className="flex flex-col gap-1.5 w-40">
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Reason (optional)"
+                            value={eventRejectReason}
+                            onChange={e => setEventRejectReason(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 focus:ring-2 focus:ring-red-400 outline-none"
+                          />
+                          <button
+                            onClick={() => handleRejectEvent(ev.id)}
+                            disabled={actingEvent === ev.id}
+                            className="bg-red-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
+                          >
+                            Confirm Reject
+                          </button>
+                          <button
+                            onClick={() => { setRejectingEventId(null); setEventRejectReason(''); }}
+                            className="text-xs text-slate-400 hover:text-slate-600 text-center"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setRejectingEventId(ev.id); setEventRejectReason(''); }}
+                          disabled={actingEvent === ev.id}
+                          className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      )}
+                      {confirmDeleteEventId === ev.id ? (
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-xs text-slate-500 text-center">Delete this post?</p>
+                          <button
+                            onClick={() => handleDeleteEventAdmin(ev.id)}
+                            disabled={actingEvent === ev.id}
+                            className="bg-red-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteEventId(null)}
+                            className="text-xs text-slate-400 hover:text-slate-600 text-center"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteEventId(ev.id)}
+                          disabled={actingEvent === ev.id}
+                          className="bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
