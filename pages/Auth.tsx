@@ -72,16 +72,16 @@ const Auth: React.FC = () => {
   const isSocialContext = new URLSearchParams(location.search).has('signup');
 
   return (
-    <div className="max-w-md mx-auto pt-2 sm:pt-10">
+    <div className="max-w-md mx-auto pt-2 sm:pt-6 pb-6">
       {isSocialContext && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium px-4 py-3 rounded-2xl mb-3 flex items-center gap-2">
-          <i className="fas fa-pencil text-blue-400 flex-shrink-0"></i>
-          Create a free account or sign in to post community events.
+          <i className="fas fa-lock text-blue-400 flex-shrink-0"></i>
+          Sign in or create a free account to continue.
         </div>
       )}
       <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-3 sm:mb-8">
-           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-12 h-12 sm:w-32 sm:h-32 mx-auto mb-1 sm:mb-3 object-contain animate-rock" />
+        <div className="text-center mb-3 sm:mb-6">
+           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-12 h-12 sm:w-20 sm:h-20 mx-auto mb-1 sm:mb-2 object-contain animate-rock" />
            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : `Join ${tenant.displayName}`}</h1>
            <p className="text-orange-600 font-semibold text-sm mt-0.5">{tenant.displayName}</p>
            <p className="text-slate-500 text-sm mt-1 hidden sm:block">
@@ -89,7 +89,7 @@ const Auth: React.FC = () => {
            </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {!isLogin && (
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Full Name</label>

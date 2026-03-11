@@ -201,7 +201,10 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
           <h1 className="text-2xl font-bold text-slate-900">Community Lost & Found</h1>
           <p className="text-slate-500">Helping the community reunite with pets and property.</p>
         </div>
-        <Link to="/lost-found/new" className="bg-orange-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-colors flex items-center justify-center">
+        <Link
+          to={user ? '/lost-found/new' : '/auth?signup=true'}
+          className="bg-orange-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-colors flex items-center justify-center"
+        >
           <i className="fas fa-plus mr-2"></i>
           Post Alert
         </Link>
