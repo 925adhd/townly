@@ -79,9 +79,16 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user }) => {
         );
 
         sessionStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem('townly_has_bookings', '1');
         setStage('done');
       } catch (err: any) {
-        setErrorMsg(err.message || 'Something went wrong. Your payment was received — please contact support.');
+        if (err.message === 'WEEK_TAKEN') {
+          setErrorMsg(
+            'That week is already booked by another submission. Your payment was received — email us at contact@townly.us and we\'ll either move you to the next available week or issue a full refund.',
+          );
+        } else {
+          setErrorMsg(err.message || 'Something went wrong. Your payment was received — please contact support.');
+        }
         setStage('error');
       }
     })();
@@ -109,7 +116,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user }) => {
         <h2 className="text-lg font-bold text-slate-900">Something went wrong</h2>
         <p className="text-slate-500 text-sm leading-relaxed">{errorMsg}</p>
         <p className="text-xs text-slate-400">
-          Email us at <strong>hello@townly.app</strong> and include your receipt — we'll get your booking sorted.
+          Email us at <strong>contact@townly.us</strong> and include your receipt — we'll get your booking sorted.
         </p>
         <Link
           to={`/book/${bookingType}`}
@@ -130,7 +137,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user }) => {
       <h2 className="text-xl font-bold text-slate-900">Payment Received!</h2>
       <p className="text-slate-500 text-sm leading-relaxed">
         Your {bookingType === 'spotlight' ? 'Weekly Spotlight' : 'Featured Post'} is submitted and under review.
-        We'll publish it once approved — usually within a few hours.
+        Once approved, it will go live at midnight on the start of your selected week.
       </p>
       {user?.email && (
         <p className="text-xs text-slate-400">

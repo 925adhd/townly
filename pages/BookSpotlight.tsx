@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange } from '../lib/api';
+import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange, fetchMyBookings, updateMyBooking } from '../lib/api';
+import type { SpotlightBooking } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -127,11 +128,58 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [myBookings, setMyBookings] = useState<SpotlightBooking[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<{ title: string; teaser: string; description: string }>({ title: '', teaser: '', description: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
+  const DRAFT_KEY = `townly_booking_draft_${bookingType}`;
+
+  // Restore draft on mount
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchBookedWeeks().then(setBookedWeeks).catch(console.error);
+    fetchMyBookings().then(setMyBookings).catch(console.error);
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.title) setTitle(d.title);
+      if (d.teaser) setTeaser(d.teaser);
+      if (d.desc) setDesc(d.desc);
+      if (d.eventDate) setEventDate(d.eventDate);
+      if (d.noDate != null) setNoDate(d.noDate);
+      if (d.allDay != null) setAllDay(d.allDay);
+      if (d.noSetTime != null) setNoSetTime(d.noSetTime);
+      if (d.startHour) setStartHour(d.startHour);
+      if (d.startMin) setStartMin(d.startMin);
+      if (d.startAmPm) setStartAmPm(d.startAmPm);
+      if (d.endHour) setEndHour(d.endHour);
+      if (d.endMin) setEndMin(d.endMin);
+      if (d.endAmPm) setEndAmPm(d.endAmPm);
+      if (d.hasEndTime != null) setHasEndTime(d.hasEndTime);
+      if (d.selectedTags) setSelectedTags(d.selectedTags);
+      if (d.location) setLocation(d.location);
+      if (d.town) setTown(d.town);
+      if (d.noTown != null) setNoTown(d.noTown);
+    } catch { /* ignore */ }
   }, []);
+
+  // Auto-save draft whenever fields change
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        title, teaser, desc, eventDate, noDate, allDay, noSetTime,
+        startHour, startMin, startAmPm, endHour, endMin, endAmPm, hasEndTime,
+        selectedTags, location, town, noTown,
+      }));
+    } catch { /* ignore quota errors */ }
+  }, [
+    title, teaser, desc, eventDate, noDate, allDay, noSetTime,
+    startHour, startMin, startAmPm, endHour, endMin, endAmPm, hasEndTime,
+    selectedTags, location, town, noTown,
+  ]);
 
   // Redirect if not logged in
   if (!user) {
@@ -186,8 +234,25 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!tos) { setError('Please agree to the content policy.'); return; }
-    if (!weekStart) { setError('Please select a week.'); return; }
+
+    // Collect every missing required field and show them all at once
+    const missing: string[] = [];
+    if (!weekStart) missing.push('Select a week');
+    if (!title.trim()) missing.push('Event title');
+    if (bookingType === 'spotlight' && !teaser.trim()) missing.push('Home page teaser');
+    if (!desc.trim()) missing.push('Event description');
+    if (!noDate && !eventDate) missing.push('Event date (or check "No specific date")');
+    if (!allDay && !noSetTime && !startHour) missing.push('Event time (or check "All day" / "No set time")');
+    if (!noTown && !town) missing.push('Town (or check "Online or no specific location")');
+    if (!noTown && !location.trim()) missing.push('Location / Venue (or check "Online or no specific location")');
+    if (!bannerFile && !bannerPreview) missing.push(bookingType === 'spotlight' ? 'Banner image' : 'Image');
+    if (!tos) missing.push('Agree to the content policy (checkbox at the bottom)');
+
+    if (missing.length > 0) {
+      setError('Please complete the following before continuing:\n• ' + missing.join('\n• '));
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
@@ -222,6 +287,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
       const successUrl = `${origin}/#/book/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${origin}/#/book/${bookingType}`;
       const { url } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
+      localStorage.removeItem(DRAFT_KEY);
       window.location.href = url;
     } catch (err: any) {
       setError(err.message || 'Failed to initiate payment. Please try again.');
@@ -259,7 +325,142 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {/* My Bookings panel */}
+      {myBookings.length > 0 && (
+        <div className="mb-6 space-y-2">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Your Bookings</p>
+          {myBookings.map((b: SpotlightBooking) => {
+            const isPast = new Date(b.weekStart) < new Date(new Date().setDate(new Date().getDate() - 6));
+            const weekLabel = (() => {
+              const d = new Date(b.weekStart + 'T00:00:00');
+              const end = new Date(d); end.setDate(end.getDate() + 6);
+              return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            })();
+            const statusBadge = b.status === 'approved'
+              ? { label: 'Approved', cls: 'bg-emerald-100 text-emerald-700' }
+              : b.status === 'rejected'
+              ? { label: 'Rejected', cls: 'bg-red-100 text-red-600' }
+              : { label: 'Pending Review', cls: 'bg-amber-100 text-amber-700' };
+            const canEdit = !isPast && b.status !== 'rejected';
+            const isEditing = editingId === b.id;
+            return (
+              <div key={b.id} className={`bg-white border rounded-xl px-4 py-3 flex flex-col gap-3 ${isPast ? 'opacity-50' : 'border-slate-200'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{b.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {b.type === 'spotlight' ? '⭐ Spotlight' : '📢 Featured'} · Week of {weekLabel}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusBadge.cls}`}>{statusBadge.label}</span>
+                    {b.status === 'approved' && !isPast && (
+                      <span className="text-[10px] text-slate-400">Goes live {new Date(b.weekStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    )}
+                    {b.status === 'rejected' && b.adminNotes && (
+                      <span className="text-[10px] text-slate-400 italic truncate max-w-[140px]">"{b.adminNotes}"</span>
+                    )}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isEditing) { setEditingId(null); setEditError(''); return; }
+                          setEditingId(b.id);
+                          setEditFields({ title: b.title, teaser: b.teaser ?? '', description: b.description });
+                          setEditError('');
+                        }}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 underline underline-offset-2"
+                      >
+                        {isEditing ? 'Cancel' : 'Edit'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Inline edit form */}
+                {isEditing && (
+                  <div className="space-y-2 pt-1 border-t border-slate-100">
+                    {b.type === 'spotlight' && (
+                      <>
+                        <input
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                          placeholder="Title"
+                          value={editFields.title}
+                          onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
+                        />
+                        <textarea
+                          rows={2}
+                          maxLength={120}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+                          placeholder="Home page teaser (max 120 chars)"
+                          value={editFields.teaser}
+                          onChange={e => setEditFields(f => ({ ...f, teaser: e.target.value }))}
+                        />
+                      </>
+                    )}
+                    {b.type === 'featured' && (
+                      <input
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+                        placeholder="Title"
+                        value={editFields.title}
+                        onChange={e => setEditFields(f => ({ ...f, title: e.target.value }))}
+                      />
+                    )}
+                    <textarea
+                      rows={3}
+                      maxLength={600}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+                      placeholder="Full description (max 600 chars)"
+                      value={editFields.description}
+                      onChange={e => setEditFields(f => ({ ...f, description: e.target.value }))}
+                    />
+                    {editError && <p className="text-xs text-red-500">{editError}</p>}
+                    <p className="text-[11px] text-slate-400">Saving will resubmit for admin approval before going live.</p>
+                    <button
+                      type="button"
+                      disabled={editSaving}
+                      onClick={async () => {
+                        if (!editFields.title.trim() || !editFields.description.trim()) {
+                          setEditError('Title and description are required.');
+                          return;
+                        }
+                        setEditSaving(true);
+                        setEditError('');
+                        try {
+                          const updated = await updateMyBooking(b.id, {
+                            title: editFields.title,
+                            teaser: editFields.teaser || undefined,
+                            description: editFields.description,
+                            eventDate: b.eventDate,
+                            eventTime: b.eventTime,
+                            location: b.location,
+                            town: b.town,
+                            tags: b.tags,
+                            imageUrl: b.imageUrl,
+                            thumbnailUrl: b.thumbnailUrl,
+                            flyerUrl: b.flyerUrl,
+                          });
+                          setMyBookings(prev => prev.map(x => x.id === b.id ? updated : x));
+                          setEditingId(null);
+                        } catch (err: any) {
+                          setEditError(err.message || 'Failed to save.');
+                        } finally {
+                          setEditSaving(false);
+                        }
+                      }}
+                      className="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl disabled:opacity-50"
+                    >
+                      {editSaving ? 'Saving…' : 'Save & Resubmit'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
         {/* Week */}
         <div>
@@ -311,7 +512,6 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             Title <span className="text-red-400">*</span>
           </label>
           <input
-            required
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
             placeholder="e.g. Grand Opening – Sunrise Bakery"
             value={title}
@@ -328,7 +528,6 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
               </label>
               <p className="text-[11px] text-slate-400 mb-2">Short hook shown on the home page preview — keep it punchy. Max 120 characters.</p>
               <textarea
-                required
                 rows={2}
                 maxLength={120}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
@@ -344,7 +543,6 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
               </label>
               <p className="text-[11px] text-slate-400 mb-2">Shown on the Events page. Include all the details. Max 600 characters.</p>
               <textarea
-                required
                 rows={4}
                 maxLength={600}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
@@ -361,7 +559,6 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
               Description <span className="text-red-400">*</span>
             </label>
             <textarea
-              required
               rows={3}
               maxLength={600}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none resize-none"
@@ -509,7 +706,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
 
         {/* Location */}
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue</label>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue <span className="text-red-400">*</span></label>
           <input
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-orange-400 outline-none"
             placeholder="e.g. Centre on Main or 425 S. Main St — no need to include the town"
@@ -521,7 +718,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         {/* Images */}
         <div className="space-y-3">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-            {bookingType === 'spotlight' ? 'Images' : 'Image'}{bookingType === 'spotlight' && <span className="text-red-400 ml-1">*</span>}
+            {bookingType === 'spotlight' ? 'Images' : 'Image'}<span className="text-red-400 ml-1">*</span>
           </p>
 
           {/* Hidden file inputs */}
@@ -623,7 +820,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col flex-1 gap-1.5">
+                <div className="flex flex-col flex-1 gap-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-amber-100 text-amber-700">⭐ Weekly Spotlight</span>
                   </div>
@@ -636,17 +833,17 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
                       )}
                     </span>
                   )}
-                  <h3 className="font-bold text-slate-900 text-xl leading-tight">
+                  <h3 className="font-bold text-slate-900 text-xl leading-tight break-words">
                     {title || <span className="text-slate-300 italic font-normal text-base">Your event title…</span>}
                   </h3>
                   {(location || town) && (
-                    <p className="text-slate-500 text-xs flex items-center gap-1">
+                    <p className="text-slate-500 text-xs flex items-center gap-1 break-words">
                       <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i>
                       {location}{location && town && <span className="text-slate-300 mx-1">·</span>}{town}
                     </p>
                   )}
-                  <p className="text-slate-600 text-sm leading-relaxed mt-1 line-clamp-2">
-                    {desc || <span className="italic text-slate-300">Your description will appear here…</span>}
+                  <p className="text-slate-600 text-sm leading-relaxed mt-1 break-words">
+                    {teaser || <span className="italic text-slate-300">Your home page teaser will appear here…</span>}
                   </p>
                 </div>
               </div>
@@ -666,17 +863,17 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
                     <span className="text-slate-400 text-xs font-medium">{formatEventDate(eventDate)}</span>
                   )}
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base leading-tight">
+                    <h3 className="font-bold text-slate-900 text-base leading-tight break-words">
                       {title || <span className="text-slate-300 italic font-normal">Your event title…</span>}
                     </h3>
                     {(location || town) && (
-                      <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                      <p className="text-slate-500 text-xs mt-1 flex items-center gap-1 break-words">
                         <i className="fas fa-map-marker-alt text-orange-400"></i>
                         {location}{location && town && <span className="text-slate-300 mx-1">·</span>}{town}
                       </p>
                     )}
                   </div>
-                  <p className="text-slate-500 text-sm leading-relaxed">
+                  <p className="text-slate-500 text-sm leading-relaxed break-words">
                     {desc || <span className="italic text-slate-300">Your description will appear here…</span>}
                   </p>
                   {(eventTime || allDay || noSetTime || selectedTags.length > 0) && (
@@ -712,16 +909,16 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
               {flyerPreview && (
                 <img src={flyerPreview} alt="preview" className="w-full max-h-[160px] object-cover rounded-xl" />
               )}
-              <h3 className="font-bold text-slate-900 text-sm leading-tight">
+              <h3 className="font-bold text-slate-900 text-sm leading-tight break-words">
                 {title || <span className="text-slate-300 italic font-normal">Your event title…</span>}
               </h3>
               {(location || town) && (
-                <p className="text-slate-500 text-xs flex items-center gap-1">
+                <p className="text-slate-500 text-xs flex items-center gap-1 break-words">
                   <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i>
                   {location}{location && town && <span className="text-slate-300 mx-1">·</span>}{town}
                 </p>
               )}
-              <p className="text-slate-500 text-xs leading-relaxed">
+              <p className="text-slate-500 text-xs leading-relaxed break-words">
                 {desc || <span className="italic text-slate-300">Your description will appear here…</span>}
               </p>
               {(eventTime || allDay || noSetTime || selectedTags.length > 0) && (
@@ -758,7 +955,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         </label>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-3 rounded-xl">{error}</div>
+          <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-3 rounded-xl whitespace-pre-line">{error}</div>
         )}
 
         {/* Payment note */}
@@ -772,20 +969,35 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         </div>
 
         <button
-          type="button"
-          disabled
-          className="w-full bg-slate-200 text-slate-400 font-bold py-4 rounded-xl text-sm cursor-not-allowed flex items-center justify-center gap-2"
+          type="submit"
+          disabled={submitting}
+          className={`w-full font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors ${
+            submitting
+              ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              : bookingType === 'spotlight'
+              ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200'
+              : 'bg-slate-800 hover:bg-slate-900 text-white'
+          }`}
         >
-          <i className="fas fa-clock text-xs"></i>
-          Online Booking Coming Soon
+          {submitting ? (
+            <>
+              <i className="fas fa-spinner fa-spin text-xs"></i>
+              Processing…
+            </>
+          ) : (
+            <>
+              <i className="fas fa-lock text-xs"></i>
+              {bookingType === 'spotlight' ? 'Pay $25 & Submit' : 'Pay $5 & Submit'}
+            </>
+          )}
         </button>
 
       </form>
 
       {/* Date Picker Modal */}
       {datePickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 pb-8 sm:pb-4" onClick={() => setDatePickerOpen(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setDatePickerOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4 max-h-[90dvh] overflow-y-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-900">Event Date</h3>
@@ -870,8 +1082,8 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
 
       {/* Time Picker Modal */}
       {timePickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 pb-8 sm:pb-4" onClick={() => setTimePickerOpen(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setTimePickerOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5 max-h-[90dvh] overflow-y-auto" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-900">Event Time</h3>
               <button type="button" onClick={() => setTimePickerOpen(false)} className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">

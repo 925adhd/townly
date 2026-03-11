@@ -1328,14 +1328,15 @@ export async function fetchBookedWeeks(): Promise<{
   featured: { week: string; count: number }[];
 }> {
   const tenant = getCurrentTenant();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - 6); // include weeks already in progress
   const { data, error } = await supabase
     .from('paid_submissions')
     .select('type, week_start')
     .eq('tenant_id', tenant.id)
     .neq('status', 'rejected')
-    .gte('week_start', today.toISOString().split('T')[0]);
+    .gte('week_start', cutoff.toISOString().split('T')[0]);
   if (error) throw new Error(error.message);
 
   const spotlightWeeks: string[] = [];
@@ -1349,6 +1350,58 @@ export async function fetchBookedWeeks(): Promise<{
   }
   const featured = Object.entries(featuredMap).map(([week, count]) => ({ week, count }));
   return { spotlight: spotlightWeeks, featured };
+}
+
+/** Fetch the current user's own spotlight/featured bookings, newest first. */
+export async function fetchMyBookings(): Promise<SpotlightBooking[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return [];
+  const tenant = getCurrentTenant();
+  const { data, error } = await supabase
+    .from('paid_submissions')
+    .select('*')
+    .eq('tenant_id', tenant.id)
+    .eq('submitted_by', session.user.id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapSpotlightBooking);
+}
+
+/** Update the user's own pending booking (resets to pending_review for re-approval). */
+export async function updateMyBooking(
+  id: string,
+  fields: {
+    title: string; teaser?: string; description: string;
+    eventDate?: string; eventTime?: string;
+    location?: string; town?: string; tags?: string[];
+    imageUrl?: string; thumbnailUrl?: string; flyerUrl?: string;
+  },
+): Promise<SpotlightBooking> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Not authenticated.');
+  const { data, error } = await supabase
+    .from('paid_submissions')
+    .update({
+      title: sanitize(fields.title, 200),
+      teaser: fields.teaser ? sanitize(fields.teaser, 120) : null,
+      description: sanitize(fields.description, 600),
+      event_date: fields.eventDate || null,
+      event_time: fields.eventTime || null,
+      location: fields.location ? sanitize(fields.location, 300) : null,
+      town: fields.town ? sanitize(fields.town, 100) : null,
+      tags: fields.tags ?? [],
+      image_url: fields.imageUrl || null,
+      thumbnail_url: fields.thumbnailUrl || null,
+      flyer_url: fields.flyerUrl || null,
+      status: 'pending_review',
+    })
+    .eq('id', id)
+    .eq('submitted_by', session.user.id) // can only edit own bookings
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSpotlightBooking(data);
 }
 
 // ── Stripe helpers ────────────────────────────────────────────────────────────
@@ -1365,7 +1418,7 @@ export async function createCheckoutSession(
     body: { type, successUrl, cancelUrl },
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(error.message + (data ? ' | ' + JSON.stringify(data) : ''));
   if (data?.error) throw new Error(data.error);
   return data as { url: string; sessionId: string };
 }
@@ -1437,8 +1490,45 @@ export async function submitSpotlightBooking(
     ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
   };
 
+  // Idempotent: if this session was already saved (e.g. page refresh), return existing row
+  if (stripeSessionId) {
+    const { data: existing } = await supabase
+      .from('paid_submissions')
+      .select()
+      .eq('stripe_session_id', stripeSessionId)
+      .maybeSingle();
+    if (existing) return mapSpotlightBooking(existing);
+  }
+
+  // If week constraint would fire, check if the existing row is rejected — if so, reclaim it
+  if (type === 'spotlight' && weekStart) {
+    const { data: existing } = await supabase
+      .from('paid_submissions')
+      .select()
+      .eq('tenant_id', tenant.id)
+      .eq('type', 'spotlight')
+      .eq('week_start', weekStart)
+      .eq('status', 'rejected')
+      .maybeSingle();
+    if (existing) {
+      const { data: updated, error: upErr } = await supabase
+        .from('paid_submissions')
+        .update({ ...payload, status: 'pending_review' })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (upErr) throw new Error(upErr.message);
+      return mapSpotlightBooking(updated);
+    }
+  }
+
   const { data, error } = await supabase.from('paid_submissions').insert(payload).select().single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message.includes('paid_submissions_spotlight_week_unique')) {
+      throw new Error('WEEK_TAKEN');
+    }
+    throw new Error(error.message);
+  }
   return mapSpotlightBooking(data);
 }
 

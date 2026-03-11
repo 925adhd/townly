@@ -21,6 +21,7 @@ import Spotlights from './pages/Spotlights';
 import BookSpotlight from './pages/BookSpotlight';
 import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
+import MyBookings from './pages/MyBookings';
 import { supabase } from './lib/supabase';
 import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlert, signOut } from './lib/api';
 import { Provider, Review, LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
@@ -124,6 +125,9 @@ const App: React.FC = () => {
               {user ? (
                 <div className="flex items-center space-x-3">
                   <span className="text-slate-500 text-sm">Hi, {user.name}</span>
+                  {localStorage.getItem('townly_has_bookings') && (
+                    <Link to="/my-bookings" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">My Bookings</Link>
+                  )}
                   {user.role === 'admin' && (
                     <Link to="/admin" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">Admin</Link>
                   )}
@@ -137,6 +141,12 @@ const App: React.FC = () => {
             <div className="md:hidden flex items-center space-x-3">
               {user ? (
                 <>
+                  {localStorage.getItem('townly_has_bookings') && (
+                    <Link to="/my-bookings" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
+                      <i className="fas fa-calendar-check text-lg"></i>
+                      <span className="text-[10px] mt-1 font-medium">Bookings</span>
+                    </Link>
+                  )}
                   {user.role === 'admin' && (
                     <Link to="/admin" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
                       <i className="fas fa-shield-halved text-lg"></i>
@@ -177,6 +187,7 @@ const App: React.FC = () => {
               <Route path="/spotlights" element={<Spotlights user={user} />} />
               <Route path="/book/:type" element={<BookSpotlight user={user} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} />} />
+              <Route path="/my-bookings" element={<MyBookings user={user} />} />
               <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} />} />
             </Routes>
           )}

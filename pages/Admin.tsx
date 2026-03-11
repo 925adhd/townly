@@ -752,8 +752,8 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                   </div>
 
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">{b.title}</h3>
-                    <p className="text-slate-500 text-xs mt-1 leading-relaxed">{b.description}</p>
+                    <h3 className="font-bold text-slate-900 text-sm break-words">{b.title}</h3>
+                    <p className="text-slate-500 text-xs mt-1 leading-relaxed break-words">{b.description}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">

@@ -4,16 +4,15 @@
 // Required env var in Supabase Dashboard → Settings → Edge Functions:
 //   STRIPE_SECRET_KEY=sk_live_...   (or sk_test_... for testing)
 
-import Stripe from 'https://esm.sh/stripe@14?target=deno';
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Stripe from 'npm:stripe@14';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -51,8 +50,8 @@ serve(async (req) => {
 
     const amount = type === 'spotlight' ? 2500 : 500; // cents
     const label = type === 'spotlight'
-      ? 'Weekly Spotlight — Townly ($25/week)'
-      : 'Featured Post — Townly ($5/week)';
+      ? 'Weekly Spotlight — Townly (one-time, 1 week)'
+      : 'Featured Post — Townly (one-time, 1 week)';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
