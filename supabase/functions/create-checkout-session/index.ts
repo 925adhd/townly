@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       customer_email: user.email,
-      receipt_email: user.email,
+      payment_intent_data: { receipt_email: user.email },
       metadata: { type, userId: user.id },
     });
 
