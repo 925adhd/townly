@@ -375,7 +375,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       </div>
 
       {/* Pricing tiers */}
-      <div>
+      <div id="pricing">
         <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Get Your Event or Post Noticed</h2>
         <p className="text-slate-500 text-sm mb-4 px-1">Short-term visibility for events, announcements, and community posts. Looking to grow your business? See the directory listing options on your business page.</p>
         <div className="space-y-5">

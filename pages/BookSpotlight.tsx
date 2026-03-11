@@ -320,10 +320,35 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             {bookingType === 'spotlight' ? 'Book a Weekly Spotlight' : 'Get Featured This Week'}
           </h1>
           <p className="text-xs text-slate-400">
-            {bookingType === 'spotlight' ? '$25 / week · Only 1 available per week' : '$5 / week · Up to 5 available per week'}
+            {bookingType === 'spotlight' ? '$25 / week · Only 1 available per week' : '$5 / week · Up to 5 slots per week'}
           </p>
         </div>
       </div>
+
+      {/* Featured slot availability banner */}
+      {bookingType === 'featured' && bookedWeeks && (() => {
+        const refWeek = weekStart || weekIsoDate(getWeekStart(new Date()));
+        const taken = (bookedWeeks.featured ?? []).find(f => f.week === refWeek)?.count ?? 0;
+        const slotsLeft = 5 - taken;
+        const weekLabel = formatWeekRange(new Date(refWeek + 'T00:00:00'));
+        return (
+          <div className={`mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl border text-sm font-medium ${
+            slotsLeft === 0
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : slotsLeft <= 2
+              ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+          }`}>
+            <i className={`fas ${slotsLeft === 0 ? 'fa-ban' : slotsLeft <= 2 ? 'fa-exclamation-triangle' : 'fa-check-circle'} text-base flex-shrink-0`}></i>
+            <span>
+              {slotsLeft === 0
+                ? <>Week of <strong>{weekLabel}</strong> is fully booked — select another week below.</>
+                : <><strong>{slotsLeft} of 5 slots</strong> available{weekStart ? <> for week of <strong>{weekLabel}</strong></> : ' this week'}</>
+              }
+            </span>
+          </div>
+        );
+      })()}
 
       {/* My Bookings panel */}
       {myBookings.length > 0 && (
