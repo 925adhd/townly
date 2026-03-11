@@ -126,6 +126,8 @@ function mapClaim(row: any): ListingClaim {
     userEmail: row.user_email ?? '',
     verificationMethod: row.verification_method as 'email' | 'phone' | 'manual',
     verificationDetail: row.verification_detail ?? '',
+    proofUrl: row.proof_url ?? undefined,
+    proofType: row.proof_type ?? undefined,
     status: row.status as 'pending' | 'approved' | 'rejected',
     createdAt: row.created_at,
   };
@@ -771,11 +773,24 @@ export async function removeContent(contentType: ReportContentType, contentId: s
 
 // ── Listing Claims ─────────────────────────────────────────────────────────────
 
+export async function uploadClaimProof(file: File): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('You must be signed in.');
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${session.user.id}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('claim-proofs').upload(path, file, { upsert: false });
+  if (error) throw new Error('Failed to upload proof image.');
+  const { data } = supabase.storage.from('claim-proofs').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function submitClaim(
   providerId: string,
   providerName: string,
   verificationMethod: 'email' | 'phone' | 'manual',
-  verificationDetail: string
+  verificationDetail: string,
+  proofUrl?: string,
+  proofType?: string
 ): Promise<void> {
   // Resolve identity from the server-side session — never trust caller-supplied IDs.
   const { data: { session } } = await supabase.auth.getSession();
@@ -795,6 +810,8 @@ export async function submitClaim(
     user_email: sanitize(session.user.email ?? '', 200),
     verification_method: verificationMethod,
     verification_detail: sanitizedDetail,
+    proof_url: proofUrl ?? null,
+    proof_type: proofType ?? null,
     status: 'pending',
     tenant_id: getCurrentTenant().id,
   });

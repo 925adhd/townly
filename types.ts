@@ -39,6 +39,8 @@ export interface ListingClaim {
   userEmail: string;
   verificationMethod: 'email' | 'phone' | 'manual';
   verificationDetail: string;
+  proofUrl?: string;
+  proofType?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }

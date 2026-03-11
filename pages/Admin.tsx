@@ -524,6 +524,19 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                           {claim.verificationDetail}
                         </p>
                       )}
+                      {claim.proofUrl && (
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5">
+                          <span className="font-semibold text-slate-400 text-xs uppercase tracking-wide block">
+                            Proof — {claim.proofType === 'storefront' ? 'Storefront photo' : claim.proofType === 'google_facebook' ? 'Google/Facebook screenshot' : claim.proofType === 'business_card' ? 'Business card' : 'Document'}
+                          </span>
+                          <a href={claim.proofUrl} target="_blank" rel="noopener noreferrer" className="block">
+                            <img src={claim.proofUrl} alt="Ownership proof" className="max-h-40 rounded-lg border border-slate-200 object-contain bg-white" />
+                          </a>
+                          <a href={claim.proofUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                            <i className="fas fa-external-link-alt text-[10px]"></i> Open full size
+                          </a>
+                        </div>
+                      )}
                       <p className="text-slate-400 text-xs">{new Date(claim.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex flex-col gap-2 flex-shrink-0">

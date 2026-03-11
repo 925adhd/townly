@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
@@ -79,23 +79,48 @@ interface ClaimModalProps {
   onSubmitted: () => void;
 }
 
+const PROOF_TYPES = [
+  { value: 'google_facebook', label: 'Screenshot of Google Business or Facebook Page showing ownership' },
+  { value: 'storefront', label: 'Photo of storefront or signage' },
+  { value: 'business_card', label: 'Photo of business card' },
+  { value: 'website', label: 'Screenshot of official website showing the business email/domain' },
+] as const;
+
+type VerifyOption = 'email' | 'phone' | 'upload';
+
 const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubmitted }) => {
-  const [method, setMethod] = useState<'email' | 'phone' | 'manual'>('email');
+  const [verifyOption, setVerifyOption] = useState<VerifyOption>('email');
   const [detail, setDetail] = useState(user.email ?? '');
+  const [proofType, setProofType] = useState<string>('google_facebook');
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const handleVerifyOptionChange = (opt: VerifyOption) => {
+    setVerifyOption(opt);
+    setDetail(opt === 'email' ? (user.email ?? '') : '');
+    setProofFile(null);
+  };
+
   const handleSubmit = async () => {
-    if (!detail.trim()) { setError('Please provide your verification details.'); return; }
+    if (verifyOption !== 'upload' && !detail.trim()) {
+      setError('Please provide your verification details.');
+      return;
+    }
+    if (verifyOption === 'upload' && !proofFile) {
+      setError('Please select a file to upload.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
-      await submitClaim(
-        provider.id,
-        provider.name,
-        method,
-        detail.trim()
-      );
+      let proofUrl: string | undefined;
+      if (proofFile) {
+        proofUrl = await uploadClaimProof(proofFile);
+      }
+      const dbMethod = verifyOption === 'upload' ? 'manual' : verifyOption;
+      const dbDetail = verifyOption === 'upload' ? `Proof upload: ${proofType}` : detail.trim();
+      await submitClaim(provider.id, provider.name, dbMethod, dbDetail, proofUrl, proofFile ? proofType : undefined);
       onSubmitted();
       onClose();
     } catch (err: any) {
@@ -106,8 +131,9 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-5">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 overflow-y-auto">
+      <div className="flex min-h-full items-start justify-center p-4 pt-6">
+      <div className="bg-white rounded-3xl shadow-2xl p-5 max-w-sm w-full space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">{provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}</h2>
@@ -116,27 +142,24 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
         </div>
 
-        <p className="text-slate-600 text-sm">How can we verify you own or manage this business?</p>
+        <p className="text-slate-600 text-sm font-medium">Verify your connection to this business</p>
 
         <div className="space-y-2">
           {([
-            { value: 'email', label: 'I manage the business email' },
-            { value: 'phone', label: 'I can be reached by phone' },
-            { value: 'manual', label: "Other — I'll explain below" },
-          ] as const).map(opt => (
+            { value: 'email' as VerifyOption, label: 'Verify with business email' },
+            { value: 'phone' as VerifyOption, label: 'Verify with phone' },
+            { value: 'upload' as VerifyOption, label: 'Upload proof of ownership' },
+          ]).map(opt => (
             <label
               key={opt.value}
-              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${method === opt.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${verifyOption === opt.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
             >
               <input
                 type="radio"
-                name="method"
+                name="verifyOption"
                 value={opt.value}
-                checked={method === opt.value}
-                onChange={() => {
-                  setMethod(opt.value);
-                  setDetail(opt.value === 'email' ? (user.email ?? '') : '');
-                }}
+                checked={verifyOption === opt.value}
+                onChange={() => handleVerifyOptionChange(opt.value)}
                 className="text-blue-600"
               />
               <span className="text-sm font-medium text-slate-700">{opt.label}</span>
@@ -144,28 +167,50 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
           ))}
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-            {method === 'email' ? 'Business email address' : method === 'phone' ? 'Phone number' : 'Details'}
-          </label>
-          {method === 'manual' ? (
-            <textarea
-              value={detail}
-              onChange={e => setDetail(e.target.value)}
-              rows={3}
-              placeholder="Describe how you can verify ownership..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-            />
-          ) : (
+        {verifyOption !== 'upload' && (
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+              {verifyOption === 'email' ? 'Business email address' : 'Phone number'}
+            </label>
             <input
-              type={method === 'email' ? 'email' : 'tel'}
+              type={verifyOption === 'email' ? 'email' : 'tel'}
               value={detail}
               onChange={e => setDetail(e.target.value)}
-              placeholder={method === 'email' ? 'owner@yourbusiness.com' : '(270) 555-0100'}
+              placeholder={verifyOption === 'email' ? 'owner@yourbusiness.com' : '(270) 555-0100'}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
-          )}
-        </div>
+          </div>
+        )}
+
+        {verifyOption === 'upload' && (
+          <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50 space-y-3">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Upload proof of ownership</p>
+            <div className="space-y-1.5">
+              {PROOF_TYPES.map(opt => (
+                <label key={opt.value} className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors text-xs ${proofType === opt.value ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <input
+                    type="radio"
+                    name="proofType"
+                    value={opt.value}
+                    checked={proofType === opt.value}
+                    onChange={() => setProofType(opt.value)}
+                    className="mt-0.5 text-blue-600 flex-shrink-0"
+                  />
+                  <span className="text-slate-700 font-medium leading-snug">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <div>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={e => setProofFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+              />
+              {proofFile && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><i className="fas fa-check-circle"></i> {proofFile.name}</p>}
+            </div>
+          </div>
+        )}
 
         {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
 
@@ -183,6 +228,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
         </div>
 
         <p className="text-center text-xs text-slate-400">Claiming is always free. We'll review within 1–2 business days.</p>
+      </div>
       </div>
     </div>
   );
