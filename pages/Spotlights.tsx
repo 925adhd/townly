@@ -223,7 +223,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 )}
               </div>
             </div>
-          ) : !searchQ ? (
+          ) : matchesSearch(['Grayson County Disaster Preparedness Summit', 'disaster preparedness summit community emergency keynote Matt Dixon meteorologist panel resource expo', 'Grayson County Extension Office', '64 Quarry Rd Leitchfield', 'Free Admission', 'Community Event', 'All Ages Welcome']) ? (
             /* ── Hardcoded fallback spotlight ── */
             <div
               id="disaster-summit"
@@ -329,10 +329,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 )}
               </div>
             ))
-          ) : !searchQ ? (
+          ) : (
             /* ── Hardcoded fallback featured cards ── */
             <>
               {/* Kids Entrepreneur Fair */}
+              {matchesSearch(['2nd Annual Kids Entrepreneur Fair', 'Grades K-12 showcase businesses YP Grayson County kids entrepreneur shopping awards peers', 'Centre on Main', '425 S Main Street Leitchfield', 'Free Entry']) && (
               <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm cursor-pointer" onClick={() => setEntrepreneurOpen(true)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
@@ -361,8 +362,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   <i className="fas fa-file-image text-[10px]"></i> View Flyer
                 </button>
               </div>
+              )}
 
               {/* UPS Store Ribbon Cutting */}
+              {matchesSearch(['Ribbon Cutting The UPS Store Leitchfield', 'Grayson County Chamber of Commerce ribbon cutting ceremony UPS Store Leitchfield location welcome new business support local growth', '52 Public Square Leitchfield KY 42754', 'Chamber Event', 'Business Opening']) && (
               <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm cursor-pointer" onClick={() => setUpsOpen(true)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
@@ -390,8 +393,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   <i className="fas fa-file-image text-[10px]"></i> View Flyer
                 </button>
               </div>
+              )}
             </>
-          ) : null}
+          )}
 
         </div>
       </div>
