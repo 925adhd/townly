@@ -1500,28 +1500,6 @@ export async function submitSpotlightBooking(
     if (existing) return mapSpotlightBooking(existing);
   }
 
-  // If week constraint would fire, check if the existing row is rejected — if so, reclaim it
-  if (type === 'spotlight' && weekStart) {
-    const { data: existing } = await supabase
-      .from('paid_submissions')
-      .select()
-      .eq('tenant_id', tenant.id)
-      .eq('type', 'spotlight')
-      .eq('week_start', weekStart)
-      .eq('status', 'rejected')
-      .maybeSingle();
-    if (existing) {
-      const { data: updated, error: upErr } = await supabase
-        .from('paid_submissions')
-        .update({ ...payload, status: 'pending_review' })
-        .eq('id', existing.id)
-        .select()
-        .single();
-      if (upErr) throw new Error(upErr.message);
-      return mapSpotlightBooking(updated);
-    }
-  }
-
   const { data, error } = await supabase.from('paid_submissions').insert(payload).select().single();
   if (error) {
     if (error.message.includes('paid_submissions_spotlight_week_unique')) {

@@ -863,7 +863,8 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
 
                   <div className="text-xs text-slate-500 space-y-0.5">
                     <p><strong>Contact:</strong> {b.contactName} · {b.contactEmail}{b.contactPhone ? ` · ${b.contactPhone}` : ''}</p>
-                    {b.submittedByName && <p><strong>Submitted by:</strong> {b.submittedByName}</p>}
+                    {b.submittedByName && <p><strong>Account:</strong> {b.submittedByName}{b.submittedBy ? <span className="text-slate-300 ml-1 font-mono">{b.submittedBy.slice(0, 8)}…</span> : null}</p>}
+                    {b.stripeSessionId && <p className="text-slate-400"><strong>Stripe session:</strong> <span className="font-mono">{b.stripeSessionId}</span></p>}
                   </div>
 
                   {b.adminNotes && (
