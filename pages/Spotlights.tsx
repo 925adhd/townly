@@ -567,8 +567,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            <p className="text-xs text-slate-400">Free to post. Events are reviewed before going live.</p>
-            <p className="text-xs text-slate-300">Free posts are text-only. <Link to={user ? '/book/featured' : '/auth?signup=true'} className="underline hover:text-slate-400 transition-colors" onClick={() => setShowForm(false)}>Upgrade to Featured</Link> to include an image.</p>
+            <p className="text-xs text-slate-400">Free to post · reviewed before going live.</p>
+            <p className="text-xs text-slate-300">Text-only unless upgraded to <Link to={user ? '/book/featured' : '/auth?signup=true'} className="underline hover:text-slate-400 transition-colors" onClick={() => setShowForm(false)}>Featured</Link>.</p>
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-2 rounded-xl leading-relaxed space-y-0.5">
+              <p>Community posts can't promote businesses or gossip.</p>
+              <p>Use <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> to promote a product, service, or business.</p>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Title</label>
