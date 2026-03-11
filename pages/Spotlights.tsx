@@ -568,14 +568,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </button>
             </div>
             <p className="text-xs text-slate-400">Free to post · reviewed before going live.</p>
-            <p className="text-xs text-slate-300">Text-only unless upgraded to <Link to={user ? '/book/featured' : '/auth?signup=true'} className="underline hover:text-slate-400 transition-colors" onClick={() => setShowForm(false)}>Featured</Link>.</p>
             <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-2 rounded-xl leading-relaxed space-y-0.5">
-              <p>Community posts can't promote businesses or gossip.</p>
-              <p>Use <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> to promote a product, service, or business.</p>
+              <p>No business promotion, gossip, or profanity.</p>
+              <p>Promote products or services with <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Title</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title</label>
                 <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -607,11 +606,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location</label>
                 <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Courthouse Square, Leitchfield"
+                  placeholder="e.g. Courthouse Square, City Park, or Main Street"
                   value={eLocation}
                   onChange={e => setELocation(e.target.value)}
                 />
@@ -622,7 +621,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   required
                   rows={3}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                  placeholder="What's happening? Who should come?"
+                  placeholder="What's happening? Share details the community should know or show up for."
                   value={eDesc}
                   onChange={e => setEDesc(e.target.value)}
                 />
