@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest } from '../lib/api';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -24,7 +24,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
 };
 
 const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }) => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings' | 'access'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings' | 'access' | 'activity'>('pending');
 
   // Pending providers
   const [pending, setPending] = useState<Provider[]>([]);
@@ -72,6 +72,14 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
   const [accessLoaded, setAccessLoaded] = useState(false);
   const [accessError, setAccessError] = useState('');
   const [confirmDeleteAccessId, setConfirmDeleteAccessId] = useState<string | null>(null);
+
+  // Activity feed
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [activityLoaded, setActivityLoaded] = useState(false);
+  const [activityError, setActivityError] = useState('');
+  const [activityFilter, setActivityFilter] = useState<'all' | ActivityItem['actionType']>('all');
+  const [activitySearch, setActivitySearch] = useState('');
 
   // Community alerts
   const [alertTitle, setAlertTitle] = useState('');
@@ -135,6 +143,16 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
         .finally(() => setLoadingAccess(false));
     }
   }, [activeTab, accessLoaded]);
+
+  useEffect(() => {
+    if (activeTab === 'activity' && !activityLoaded) {
+      setLoadingActivity(true);
+      fetchActivityFeed(200)
+        .then(data => { setActivity(data); setActivityLoaded(true); })
+        .catch(e => setActivityError(e.message || 'Failed to load activity.'))
+        .finally(() => setLoadingActivity(false));
+    }
+  }, [activeTab, activityLoaded]);
 
   if (!user || user.role !== 'admin') {
     return (
@@ -422,6 +440,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
             { key: 'alerts', icon: 'fa-triangle-exclamation', label: 'Alerts', badge: communityAlert ? 1 : 0, badgeColor: 'bg-red-500' },
             { key: 'bookings', icon: 'fa-star', label: 'Bookings', badge: bookings.filter(b => b.status === 'pending_review').length, badgeColor: 'bg-amber-500' },
             { key: 'access', icon: 'fa-bolt', label: 'Early Access', badge: accessRequests.filter(r => r.status === 'pending').length, badgeColor: 'bg-amber-500' },
+            { key: 'activity', icon: 'fa-clock-rotate-left', label: 'Activity', badge: 0, badgeColor: '' },
           ] as const).map(tab => (
             <button
               key={tab.key}
@@ -1091,6 +1110,109 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
           )}
         </>
       )}
+      {activeTab === 'activity' && (() => {
+        const actionLabels: Record<ActivityItem['actionType'], string> = {
+          review: 'Review',
+          claim: 'Claim',
+          report: 'Report',
+          event: 'Event',
+          lost_found: 'Lost & Found',
+          early_access: 'Early Access',
+        };
+        const actionIcons: Record<ActivityItem['actionType'], string> = {
+          review: 'fa-star',
+          claim: 'fa-store',
+          report: 'fa-flag',
+          event: 'fa-calendar',
+          lost_found: 'fa-paw',
+          early_access: 'fa-bolt',
+        };
+        const filtered = activity
+          .filter((item: ActivityItem) => activityFilter === 'all' || item.actionType === activityFilter)
+          .filter((item: ActivityItem) => {
+            if (!activitySearch.trim()) return true;
+            const q = activitySearch.toLowerCase();
+            return (
+              item.userName.toLowerCase().includes(q) ||
+              item.summary.toLowerCase().includes(q) ||
+              (item.detail ?? '').toLowerCase().includes(q)
+            );
+          });
+
+        return (
+          <>
+            {activityError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl flex items-center justify-between">
+                <span>{activityError}</span>
+                <button onClick={() => setActivityError('')} className="ml-4 font-bold text-lg leading-none">&times;</button>
+              </div>
+            )}
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <input
+                type="text"
+                placeholder="Search by user or content…"
+                value={activitySearch}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActivitySearch(e.target.value)}
+                className="flex-1 min-w-[180px] text-sm border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300"
+              />
+              <select
+                value={activityFilter}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setActivityFilter(e.target.value as typeof activityFilter)}
+                className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-slate-300"
+              >
+                <option value="all">All actions</option>
+                {(Object.keys(actionLabels) as ActivityItem['actionType'][]).map(k => (
+                  <option key={k} value={k}>{actionLabels[k]}</option>
+                ))}
+              </select>
+              {activityLoaded && (
+                <button
+                  onClick={() => { setActivityLoaded(false); setActivity([]); setActivityError(''); }}
+                  className="text-xs text-slate-400 hover:text-slate-600 px-2"
+                >
+                  <i className="fas fa-rotate-right mr-1"></i>Refresh
+                </button>
+              )}
+            </div>
+
+            {loadingActivity ? (
+              <div className="text-center py-20 text-slate-400 text-sm">Loading activity…</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <i className="fas fa-clock-rotate-left text-slate-300 text-3xl mb-3"></i>
+                <p className="text-slate-500 font-medium">No activity found.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map((item: ActivityItem) => (
+                  <div key={item.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <i className={`fas ${actionIcons[item.actionType]} text-slate-400 text-xs`}></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-slate-900">{item.userName}</span>
+                        {item.badge && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.badgeColor}`}>{item.badge}</span>
+                        )}
+                        <span className="text-xs text-slate-400 ml-auto flex-shrink-0">
+                          {new Date(item.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 mt-0.5">{item.summary}</p>
+                      {item.detail && (
+                        <p className="text-xs text-slate-400 mt-0.5 italic truncate">"{item.detail}"</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 };

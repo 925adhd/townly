@@ -1262,13 +1262,21 @@ export async function dismissAlert(id: string): Promise<void> {
 // ── Listing Analytics ─────────────────────────────────────────────────────────
 
 export async function logListingView(providerId: string, userId?: string): Promise<void> {
-  if (!userId) return; // only log authenticated views
-  const storageKey = `view_${providerId}_${userId}`;
-  if (sessionStorage.getItem(storageKey)) return;
-  sessionStorage.setItem(storageKey, '1');
+  // Use user ID for authenticated users, otherwise a stable anonymous browser ID
+  let sessionKey = userId ?? localStorage.getItem('townly_vid');
+  if (!sessionKey) {
+    sessionKey = crypto.randomUUID();
+    localStorage.setItem('townly_vid', sessionKey);
+  }
+
+  // Prevent firing more than once per page session
+  const dedupKey = `view_${providerId}_${sessionKey}`;
+  if (sessionStorage.getItem(dedupKey)) return;
+  sessionStorage.setItem(dedupKey, '1');
+
   await supabase.from('listing_views').upsert(
-    { provider_id: providerId, tenant_id: getCurrentTenant().id, user_id: userId },
-    { onConflict: 'provider_id,user_id', ignoreDuplicates: true }
+    { provider_id: providerId, tenant_id: getCurrentTenant().id, session_key: sessionKey },
+    { onConflict: 'provider_id,session_key', ignoreDuplicates: true }
   );
 }
 
@@ -1756,4 +1764,153 @@ export async function deleteEarlyAccessRequest(id: string): Promise<void> {
     .delete()
     .eq('id', id);
   if (error) throw new Error('Failed to delete request.');
+}
+
+// ── Activity Feed ─────────────────────────────────────────────────────────────
+
+export type ActivityActionType =
+  | 'review'
+  | 'claim'
+  | 'report'
+  | 'event'
+  | 'lost_found'
+  | 'early_access';
+
+export interface ActivityItem {
+  id: string;
+  actionType: ActivityActionType;
+  userName: string;
+  userId?: string;
+  summary: string;
+  detail?: string;
+  createdAt: string;
+  /** Optional badge label e.g. "5★", "pending", "spam" */
+  badge?: string;
+  badgeColor?: string;
+}
+
+export async function fetchActivityFeed(limit = 100): Promise<ActivityItem[]> {
+  await requireAdmin();
+  const tenant = getCurrentTenant().id;
+
+  const [reviews, claims, reports, events, lostFound, earlyAccess] = await Promise.all([
+    supabase
+      .from('reviews')
+      .select('id, user_name, user_id, rating, review_text, created_at, provider_id')
+      .eq('tenant_id', tenant)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('listing_claims')
+      .select('id, user_name, user_id, provider_name, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('content_reports')
+      .select('id, user_name, user_id, reason, content_type, created_at')
+      .eq('tenant_id', tenant)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('community_events')
+      .select('id, submitted_by, title, status, created_at')
+      .eq('tenant_id', tenant)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('lost_found_posts')
+      .select('id, user_name, user_id, title, type, created_at')
+      .eq('tenant_id', tenant)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase
+      .from('early_access_requests')
+      .select('id, user_name, user_id, provider_name, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ]);
+
+  const items: ActivityItem[] = [];
+
+  for (const row of reviews.data ?? []) {
+    items.push({
+      id: `review-${row.id}`,
+      actionType: 'review',
+      userName: row.user_name ?? 'Unknown',
+      userId: row.user_id,
+      summary: `Left a ${row.rating}-star review`,
+      detail: row.review_text ? row.review_text.slice(0, 120) : undefined,
+      createdAt: row.created_at,
+      badge: `${row.rating}★`,
+      badgeColor: row.rating >= 4 ? 'bg-emerald-100 text-emerald-700' : row.rating <= 2 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700',
+    });
+  }
+
+  for (const row of claims.data ?? []) {
+    items.push({
+      id: `claim-${row.id}`,
+      actionType: 'claim',
+      userName: row.user_name ?? 'Unknown',
+      userId: row.user_id,
+      summary: `Submitted a claim for "${row.provider_name ?? 'Unknown listing'}"`,
+      createdAt: row.created_at,
+      badge: row.status,
+      badgeColor: row.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : row.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-700',
+    });
+  }
+
+  for (const row of reports.data ?? []) {
+    items.push({
+      id: `report-${row.id}`,
+      actionType: 'report',
+      userName: row.user_name ?? 'Unknown',
+      userId: row.user_id,
+      summary: `Reported ${row.content_type ?? 'content'}`,
+      detail: row.reason ? row.reason.slice(0, 120) : undefined,
+      createdAt: row.created_at,
+      badge: 'flagged',
+      badgeColor: 'bg-red-100 text-red-600',
+    });
+  }
+
+  for (const row of events.data ?? []) {
+    items.push({
+      id: `event-${row.id}`,
+      actionType: 'event',
+      userName: row.submitted_by ?? 'Unknown',
+      summary: `Submitted event "${row.title ?? 'Untitled'}"`,
+      createdAt: row.created_at,
+      badge: row.status,
+      badgeColor: row.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : row.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-700',
+    });
+  }
+
+  for (const row of lostFound.data ?? []) {
+    items.push({
+      id: `lost-${row.id}`,
+      actionType: 'lost_found',
+      userName: row.user_name ?? 'Unknown',
+      userId: row.user_id,
+      summary: `Posted ${row.type === 'found' ? 'Found' : 'Lost'} item: "${row.title ?? 'Untitled'}"`,
+      createdAt: row.created_at,
+      badge: row.type,
+      badgeColor: row.type === 'found' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700',
+    });
+  }
+
+  for (const row of earlyAccess.data ?? []) {
+    items.push({
+      id: `access-${row.id}`,
+      actionType: 'early_access',
+      userName: row.user_name ?? 'Unknown',
+      userId: row.user_id,
+      summary: `Requested early access for "${row.provider_name ?? 'Unknown'}"`,
+      createdAt: row.created_at,
+      badge: row.status,
+      badgeColor: row.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+    });
+  }
+
+  items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return items.slice(0, limit);
 }

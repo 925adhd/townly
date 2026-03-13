@@ -20,6 +20,65 @@ interface ProviderDetailProps {
   user: { id: string; name: string; email?: string; role?: string } | null;
 }
 
+const HOUR_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+const HOUR_TIMES: string[] = [
+  '12am','12:30am','1am','1:30am','2am','2:30am','3am','3:30am','4am','4:30am',
+  '5am','5:30am','6am','6:30am','7am','7:30am','8am','8:30am','9am','9:30am',
+  '10am','10:30am','11am','11:30am','12pm','12:30pm','1pm','1:30pm','2pm','2:30pm',
+  '3pm','3:30pm','4pm','4:30pm','5pm','5:30pm','6pm','6:30pm','7pm','7:30pm',
+  '8pm','8:30pm','9pm','9:30pm','10pm','10:30pm','11pm','11:30pm',
+];
+interface DaySchedule { open: boolean; openTime: string; closeTime: string; }
+const DEFAULT_HOURS_SCHEDULE: DaySchedule[] = [
+  { open: true,  openTime: '9am', closeTime: '5pm' },
+  { open: true,  openTime: '9am', closeTime: '5pm' },
+  { open: true,  openTime: '9am', closeTime: '5pm' },
+  { open: true,  openTime: '9am', closeTime: '5pm' },
+  { open: true,  openTime: '9am', closeTime: '5pm' },
+  { open: false, openTime: '9am', closeTime: '1pm' },
+  { open: false, openTime: '9am', closeTime: '1pm' },
+];
+function serializeHoursSchedule(schedule: DaySchedule[]): string {
+  const parts: string[] = [];
+  let i = 0;
+  while (i < 7) {
+    if (!schedule[i].open) { i++; continue; }
+    let j = i + 1;
+    while (j < 7 && schedule[j].open && schedule[j].openTime === schedule[i].openTime && schedule[j].closeTime === schedule[i].closeTime) j++;
+    const label = j - i > 1 ? `${HOUR_DAYS[i]}–${HOUR_DAYS[j - 1]}` : HOUR_DAYS[i];
+    parts.push(`${label} ${schedule[i].openTime}–${schedule[i].closeTime}`);
+    i = j;
+  }
+  return parts.join(', ') || 'Closed';
+}
+const STATE_ABBR: Record<string, string> = {
+  'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA',
+  'Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA',
+  'Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA',
+  'Kansas':'KS','Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD',
+  'Massachusetts':'MA','Michigan':'MI','Minnesota':'MN','Mississippi':'MS',
+  'Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV','New Hampshire':'NH',
+  'New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC',
+  'North Dakota':'ND','Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA',
+  'Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD','Tennessee':'TN',
+  'Texas':'TX','Utah':'UT','Vermont':'VT','Virginia':'VA','Washington':'WA',
+  'West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY',
+};
+function buildCleanAddress(addr: Record<string, string>): string {
+  const street = [addr.house_number, addr.road].filter(Boolean).join(' ');
+  const city = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || '';
+  const state = STATE_ABBR[addr.state] || addr.state || '';
+  const zip = addr.postcode || '';
+  return [street, city, state && zip ? `${state} ${zip}` : state || zip].filter(Boolean).join(', ');
+}
+
+function stripFbPrefix(val: string): string {
+  return val.replace(/^https?:\/\/(www\.)?facebook\.com\//i, '').replace(/^(www\.)?facebook\.com\//i, '').replace(/^\//, '');
+}
+function stripHttps(val: string): string {
+  return val.replace(/^https?:\/\//i, '');
+}
+
 function formatPhone(raw: string): string {
   const cleaned = raw.replace(/[\s\-\(\)\.]/g, '');
   if (!/^\d{0,10}$/.test(cleaned)) return raw;
@@ -367,11 +426,15 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [eDesc, setEDesc] = useState(provider.description ?? '');
   const [ePhone, setEPhone] = useState(provider.phone ?? '');
   const [eAddress, setEAddress] = useState(provider.address ?? '');
-  const [eHours, setEHours] = useState(provider.hours ?? '');
-  const [eFacebook, setEFacebook] = useState(provider.facebook ?? '');
-  const [eWebsite, setEWebsite] = useState(provider.website ?? '');
+  const [eHoursSchedule, setEHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
+  const [eFacebook, setEFacebook] = useState(stripFbPrefix(provider.facebook ?? ''));
+  const [eWebsite, setEWebsite] = useState(stripHttps(provider.website ?? ''));
   const [eTags, setETags] = useState<string[]>(provider.tags ?? []);
   const [tagInput, setTagInput] = useState('');
+  const [addrSuggestions, setAddrSuggestions] = useState<{ display: string; lat: string; lon: string }[]>([]);
+  const [addrLoading, setAddrLoading] = useState(false);
+  const [addrOpen, setAddrOpen] = useState(false);
+  const addrDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -383,9 +446,9 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
         description: eDesc,
         phone: ePhone,
         address: eAddress,
-        hours: eHours,
-        facebook: eFacebook,
-        website: eWebsite,
+        hours: serializeHoursSchedule(eHoursSchedule),
+        facebook: eFacebook ? `https://facebook.com/${eFacebook}` : '',
+        website: eWebsite ? `https://${eWebsite}` : '',
         tags: eTags,
       });
       onSaved(updated);
@@ -536,49 +599,141 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <div>
+            <div className="relative">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Address</label>
-              <input
-                type="text"
-                value={eAddress}
-                onChange={e => setEAddress(e.target.value)}
-                placeholder="123 Main St, Leitchfield"
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={eAddress}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEAddress(val);
+                    setAddrOpen(false);
+                    if (addrDebounce.current) clearTimeout(addrDebounce.current);
+                    if (val.length < 4) { setAddrSuggestions([]); return; }
+                    addrDebounce.current = setTimeout(async () => {
+                      setAddrLoading(true);
+                      try {
+                        const res = await fetch(
+                          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&countrycodes=us&limit=5`,
+                          { headers: { 'Accept-Language': 'en', 'User-Agent': 'Townly/1.0' } }
+                        );
+                        const results = await res.json();
+                        setAddrSuggestions(results.map((r: any) => ({ display: buildCleanAddress(r.address), lat: r.lat, lon: r.lon })).filter((s: { display: string }) => s.display));
+                        setAddrOpen(true);
+                      } catch { /* silent */ } finally {
+                        setAddrLoading(false);
+                      }
+                    }, 380);
+                  }}
+                  onBlur={() => setTimeout(() => setAddrOpen(false), 150)}
+                  onFocus={() => addrSuggestions.length > 0 && setAddrOpen(true)}
+                  placeholder="123 Main St, Leitchfield"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none pr-8"
+                />
+                {addrLoading && (
+                  <i className="fas fa-circle-notch fa-spin text-slate-300 text-xs absolute right-3 top-1/2 -translate-y-1/2"></i>
+                )}
+              </div>
+              {addrOpen && addrSuggestions.length > 0 && (
+                <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                  {addrSuggestions.map((s, i) => (
+                    <li
+                      key={i}
+                      onMouseDown={() => {
+                        setEAddress(s.display);
+                        setAddrSuggestions([]);
+                        setAddrOpen(false);
+                      }}
+                      className="px-4 py-2.5 text-xs text-slate-700 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-0 leading-snug"
+                    >
+                      <i className="fas fa-location-dot text-slate-300 mr-2 text-[10px]"></i>
+                      {s.display}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
+          {/* Hours builder */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Hours</label>
-            <input
-              type="text"
-              value={eHours}
-              onChange={e => setEHours(e.target.value)}
-              placeholder="Mon–Fri 8am–5pm, Sat 9am–2pm"
-              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Hours</label>
+            {provider.hours && (
+              <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                <i className="fas fa-clock text-[10px]"></i>
+                Currently saved: <span className="font-medium text-slate-600">{provider.hours}</span>
+              </p>
+            )}
+            <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 space-y-2">
+              {HOUR_DAYS.map((day, i) => {
+                const d = eHoursSchedule[i];
+                return (
+                  <div key={day} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`day-${i}`}
+                      checked={d.open}
+                      onChange={e => setEHoursSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, open: e.target.checked } : s))}
+                      className="accent-emerald-600 w-3.5 h-3.5 flex-shrink-0"
+                    />
+                    <label htmlFor={`day-${i}`} className="text-xs font-semibold text-slate-700 w-7 flex-shrink-0 cursor-pointer">{day}</label>
+                    {d.open ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <select
+                          value={d.openTime}
+                          onChange={e => setEHoursSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, openTime: e.target.value } : s))}
+                          className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:ring-1 focus:ring-emerald-500 outline-none"
+                        >
+                          {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <span className="text-xs text-slate-400">–</span>
+                        <select
+                          value={d.closeTime}
+                          onChange={e => setEHoursSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, closeTime: e.target.value } : s))}
+                          className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:ring-1 focus:ring-emerald-500 outline-none"
+                        >
+                          {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Closed</span>
+                    )}
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                Preview: <span className="font-medium text-slate-600">{serializeHoursSchedule(eHoursSchedule) || 'Closed'}</span>
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Facebook URL</label>
-              <input
-                type="text"
-                value={eFacebook}
-                onChange={e => setEFacebook(e.target.value)}
-                placeholder="facebook.com/yourbusiness"
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Facebook</label>
+              <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+                <span className="text-xs text-slate-400 bg-slate-50 border-r border-slate-200 px-3 py-3 flex-shrink-0 select-none">facebook.com/</span>
+                <input
+                  type="text"
+                  value={eFacebook}
+                  onChange={e => setEFacebook(stripFbPrefix(e.target.value))}
+                  placeholder="yourbusiness"
+                  className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-900 outline-none min-w-0"
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Website URL</label>
-              <input
-                type="text"
-                value={eWebsite}
-                onChange={e => setEWebsite(e.target.value)}
-                placeholder="yoursite.com"
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Website</label>
+              <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+                <span className="text-xs text-slate-400 bg-slate-50 border-r border-slate-200 px-3 py-3 flex-shrink-0 select-none">https://</span>
+                <input
+                  type="text"
+                  value={eWebsite}
+                  onChange={e => setEWebsite(stripHttps(e.target.value))}
+                  placeholder="yourbusiness.com"
+                  className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-900 outline-none min-w-0"
+                />
+              </div>
             </div>
           </div>
 
@@ -653,6 +808,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                   <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                     Be one of the three businesses shown first when locals browse services in your category on Townly.
                   </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>Only three businesses can hold this placement in each category.</p>
                 </div>
                 <div className="flex-shrink-0 text-right">
                   <span className="text-xl font-bold text-amber-700">$99</span>
@@ -662,10 +818,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
               <ul className="space-y-1 text-xs text-slate-600">
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Top 3 placement in your category</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Always visible to local customers</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Amber-gold highlighted listing that stands out</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Gold-highlighted listing that stands out</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct call and website buttons</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Priority exposure in the directory</li>
-                <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-[10px]"></i>
+                <li className="flex items-center gap-2 font-semibold text-amber-700">
+                  <i className="fas fa-lock text-amber-500 text-[10px]"></i>
                   {provider.listingTier === 'featured' ? (
                     '✓ Your spot is active'
                   ) : featuredSlots !== null && featuredSlots >= 3 ? (
@@ -674,25 +831,48 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                     'Limited to 3 businesses per category'
                   )}
                 </li>
+                {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && featuredSlots !== null && (
+                  <li className="flex items-center gap-2 pl-4" style={{ fontSize: '12px', color: '#92400E' }}>
+                    {3 - featuredSlots} of 3 spot{3 - featuredSlots !== 1 ? 's' : ''} remaining in your category
+                  </li>
+                )}
+                <li className="flex items-center gap-2 text-slate-600"><i className="fas fa-tag text-amber-500 text-[10px]"></i> Member pricing on promotions</li>
               </ul>
+
+              {/* Member Promotion Pricing */}
+              <div className="mt-4 rounded-xl px-3 py-3 space-y-2" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '14px' }}>
+                <p style={{ fontSize: '12px', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', marginBottom: '8px', fontWeight: 600 }}>Member Promotion Pricing</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 px-3 py-2 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                    <p className="text-xs font-semibold text-slate-700">Weekly Spotlight</p>
+                    <p className="text-[10px] text-slate-400 line-through">$25 regular</p>
+                    <p className="text-xs font-bold text-amber-600 flex items-center gap-1"><i className="fas fa-star text-[9px]"></i> Member price: $20</p>
+                  </div>
+                  <div className="flex-1 px-3 py-2 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                    <p className="text-xs font-semibold text-slate-700">Featured Post</p>
+                    <p className="text-[10px] text-slate-400 line-through">$5 regular</p>
+                    <p className="text-xs font-bold text-amber-600 flex items-center gap-1"><i className="fas fa-star text-[9px]"></i> Member price: $4</p>
+                  </div>
+                </div>
+              </div>
 
               {/* Preview toggle */}
               <button
                 type="button"
                 onClick={() => setShowFeaturedPreview((p: boolean) => !p)}
-                className="w-full flex items-center justify-between text-xs text-amber-700 font-semibold py-1.5 px-3 bg-amber-100/60 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
+                className="w-full flex items-center justify-between text-xs text-slate-600 font-semibold py-1.5 px-3 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors mt-2"
               >
                 <span className="flex items-center gap-1.5">
-                  <i className="fas fa-eye text-[10px]"></i>
+                  <i className="fas fa-eye text-slate-400 text-[10px]"></i>
                   {showFeaturedPreview ? 'Hide preview' : 'See how you\u2019d appear in the directory'}
                 </span>
-                <i className={`fas fa-chevron-${showFeaturedPreview ? 'up' : 'down'} text-[10px]`}></i>
+                <i className={`fas fa-chevron-${showFeaturedPreview ? 'up' : 'down'} text-slate-400 text-[10px]`}></i>
               </button>
 
               {/* Directory card mock */}
               {showFeaturedPreview && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-0.5">Directory preview</p>
+                <div className="w-full space-y-2.5" style={{ marginTop: '12px', backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '18px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+                  <p style={{ fontSize: '12px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B', marginBottom: '10px', fontWeight: 600 }}>Preview: How Your Business Appears</p>
                   {/* Card row */}
                   <div className="p-4 border bg-amber-50 border-amber-300 border-l-4 rounded-t-2xl flex flex-row items-center gap-4 shadow-sm pointer-events-none select-none">
                     <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
@@ -704,7 +884,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1 mb-0.5">
                         <span className="font-bold text-slate-900 text-sm truncate">{provider.name}</span>
-                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200 flex-shrink-0">Sponsored</span>
+                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200 flex-shrink-0">Townly Spotlight</span>
                       </div>
                       <p className="text-xs text-slate-500 truncate">{provider.category}{provider.town ? ` · ${provider.town}` : ''}</p>
                       {provider.description && (
@@ -713,7 +893,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                     </div>
                     <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
                   </div>
-                  {/* Contact bar (shown when phone or website is set) */}
+                  {/* Contact bar */}
                   {(provider.phone || provider.website) && (
                     <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap pointer-events-none select-none">
                       {provider.phone && (
@@ -728,7 +908,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                       )}
                     </div>
                   )}
-                  <p className="text-[10px] text-slate-400 text-center pt-0.5">This is how your listing appears to customers in the directory.</p>
+                  <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', paddingTop: '2px' }}>This is how your listing appears to customers in the directory.</p>
                 </div>
               )}
 
