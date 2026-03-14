@@ -890,6 +890,7 @@ export async function removeContent(contentType: ReportContentType, contentId: s
     lost_found: 'lost_found_posts',
     recommendation_request: 'recommendation_requests',
     recommendation_response: 'recommendation_responses',
+    community_event: 'community_events',
   };
   // Scope delete to the admin's own tenant to prevent cross-tenant data deletion.
   const { error } = await supabase
@@ -1310,6 +1311,7 @@ export async function submitCommunityEvent(
     location: sanitizedLocation,
     town: sanitize(town, 100),
     tenant_id: getCurrentTenant().id,
+    status: 'approved',
   });
   if (error) {
     if (error.message.includes('RATE_LIMIT_EVENTS')) {
@@ -1362,6 +1364,10 @@ export async function deleteOwnCommunityEvent(id: string): Promise<void> {
     .eq('user_id', session.user.id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to delete event.');
+}
+
+export async function flagCommunityEvent(id: string, title: string): Promise<void> {
+  await submitReport('community_event', id, title, 'Flagged as inappropriate');
 }
 
 // ── Community Alerts ──────────────────────────────────────────────────────────

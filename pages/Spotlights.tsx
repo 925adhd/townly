@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CommunityEvent, SpotlightBooking } from '../types';
-import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions, deleteCommunityEvent, deleteOwnCommunityEvent } from '../lib/api';
+import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions, deleteCommunityEvent, deleteOwnCommunityEvent, flagCommunityEvent } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -74,6 +74,31 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     }
   };
 
+  const handleShareEvent = async (ev: CommunityEvent) => {
+    const url = `${window.location.origin}${window.location.pathname}#/events`;
+    const text = `${ev.title}\n📍 ${ev.location}${ev.town ? ` · ${ev.town}` : ''}\n${ev.description}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: ev.title, text, url }); } catch { /* dismissed */ }
+    } else {
+      try { await navigator.clipboard.writeText(`${text}\n${url}`); alert('Copied to clipboard!'); } catch { alert('Could not copy link.'); }
+    }
+  };
+
+  const [flaggingEventId, setFlaggingEventId] = useState<string | null>(null);
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
+
+  const handleFlagEvent = async (id: string, title: string) => {
+    setFlagSubmitting(true);
+    try {
+      await flagCommunityEvent(id, title);
+      setFlaggingEventId(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit flag.');
+    } finally {
+      setFlagSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -130,7 +155,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Around Town</h1>
-          <p className="text-slate-500 text-sm">Events and announcements happening around {tenant.name} this week.</p>
+          <p className="text-slate-500 text-sm">Events and announcements around {tenant.name} this week.</p>
         </div>
         <div className="relative">
           <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
@@ -234,7 +259,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Featured Listings */}
       <div>
         <h2 className="text-xl font-bold text-slate-900 mb-1 px-1 -mt-4">Featured Listings</h2>
-        <p className="text-slate-400 text-xs mb-4 px-1">Paid listings from local businesses and organizations this week.</p>
+        <p className="text-slate-400 text-xs mb-4 px-1">Paid posts with extra visibility this week.</p>
         <div className="grid md:grid-cols-2 gap-4">
 
           {filteredFeatured.length > 0 ? (
@@ -317,12 +342,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </Link>
           )}
         </div>
-        <p className="text-slate-400 text-xs mb-3 px-1">Free · share something the community should know about or show up for. No buying, selling, or gossip.</p>
+        <p className="text-slate-400 text-xs mb-3 px-1">Free · share local events and announcements. No business promotions.</p>
 
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
             <i className="fas fa-check-circle"></i>
-            Event submitted! It will appear here once approved.
+            Your post is live! Scroll down to see it.
           </div>
         )}
 
@@ -341,6 +366,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">Community Event</span>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400 text-xs">{formatEventDate(ev.eventDate)}</span>
+                    <button
+                      onClick={() => handleShareEvent(ev)}
+                      className="text-slate-300 hover:text-blue-400 transition-colors"
+                      title="Share this post"
+                    >
+                      <i className="fas fa-share-alt text-xs"></i>
+                    </button>
                     {isAdmin ? (
                       <button
                         onClick={() => handleDeleteEvent(ev.id)}
@@ -357,6 +389,32 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                       >
                         <i className="fas fa-trash-alt text-xs"></i>
                       </button>
+                    ) : user ? (
+                      flaggingEventId === ev.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleFlagEvent(ev.id, ev.title)}
+                            disabled={flagSubmitting}
+                            className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                          >
+                            {flagSubmitting ? 'Flagging...' : 'Confirm'}
+                          </button>
+                          <button
+                            onClick={() => setFlaggingEventId(null)}
+                            className="text-[10px] text-slate-400 hover:text-slate-600"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setFlaggingEventId(ev.id)}
+                          className="text-slate-300 hover:text-orange-400 transition-colors"
+                          title="Flag as inappropriate"
+                        >
+                          <i className="fas fa-flag text-xs"></i>
+                        </button>
+                      )
                     ) : null}
                   </div>
                 </div>
@@ -377,7 +435,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Pricing tiers */}
       <div id="pricing">
         <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Get Your Event or Post Noticed</h2>
-        <p className="text-slate-500 text-sm mb-4 px-1">Short-term visibility for events, announcements, and community posts. Looking to grow your business? See the directory listing options on your business page.</p>
+        <p className="text-slate-500 text-sm mb-4 px-1">Promote an event or announcement for extra visibility this week.</p>
         <div className="space-y-5">
 
           {/* Local Spotlight — full width */}
@@ -387,24 +445,20 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-xl font-bold text-slate-900">Weekly Spotlight</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The most visible placement on Townly. Your event is pinned at the very top of the <strong>Home page and Events page</strong> for everyone in {tenant.name} who visits this week.
+              The most visible placement on Townly.<br />Your event appears at the very top of the Home and Events pages all week.
             </p>
             <div className="pt-1">
               <span className="text-3xl font-bold text-amber-600">$25</span>
               <span className="text-slate-400 text-sm font-medium"> / week</span>
             </div>
             <ul className="space-y-1.5 text-sm text-slate-600">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the Home page and Events page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Amber-gold highlighted spotlight card that stands out</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large banner image displayed on the event listing</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Clickable flyer image for full details</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Thumbnail preview shown on the home page</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Use the same image or upload separate images for each placement</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Custom description</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned above all other listings for the full week</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the Home and Events pages</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large spotlight banner for your event</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Clickable flyer or event image</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 spotlight available each week</li>
             </ul>
-            <p className="text-xs text-amber-700/80 font-medium">Ideal for grand openings, ticketed events, and time-sensitive announcements.</p>
+            <p className="text-xs text-amber-700/80 font-medium">Perfect for grand openings, major events, and time-sensitive announcements.</p>
             <Link
               to={user ? '/book/spotlight' : '/auth?signup=true'}
               className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
@@ -421,21 +475,19 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-base font-bold text-slate-800">Featured Post</h2>
             <p className="text-slate-500 text-xs leading-relaxed">
-              Feature a community post or event for higher visibility this week.
+              Promote your business or announcement this week.
             </p>
             <div className="pt-0.5">
               <span className="text-xl font-bold text-slate-700">$5</span>
               <span className="text-slate-400 text-xs font-medium"> / week</span>
             </div>
             <ul className="space-y-1.5 text-xs text-slate-500">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Rises above regular community posts</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown in the weekly featured section</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Flyer preview button included <em className="text-slate-400">(free community posts are text-only)</em></li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Custom description</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown above regular community posts</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Add a flyer image (optional)</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Active for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
             </ul>
-            <p className="text-xs text-slate-400 font-medium">Great for yard sales, one-time events, community announcements, and seasonal posts.</p>
+            <p className="text-xs text-slate-400 font-medium">Perfect for yard sales, fundraisers, local events, and community announcements.</p>
             <Link
               to={user ? '/book/featured' : '/auth?signup=true'}
               className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
@@ -463,10 +515,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            <p className="text-xs text-slate-400">Free to post · text-only · reviewed before going live.</p>
-            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-2 rounded-xl leading-relaxed space-y-0.5">
-              <p>No selling products or services, gossip, or profanity.</p>
-              <p>Use <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> for higher visibility.</p>
+            <div className="bg-amber-50 border border-amber-100 text-amber-800 text-xs px-3 py-2.5 rounded-xl leading-relaxed space-y-0.5">
+              <p>No buying, selling, or business ads • no gossip</p>
+              <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
@@ -474,7 +525,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Community Clean-Up Day"
+                  placeholder="e.g. Yard Sale, Church Dinner, Town Meeting"
                   value={eTitle}
                   onChange={e => setETitle(e.target.value)}
                 />
@@ -506,7 +557,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Courthouse Square, City Park, or Main Street"
+                  placeholder="e.g. Courthouse Square, City Park, Main St"
                   value={eLocation}
                   onChange={e => setELocation(e.target.value)}
                 />
@@ -521,7 +572,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   rows={3}
                   maxLength={300}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                  placeholder="What's happening? Share details the community should know or show up for."
+                  placeholder="What's happening? Share details the community should know or attend."
                   value={eDesc}
                   onChange={e => setEDesc(e.target.value)}
                 />
@@ -534,8 +585,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 disabled={submitting}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors disabled:opacity-60 text-sm"
               >
-                {submitting ? 'Submitting...' : 'Submit for Review'}
+                {submitting ? 'Posting...' : 'Post to Board'}
               </button>
+              <p className="text-center text-[11px] text-slate-300">Posts appear instantly and may be shared by neighbors.</p>
             </form>
           </div>
         </div>

@@ -84,6 +84,17 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     }
   };
 
+  const handleShare = async (req: RecommendationRequest) => {
+    const base = `${window.location.origin}${window.location.pathname}`;
+    const url = req.slug ? `${base}#/ask/${req.slug}` : `${base}#/ask`;
+    const text = `Looking for a recommendation: ${req.serviceNeeded}${req.description ? `\n${req.description}` : ''}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: req.serviceNeeded, text, url }); } catch { /* dismissed */ }
+    } else {
+      try { await navigator.clipboard.writeText(`${text}\n${url}`); alert('Copied to clipboard!'); } catch { alert('Could not copy link.'); }
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await deleteRequest(id);
@@ -246,6 +257,13 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                   )}
                 </div>
                 <div className="flex items-center gap-2" onClick={e => e.preventDefault()}>
+                  <button
+                    onClick={() => handleShare(req)}
+                    className="text-slate-300 hover:text-blue-400 transition-colors text-xs p-1"
+                    title="Share this request"
+                  >
+                    <i className="fas fa-share-alt"></i>
+                  </button>
                   {!!(user && user.id !== req.userId && !isAdminOrMod) && (
                     <button
                       onClick={() => { setReportingId(reportingId === req.id ? null : req.id); setReportReason(''); }}

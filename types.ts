@@ -161,7 +161,7 @@ export interface SpotlightBooking {
   createdAt: string;
 }
 
-export type ReportContentType = 'provider' | 'lost_found' | 'recommendation_request' | 'recommendation_response';
+export type ReportContentType = 'provider' | 'lost_found' | 'recommendation_request' | 'recommendation_response' | 'community_event';
 
 export interface ContentReport {
   id: string;

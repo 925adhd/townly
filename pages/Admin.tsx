@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, rejectCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -52,8 +52,6 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [actingEvent, setActingEvent] = useState<string | null>(null);
   const [eventsError, setEventsError] = useState('');
-  const [rejectingEventId, setRejectingEventId] = useState<string | null>(null);
-  const [eventRejectReason, setEventRejectReason] = useState('');
   const [confirmDeleteEventId, setConfirmDeleteEventId] = useState<string | null>(null);
 
   // Spotlight bookings
@@ -256,20 +254,6 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
     }
   };
 
-  const handleRejectEvent = async (id: string) => {
-    setActingEvent(id);
-    setEventsError('');
-    try {
-      await rejectCommunityEvent(id, eventRejectReason.trim() || undefined);
-      setPendingEvents(prev => prev.filter(e => e.id !== id));
-      setRejectingEventId(null);
-      setEventRejectReason('');
-    } catch (e: any) {
-      setEventsError(e.message || 'Failed to reject event.');
-    } finally {
-      setActingEvent(null);
-    }
-  };
 
   const handlePostAlert = async () => {
     if (!alertTitle.trim() || !alertDescription.trim() || !user) return;
@@ -601,7 +585,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
           ) : pendingEvents.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
               <i className="fas fa-calendar-check text-emerald-400 text-3xl mb-3"></i>
-              <p className="text-slate-500 font-medium">No pending community events.</p>
+              <p className="text-slate-500 font-medium">No flagged community events.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -624,41 +608,8 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
                         disabled={actingEvent === ev.id}
                         className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
                       >
-                        Approve
+                        Restore
                       </button>
-                      {rejectingEventId === ev.id ? (
-                        <div className="flex flex-col gap-1.5 w-40">
-                          <input
-                            autoFocus
-                            type="text"
-                            placeholder="Reason (optional)"
-                            value={eventRejectReason}
-                            onChange={e => setEventRejectReason(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 focus:ring-2 focus:ring-red-400 outline-none"
-                          />
-                          <button
-                            onClick={() => handleRejectEvent(ev.id)}
-                            disabled={actingEvent === ev.id}
-                            className="bg-red-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
-                          >
-                            Confirm Reject
-                          </button>
-                          <button
-                            onClick={() => { setRejectingEventId(null); setEventRejectReason(''); }}
-                            className="text-xs text-slate-400 hover:text-slate-600 text-center"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => { setRejectingEventId(ev.id); setEventRejectReason(''); }}
-                          disabled={actingEvent === ev.id}
-                          className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      )}
                       {confirmDeleteEventId === ev.id ? (
                         <div className="flex flex-col gap-1.5">
                           <p className="text-xs text-slate-500 text-center">Delete this post?</p>
