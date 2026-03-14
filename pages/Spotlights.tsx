@@ -483,7 +483,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <ul className="space-y-1.5 text-xs text-slate-500">
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown above regular community posts</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Add a flyer image (optional)</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Upload an image <em className="text-slate-400">(community posts are text-only)</em></li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Active for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
             </ul>
