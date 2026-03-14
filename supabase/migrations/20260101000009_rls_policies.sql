@@ -72,6 +72,12 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
+  CREATE POLICY "user delete own review"
+    ON reviews FOR DELETE TO authenticated
+    USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN
   CREATE POLICY "admin delete reviews"
     ON reviews FOR DELETE TO authenticated
     USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'moderator')));
@@ -279,6 +285,12 @@ DO $$ BEGIN
   CREATE POLICY "owner insert review reply"
     ON review_replies FOR INSERT TO authenticated
     WITH CHECK (owner_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "owner update own review reply"
+    ON review_replies FOR UPDATE TO authenticated
+    USING (owner_id = auth.uid()) WITH CHECK (owner_id = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN

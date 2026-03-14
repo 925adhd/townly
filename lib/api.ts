@@ -1135,6 +1135,20 @@ export async function submitReviewReply(
 export async function markReplyResolution(replyId: string, resolved: boolean | null): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
+  // Verify the caller is the author of the review this reply belongs to.
+  const { data: reply } = await supabase
+    .from('review_replies')
+    .select('review_id')
+    .eq('id', replyId)
+    .single();
+  if (!reply) throw new Error('Reply not found.');
+  const { data: review } = await supabase
+    .from('reviews')
+    .select('user_id')
+    .eq('id', reply.review_id)
+    .single();
+  if (!review) throw new Error('Review not found.');
+  if (review.user_id !== session.user.id) throw new Error('Only the reviewer can mark this as resolved.');
   const { error } = await supabase
     .from('review_replies')
     .update({ resolved_by_reviewer: resolved })
