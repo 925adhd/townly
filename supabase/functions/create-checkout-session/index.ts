@@ -44,14 +44,30 @@ Deno.serve(async (req) => {
       cancelUrl: string;
     };
 
+    // Check member status server-side — cannot be spoofed by client
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const { data: memberProvider } = await serviceClient
+      .from('providers')
+      .select('id')
+      .eq('claimed_by', user.id)
+      .eq('listing_tier', 'featured')
+      .limit(1)
+      .maybeSingle();
+    const isMember = !!memberProvider;
+
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
       apiVersion: '2023-10-16',
     });
 
-    const amount = type === 'spotlight' ? 2500 : 500; // cents
+    const regularAmount = type === 'spotlight' ? 2500 : 500;
+    const memberAmount  = type === 'spotlight' ? 2000 : 400;
+    const amount = isMember ? memberAmount : regularAmount;
     const label = type === 'spotlight'
-      ? 'Weekly Spotlight Post — Townly (one-time, 1 week)'
-      : 'Featured Post — Townly (one-time, 1 week)';
+      ? `Weekly Spotlight Post — Townly (one-time, 1 week)${isMember ? ' · Member Rate' : ''}`
+      : `Featured Post — Townly (one-time, 1 week)${isMember ? ' · Member Rate' : ''}`;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

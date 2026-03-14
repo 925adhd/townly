@@ -7,18 +7,19 @@ import CustomSelect from '../components/CustomSelect';
 
 interface AddReviewProps {
   providers: Provider[];
+  setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
   reviews: Review[];
   setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   user: { id: string, name: string } | null;
 }
 
-const AddReview: React.FC<AddReviewProps> = ({ providers, reviews, setReviews, user }) => {
+const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews, setReviews, user }) => {
   const { providerId } = useParams<{ providerId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const provider = providers.find(p => p.id === providerId);
 
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
   const [wouldHireAgain, setWouldHireAgain] = useState<boolean | null>(null);
   const [serviceDesc, setServiceDesc] = useState('');
   const [cost, setCost] = useState<CostRange>('not_shared');
@@ -54,6 +55,16 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, reviews, setReviews, u
     </div>
   );
 
+  const isOwner = !!(provider.claimedBy && provider.claimedBy === user.id);
+  if (isOwner) return (
+    <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
+      <i className="fas fa-store text-slate-400 text-4xl mb-4"></i>
+      <h2 className="text-xl font-bold mb-2">You can't review your own business</h2>
+      <p className="text-slate-500 text-sm mb-6">Owners aren't able to leave reviews for their own listings.</p>
+      <Link to={`/provider/${provider.id}`} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Back to Business</Link>
+    </div>
+  );
+
   const alreadyReviewed = reviews.some(r => r.providerId === provider.id && r.userId === user.id);
   if (alreadyReviewed) return (
     <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
@@ -66,6 +77,7 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, reviews, setReviews, u
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (rating === 0) { setError('Please select a star rating.'); return; }
     if (wouldHireAgain === null) { setError('Please tell us if you would hire them again.'); return; }
     setError('');
     setLoading(true);
@@ -84,6 +96,14 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, reviews, setReviews, u
         user.name
       );
       setReviews(prev => [newReview, ...prev]);
+      const allReviews: Review[] = [...reviews.filter(r => r.providerId === provider.id), newReview];
+      const count = allReviews.length;
+      const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / count;
+      const hireAgainPercent = Math.round((allReviews.filter((r: Review) => r.wouldHireAgain).length / count) * 100);
+      setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === provider.id
+        ? { ...p, reviewCount: count, averageRating: avgRating, hireAgainPercent }
+        : p
+      ));
       navigate(`/provider/${provider.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to submit review. Please try again.');

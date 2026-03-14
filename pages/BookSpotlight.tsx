@@ -2,13 +2,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange, fetchMyBookings, updateMyBooking } from '../lib/api';
-import type { SpotlightBooking } from '../types';
+import type { SpotlightBooking, Provider } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
 interface BookSpotlightProps {
   user: { id: string; name: string; email?: string } | null;
+  providers: Provider[];
 }
 
 function getUpcomingWeeks(): Date[] {
@@ -73,9 +74,12 @@ function ImageUploadSlot({
   );
 }
 
-const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
+const BookSpotlight: React.FC<BookSpotlightProps> = ({ user, providers }) => {
   const { type } = useParams<{ type: 'spotlight' | 'featured' }>();
   const bookingType = type === 'featured' ? 'featured' : 'spotlight';
+  const isMember = !!user && providers.some(
+    p => p.claimedBy === user.id && p.listingTier === 'featured'
+  );
   const navigate = useNavigate();
 
   const [bookedWeeks, setBookedWeeks] = useState<{ spotlight: string[]; featured: { week: string; count: number }[] } | null>(null);
@@ -320,7 +324,9 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
             {bookingType === 'spotlight' ? 'Book a Weekly Spotlight' : 'Get Featured This Week'}
           </h1>
           <p className="text-xs text-slate-400">
-            {bookingType === 'spotlight' ? '$25 / week · Only 1 available per week' : '$5 / week · Up to 5 slots per week'}
+            {bookingType === 'spotlight'
+              ? isMember ? '$20 / week · Member Rate · Only 1 available per week' : '$25 / week · Only 1 available per week'
+              : isMember ? '$4 / week · Member Rate · Up to 5 slots per week' : '$5 / week · Up to 5 slots per week'}
           </p>
         </div>
       </div>
@@ -988,7 +994,11 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           <i className="fas fa-lock mt-0.5 flex-shrink-0 text-slate-400"></i>
           <span>
             You'll be taken to Stripe's secure checkout to pay{' '}
-            <strong>{bookingType === 'spotlight' ? '$25' : '$5'}</strong>.
+            <strong>
+              {bookingType === 'spotlight' ? (isMember ? '$20' : '$25') : (isMember ? '$4' : '$5')}
+            </strong>
+            {isMember && <span className="text-amber-600 font-semibold"> (member rate)</span>}
+            .
             Your booking is submitted after payment is confirmed.
           </span>
         </div>
@@ -1012,7 +1022,9 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
           ) : (
             <>
               <i className="fas fa-lock text-xs"></i>
-              {bookingType === 'spotlight' ? 'Pay $25 & Submit' : 'Pay $5 & Submit'}
+              {bookingType === 'spotlight'
+                ? (isMember ? 'Pay $20 & Submit' : 'Pay $25 & Submit')
+                : (isMember ? 'Pay $4 & Submit' : 'Pay $5 & Submit')}
             </>
           )}
         </button>

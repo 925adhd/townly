@@ -16,6 +16,7 @@ import CreateLostFound from './pages/CreateLostFound';
 import AddProvider from './pages/AddProvider';
 import AddReview from './pages/AddReview';
 import Recommendations from './pages/Recommendations';
+import QuestionDetail from './pages/QuestionDetail';
 import Auth from './pages/Auth';
 import Spotlights from './pages/Spotlights';
 import BookSpotlight from './pages/BookSpotlight';
@@ -182,14 +183,15 @@ const App: React.FC = () => {
               <Route path="/lost-found" element={<LostFound posts={lostFound} setPosts={setLostFound} user={user} />} />
               <Route path="/lost-found/new" element={<CreateLostFound setPosts={setLostFound} user={user} />} />
               <Route path="/add-provider" element={<AddProvider setProviders={setProviders} user={user} />} />
-              <Route path="/review/:providerId" element={<AddReview providers={providers} reviews={reviews} setReviews={setReviews} user={user} />} />
+              <Route path="/review/:providerId" element={<AddReview providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
               <Route path="/ask" element={<Recommendations requests={requests} setRequests={setRequests} user={user} />} />
+              <Route path="/ask/:slug" element={<QuestionDetail providers={providers} user={user} />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/spotlights" element={<Spotlights user={user} />} />
-              <Route path="/book/:type" element={<BookSpotlight user={user} />} />
+              <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
-              <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} />} />
+              <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} setProviders={setProviders} />} />
             </Routes>
           )}
         </main>

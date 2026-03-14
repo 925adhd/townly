@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, deleteReviewReply, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
@@ -70,6 +70,13 @@ function buildCleanAddress(addr: Record<string, string>): string {
   const state = STATE_ABBR[addr.state] || addr.state || '';
   const zip = addr.postcode || '';
   return [street, city, state && zip ? `${state} ${zip}` : state || zip].filter(Boolean).join(', ');
+}
+
+function stripTownFromAddress(address: string, town: string): string {
+  return address
+    .replace(new RegExp(',?\\s*' + town.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*,?\\s*(KY)?\\s*\\d*', 'gi'), '')
+    .replace(/,\s*$/, '')
+    .trim();
 }
 
 function stripFbPrefix(val: string): string {
@@ -301,10 +308,11 @@ interface UpdateRequestModalProps {
   provider: Provider;
   user: { id: string; name: string } | null;
   onClose: () => void;
+  removalOnly?: boolean;
 }
 
-const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user, onClose }) => {
-  const [requestType, setRequestType] = useState<'update' | 'removal'>('update');
+const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user, onClose, removalOnly }) => {
+  const [requestType, setRequestType] = useState<'update' | 'removal'>(removalOnly ? 'removal' : 'update');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -333,7 +341,7 @@ const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user,
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-md w-full space-y-4">
         <div className="flex items-start justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Request Update or Removal</h2>
+          <h2 className="text-lg font-bold text-slate-900">{removalOnly ? 'Request Listing Removal' : 'Request Update or Removal'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
         </div>
         {done ? (
@@ -345,17 +353,19 @@ const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user,
           </div>
         ) : (
           <>
-            <div className="flex gap-2">
-              {(['update', 'removal'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setRequestType(t)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${requestType === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
-                >
-                  {t === 'update' ? 'Update Info' : 'Request Removal'}
-                </button>
-              ))}
-            </div>
+            {!removalOnly && (
+              <div className="flex gap-2">
+                {(['update', 'removal'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setRequestType(t)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${requestType === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                  >
+                    {t === 'update' ? 'Update Info' : 'Request Removal'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
                 {requestType === 'update' ? 'What needs to be updated?' : 'Why are you requesting removal?'}
@@ -388,9 +398,10 @@ interface OwnerDashboardProps {
   provider: Provider;
   userId: string;
   onSaved: (updated: Provider) => void;
+  onRequestRemoval: () => void;
 }
 
-const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSaved }) => {
+const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSaved, onRequestRemoval }) => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -426,6 +437,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [eDesc, setEDesc] = useState(provider.description ?? '');
   const [ePhone, setEPhone] = useState(provider.phone ?? '');
   const [eAddress, setEAddress] = useState(provider.address ?? '');
+  const [eOwnerTown, setEOwnerTown] = useState<Town>(provider.town);
   const [eHoursSchedule, setEHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
   const [eFacebook, setEFacebook] = useState(stripFbPrefix(provider.facebook ?? ''));
   const [eWebsite, setEWebsite] = useState(stripHttps(provider.website ?? ''));
@@ -445,11 +457,12 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
       const updated = await updateOwnerListing(provider.id, {
         description: eDesc,
         phone: ePhone,
-        address: eAddress,
+        address: stripTownFromAddress(eAddress, eOwnerTown),
         hours: serializeHoursSchedule(eHoursSchedule),
         facebook: eFacebook ? `https://facebook.com/${eFacebook}` : '',
         website: eWebsite ? `https://${eWebsite}` : '',
         tags: eTags,
+        town: eOwnerTown,
       });
       onSaved(updated);
       setSuccess('Changes saved.');
@@ -600,7 +613,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
               />
             </div>
             <div className="relative">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Address</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Address <span className="normal-case font-normal text-slate-400">· street only, no town</span></label>
               <div className="relative">
                 <input
                   type="text"
@@ -628,7 +641,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                   }}
                   onBlur={() => setTimeout(() => setAddrOpen(false), 150)}
                   onFocus={() => addrSuggestions.length > 0 && setAddrOpen(true)}
-                  placeholder="123 Main St, Leitchfield"
+                  placeholder="123 Main St"
                   className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none pr-8"
                 />
                 {addrLoading && (
@@ -654,6 +667,17 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 </ul>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+            <select
+              value={eOwnerTown}
+              onChange={e => setEOwnerTown(e.target.value as Town)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              {towns.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
 
           {/* Hours builder */}
@@ -884,7 +908,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1 mb-0.5">
                         <span className="font-bold text-slate-900 text-sm truncate">{provider.name}</span>
-                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200 flex-shrink-0">Townly Spotlight</span>
+                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200 flex-shrink-0">Sponsored</span>
                       </div>
                       <p className="text-xs text-slate-500 truncate">{provider.category}{provider.town ? ` · ${provider.town}` : ''}</p>
                       {provider.description && (
@@ -893,21 +917,15 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                     </div>
                     <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
                   </div>
-                  {/* Contact bar */}
-                  {(provider.phone || provider.website) && (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap pointer-events-none select-none">
-                      {provider.phone && (
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
-                          <i className="fas fa-phone text-[10px]"></i>Call
-                        </span>
-                      )}
-                      {provider.website && (
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
-                          <i className="fas fa-globe text-[10px]"></i>Website
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {/* Contact bar — always shown in preview */}
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap pointer-events-none select-none">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
+                      <i className="fas fa-phone text-[10px]"></i>{provider.phone || 'Call'}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
+                      <i className="fas fa-globe text-[10px]"></i>Website
+                    </span>
+                  </div>
                   <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', paddingTop: '2px' }}>This is how your listing appears to customers in the directory.</p>
                 </div>
               )}
@@ -952,6 +970,15 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
               )}
             </div>
           </div>
+        <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+          <button
+            type="button"
+            onClick={onRequestRemoval}
+            className="text-xs text-slate-300 hover:text-red-400 transition-colors"
+          >
+            Request listing removal
+          </button>
+        </div>
         </form>
         </>
       )}
@@ -982,6 +1009,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+  const [editReplyText, setEditReplyText] = useState('');
+  const [editReplyLoading, setEditReplyLoading] = useState(false);
+  const [deletedReplyReviewIds, setDeletedReplyReviewIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -1003,11 +1034,17 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
   const [eTown, setETown] = useState<Town>(tenant.towns[0]);
   const [eFacebook, setEFacebook] = useState('');
   const [eWebsite, setEWebsite] = useState('');
+  const [eAdminDesc, setEAdminDesc] = useState('');
+  const [eAdminTags, setEAdminTags] = useState<string[]>([]);
+  const [eAdminTagInput, setEAdminTagInput] = useState('');
+  const [eAdminAddress, setEAdminAddress] = useState('');
+  const [eAdminHoursSchedule, setEAdminHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
+  const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
 
   if (!provider) return <div className="text-center py-12">Business not found.</div>;
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
-  const isOwner = (import.meta.env.DEV && !!user) || !!(user && provider.claimedBy === user.id);
+  const isOwner = (import.meta.env.DEV && user?.role === 'admin') || !!(user && provider.claimedBy === user.id);
   const img = providerImage(provider);
   const icon = categoryIcon[provider.category] || 'fa-store';
   const iconColor = categoryIconColor[provider.category] || 'text-slate-300';
@@ -1037,8 +1074,14 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
     setESub(provider.subcategory || '');
     setEPhone(provider.phone || '');
     setETown(provider.town);
-    setEFacebook(provider.facebook || '');
-    setEWebsite(provider.website || '');
+    setEFacebook(stripFbPrefix(provider.facebook || ''));
+    setEWebsite(stripHttps(provider.website || ''));
+    setEAdminDesc(provider.description || '');
+    setEAdminTags(provider.tags ?? []);
+    setEAdminTagInput('');
+    setEAdminAddress(provider.address || '');
+    setEAdminHoursSchedule(DEFAULT_HOURS_SCHEDULE);
+    setEAdminTier(provider.listingTier);
     setEditError('');
     setEditing(true);
   };
@@ -1054,8 +1097,13 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
         subcategory: eSub,
         phone: ePhone,
         town: eTown,
-        facebook: eFacebook,
-        website: eWebsite,
+        facebook: eFacebook ? `https://facebook.com/${eFacebook}` : '',
+        website: eWebsite ? `https://${eWebsite}` : '',
+        description: eAdminDesc,
+        tags: eAdminTags,
+        address: stripTownFromAddress(eAdminAddress, eTown),
+        hours: serializeHoursSchedule(eAdminHoursSchedule),
+        listingTier: eAdminTier,
       });
       setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
       setEditing(false);
@@ -1083,10 +1131,29 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
 
   const handleDeleteReply = async (replyId: string, reviewId: string) => {
     try {
-      await deleteReviewReply(replyId);
+      if (isAdminOrMod) {
+        await deleteReviewReply(replyId);
+      } else {
+        await deleteOwnReviewReply(replyId);
+        setDeletedReplyReviewIds(prev => new Set(prev).add(reviewId));
+      }
       setReplies(prev => { const next = { ...prev }; delete next[reviewId]; return next; });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleEditReply = async (replyId: string, reviewId: string) => {
+    if (!editReplyText.trim()) return;
+    setEditReplyLoading(true);
+    try {
+      await updateReviewReply(replyId, editReplyText.trim());
+      setReplies(prev => ({ ...prev, [reviewId]: { ...prev[reviewId], replyText: editReplyText.trim() } }));
+      setEditingReplyId(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setEditReplyLoading(false);
     }
   };
 
@@ -1168,6 +1235,15 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
               {provider.hours}
             </p>
           )}
+          {provider.tags && provider.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3 mb-1">
+              {provider.tags.map((tag: string) => (
+                <span key={tag} className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             {provider.phone && (
@@ -1247,11 +1323,12 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       )}
 
       {/* Owner Dashboard */}
-      {isOwner && (
+      {(isOwner || isAdminOrMod) && (
         <OwnerDashboard
           provider={provider}
           userId={user!.id}
           onSaved={updated => setProviders(prev => prev.map(p => p.id === updated.id ? updated : p))}
+          onRequestRemoval={() => setShowUpdateModal(true)}
         />
       )}
 
@@ -1292,6 +1369,29 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
             </div>
 
             <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Address <span className="normal-case font-normal text-slate-400">· street only, no town</span></label>
+              <input
+                type="text"
+                placeholder="123 Main St"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                value={eAdminAddress}
+                onChange={e => setEAdminAddress(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Membership</label>
+              <select
+                value={eAdminTier === 'featured' ? 'featured' : 'none'}
+                onChange={e => setEAdminTier(e.target.value as 'none' | 'featured')}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="none">Not a Member</option>
+                <option value="featured">Member ($99/mo)</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Specific Service</label>
               <input
                 type="text"
@@ -1318,10 +1418,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
               <input
                 type="text"
                 name="facebook"
-                placeholder="facebook.com/yourbusiness"
+                placeholder="yourbusiness"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 value={eFacebook}
-                onChange={e => setEFacebook(e.target.value)}
+                onChange={e => setEFacebook(stripFbPrefix(e.target.value))}
               />
             </div>
 
@@ -1333,8 +1433,110 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                 placeholder="yoursite.com"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 value={eWebsite}
-                onChange={e => setEWebsite(e.target.value)}
+                onChange={e => setEWebsite(stripHttps(e.target.value))}
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Hours</label>
+              {provider.hours && (
+                <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                  <i className="fas fa-clock text-[10px]"></i>
+                  Currently saved: <span className="font-medium text-slate-600">{provider.hours}</span>
+                </p>
+              )}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 space-y-2">
+                {HOUR_DAYS.map((day, i) => {
+                  const d = eAdminHoursSchedule[i];
+                  return (
+                    <div key={day} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`admin-day-${i}`}
+                        checked={d.open}
+                        onChange={e => setEAdminHoursSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, open: e.target.checked } : s))}
+                        className="accent-blue-600 w-3.5 h-3.5 flex-shrink-0"
+                      />
+                      <label htmlFor={`admin-day-${i}`} className="text-xs font-semibold text-slate-700 w-7 flex-shrink-0 cursor-pointer">{day}</label>
+                      {d.open ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <select
+                            value={d.openTime}
+                            onChange={e => setEAdminHoursSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, openTime: e.target.value } : s))}
+                            className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none"
+                          >
+                            {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <span className="text-xs text-slate-400">–</span>
+                          <select
+                            value={d.closeTime}
+                            onChange={e => setEAdminHoursSchedule(prev => prev.map((s, idx) => idx === i ? { ...s, closeTime: e.target.value } : s))}
+                            className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none"
+                          >
+                            {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">Closed</span>
+                      )}
+                    </div>
+                  );
+                })}
+                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                  Preview: <span className="font-medium text-slate-600">{serializeHoursSchedule(eAdminHoursSchedule) || 'Closed'}</span>
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Description</label>
+              <textarea
+                value={eAdminDesc}
+                onChange={e => setEAdminDesc(e.target.value)}
+                rows={3}
+                placeholder="Briefly describe this business..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Service Tags</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={eAdminTagInput}
+                  onChange={e => setEAdminTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if ((e.key === 'Enter' || e.key === ',') && eAdminTagInput.trim()) {
+                      e.preventDefault();
+                      const tag = eAdminTagInput.trim().toLowerCase().replace(/,/g, '');
+                      if (!eAdminTags.includes(tag)) setEAdminTags(prev => [...prev, tag]);
+                      setEAdminTagInput('');
+                    }
+                  }}
+                  placeholder="Type a tag and press Enter..."
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const tag = eAdminTagInput.trim().toLowerCase().replace(/,/g, '');
+                    if (tag && !eAdminTags.includes(tag)) setEAdminTags(prev => [...prev, tag]);
+                    setEAdminTagInput('');
+                  }}
+                  className="bg-slate-100 text-slate-600 font-bold px-4 py-2.5 rounded-xl hover:bg-slate-200 text-sm"
+                >Add</button>
+              </div>
+              {eAdminTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {eAdminTags.map(tag => (
+                    <span key={tag} className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      {tag}
+                      <button type="button" onClick={() => setEAdminTags(prev => prev.filter(t => t !== tag))} className="text-blue-400 hover:text-blue-600 leading-none">&times;</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {editError && (
@@ -1420,12 +1622,14 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
       {provider.category !== 'Churches' && <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900">Local Reviews</h2>
-          <Link
-            to={`/review/${provider.id}`}
-            className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors"
-          >
-            Write a Review
-          </Link>
+          {!isOwner && (
+            <Link
+              to={`/review/${provider.id}`}
+              className="text-sm font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors"
+            >
+              Write a Review
+            </Link>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -1446,13 +1650,17 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                     <span className="text-amber-600 font-bold text-sm">{review.rating}</span>
                     <i className="fas fa-star text-amber-400 text-[10px]"></i>
                   </div>
-                  {isAdminOrMod && (
+                  {(isAdminOrMod || (user && review.userId === user.id)) && (
                     <button
                       onClick={() => setConfirmModal({
                         message: 'Delete this review? This cannot be undone.',
                         onConfirm: async () => {
                           setConfirmModal(null);
-                          await deleteReview(review.id);
+                          if (isAdminOrMod) {
+                            await deleteReview(review.id);
+                          } else {
+                            await deleteOwnReview(review.id);
+                          }
                           setReviews(prev => prev.filter(r => r.id !== review.id));
                         },
                       })}
@@ -1492,6 +1700,27 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                       <i className="fas fa-store mr-1.5 text-[10px]"></i>Owner Response
                     </span>
                     {isOwner && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setEditingReplyId(replies[review.id].id); setEditReplyText(replies[review.id].replyText); }}
+                          className="text-slate-300 hover:text-blue-400 text-xs transition-colors"
+                          title="Edit reply"
+                        >
+                          <i className="fas fa-pen"></i>
+                        </button>
+                        <button
+                          onClick={() => setConfirmModal({
+                            message: 'Delete your response? You won\'t be able to reply to this review again.',
+                            onConfirm: async () => { setConfirmModal(null); await handleDeleteReply(replies[review.id].id, review.id); },
+                          })}
+                          className="text-slate-300 hover:text-red-400 text-xs transition-colors"
+                          title="Delete reply"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    )}
+                    {isAdminOrMod && !isOwner && (
                       <button
                         onClick={() => handleDeleteReply(replies[review.id].id, review.id)}
                         className="text-slate-300 hover:text-red-400 text-xs transition-colors"
@@ -1500,9 +1729,52 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                       </button>
                     )}
                   </div>
-                  <p className="text-slate-600 text-sm leading-relaxed">{replies[review.id].replyText}</p>
+                  {editingReplyId === replies[review.id].id ? (
+                    <div className="space-y-2 mt-1">
+                      <textarea
+                        value={editReplyText}
+                        onChange={e => setEditReplyText(e.target.value)}
+                        rows={3}
+                        className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setEditingReplyId(null)} className="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5 rounded-lg transition-colors">Cancel</button>
+                        <button
+                          onClick={() => handleEditReply(replies[review.id].id, review.id)}
+                          disabled={editReplyLoading || !editReplyText.trim()}
+                          className="text-xs font-bold text-white bg-emerald-600 px-4 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                        >
+                          {editReplyLoading ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-600 text-sm leading-relaxed">{replies[review.id].replyText}</p>
+                  )}
+                  {user && review.userId === user.id && review.rating <= 3 && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-100">
+                      <button
+                        onClick={async () => {
+                          const next = replies[review.id].resolvedByReviewer === true ? null : true;
+                          await markReplyResolution(replies[review.id].id, next);
+                          setReplies((prev: Record<string, ReviewReply>) => ({ ...prev, [review.id]: { ...prev[review.id], resolvedByReviewer: next } }));
+                        }}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg transition-colors ${replies[review.id].resolvedByReviewer === true ? 'bg-emerald-600 text-white' : 'bg-white border border-emerald-300 text-emerald-600 hover:bg-emerald-50'}`}
+                      >
+                        <i className="fas fa-circle-check mr-1"></i>
+                        {replies[review.id].resolvedByReviewer === true ? 'Marked as resolved' : 'Mark as resolved'}
+                      </button>
+                    </div>
+                  )}
+                  {replies[review.id].resolvedByReviewer === true && review.rating <= 3 && !(user && review.userId === user.id) && (
+                    <div className="mt-2 pt-2 border-t border-emerald-100">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700">
+                        <i className="fas fa-circle-check mr-1"></i>Reviewer marked as resolved
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ) : isOwner && (
+              ) : isOwner && !deletedReplyReviewIds.has(review.id) && (
                 replyingTo === review.id ? (
                   <div className="mt-3 ml-4 space-y-2">
                     <textarea
@@ -1548,20 +1820,14 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
         </div>
       </div>}
 
-      {/* Transparency + update request */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-2 border-t border-slate-100">
-        <p className="text-slate-400 text-xs">
-          Business information sourced from publicly available data. Owners must claim their business to request updates or removal.
-        </p>
-        {isOwner && provider.claimStatus === 'claimed' && (
-          <button
-            onClick={() => setShowUpdateModal(true)}
-            className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors shrink-0"
-          >
-            Request updates or removal
-          </button>
-        )}
-      </div>
+      {/* Transparency note — hidden for owners (removal link is inside Owner Dashboard) */}
+      {!isOwner && (
+        <div className="py-2 border-t border-slate-100">
+          <p className="text-slate-400 text-xs">
+            Business information sourced from publicly available data. Claim this listing to manage your info, reply to reviews, or request removal.
+          </p>
+        </div>
+      )}
 
       {/* Modals */}
       {showClaimModal && (
@@ -1578,6 +1844,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
           provider={provider}
           user={user}
           onClose={() => setShowUpdateModal(false)}
+          removalOnly={!!(isOwner && provider.claimStatus === 'claimed')}
         />
       )}
 

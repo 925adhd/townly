@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { IconMessageCircle } from '@tabler/icons-react';
 import { RecommendationRequest, RecommendationResponse, Town } from '../types';
-import { addRequest, resolveRequest, unresolveRequest, deleteRequest, deleteResponse, fetchAllRecommendationResponses, addResponse, fetchUserVotedResponseIds, toggleResponseVote, submitReport } from '../lib/api';
+import { addRequest, deleteRequest, fetchAllRecommendationResponses, submitReport } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
 
@@ -24,13 +25,6 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
   const [formLoading, setFormLoading] = useState(false);
 
   const [responses, setResponses] = useState<Record<string, RecommendationResponse[]>>({});
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const [replyError, setReplyError] = useState('');
-  const [replyLoading, setReplyLoading] = useState(false);
-
-  const [userVotes, setUserVotes] = useState<Set<string>>(new Set());
-  const [votingId, setVotingId] = useState<string | null>(null);
 
   const [notice, setNotice] = useState('');
 
@@ -72,43 +66,6 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     }).catch(console.error);
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserVotedResponseIds(user.id).then(ids => {
-        setUserVotes(new Set(ids));
-      }).catch(console.error);
-    } else {
-      setUserVotes(new Set());
-    }
-  }, [user]);
-
-  const handleVote = async (responseId: string) => {
-    if (!user) { setNotice('Please log in to vote.'); return; }
-    setVotingId(responseId);
-    const hasVoted = userVotes.has(responseId);
-    try {
-      const newCount = await toggleResponseVote(responseId, user.id, hasVoted);
-      setUserVotes(prev => {
-        const next = new Set(prev);
-        hasVoted ? next.delete(responseId) : next.add(responseId);
-        return next;
-      });
-      setResponses(prev => {
-        const updated: Record<string, RecommendationResponse[]> = {};
-        for (const [reqId, resps] of Object.entries(prev) as [string, RecommendationResponse[]][]) {
-          updated[reqId] = resps.map(r =>
-            r.id === responseId ? { ...r, voteCount: newCount } : r
-          );
-        }
-        return updated;
-      });
-    } catch (err: any) {
-      setNotice(err.message || 'Failed to vote.');
-    } finally {
-      setVotingId(null);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { setFormError('Please log in to post a request.'); return; }
@@ -127,47 +84,6 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     }
   };
 
-  const handleReply = async (e: React.FormEvent, requestId: string) => {
-    e.preventDefault();
-    if (!user) { setNotice('Please log in to give a recommendation.'); return; }
-    setReplyError('');
-    setReplyLoading(true);
-    try {
-      const resp = await addResponse(requestId, replyText, user.id, user.name);
-      setResponses(prev => ({
-        ...prev,
-        [requestId]: [...(prev[requestId] || []), resp],
-      }));
-      setRequests(prev => prev.map(r =>
-        r.id === requestId ? { ...r, responseCount: r.responseCount + 1 } : r
-      ));
-      setReplyText('');
-      setReplyingTo(null);
-    } catch (err: any) {
-      setReplyError(err.message || 'Failed to submit recommendation.');
-    } finally {
-      setReplyLoading(false);
-    }
-  };
-
-  const handleResolve = async (id: string) => {
-    try {
-      await resolveRequest(id);
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'resolved' as const } : r));
-    } catch (err: any) {
-      setNotice(err.message || 'Failed to mark resolved.');
-    }
-  };
-
-  const handleUnresolve = async (id: string) => {
-    try {
-      await unresolveRequest(id);
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'open' as const } : r));
-    } catch (err: any) {
-      setNotice(err.message || 'Failed to reopen request.');
-    }
-  };
-
   const handleDelete = async (id: string) => {
     try {
       await deleteRequest(id);
@@ -177,20 +93,6 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     }
   };
 
-  const handleDeleteResponse = async (requestId: string, responseId: string) => {
-    try {
-      await deleteResponse(responseId);
-      setResponses(prev => ({
-        ...prev,
-        [requestId]: (prev[requestId] || []).filter(r => r.id !== responseId),
-      }));
-      setRequests(prev => prev.map(r =>
-        r.id === requestId ? { ...r, responseCount: Math.max(0, r.responseCount - 1) } : r
-      ));
-    } catch (err: any) {
-      setNotice(err.message || 'Failed to delete response.');
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -204,7 +106,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
-          <p className="text-slate-500">Can't find a service? Ask locals for recommendations.</p>
+          <p className="text-slate-500">Try searching the <Link to="/" className="text-blue-600 hover:underline font-medium">Local Businesses</Link> directory first. If you can't find what you need, ask the community for recommendations.</p>
         </div>
         <div className="flex items-center justify-center md:justify-start gap-3">
           {!showForm && (
@@ -213,7 +115,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                 onClick={() => setShowForm(true)}
                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
               >
-                Post a Request
+                Ask a Question
               </button>
             ) : (
               <Link
@@ -221,7 +123,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                 state={{ from: location.pathname }}
                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
               >
-                Post a Request
+                Ask a Question
               </Link>
             )
           )}
@@ -283,79 +185,87 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
       <div className="space-y-4">
         {requests.map(req => {
           const reqResponses = [...(responses[req.id] || [])].sort((a, b) => b.voteCount - a.voteCount);
-          const isReplying = replyingTo === req.id;
+          const topPick = reqResponses[0] ?? null;
+          const detailTo = req.slug ? `/ask/${req.slug}` : null;
+
+          const CardWrapper = ({ children }: { children: React.ReactNode }) =>
+            detailTo ? (
+              <Link to={detailTo} className="block bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-md transition-all overflow-hidden">
+                {children}
+              </Link>
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                {children}
+              </div>
+            );
 
           return (
-            <div key={req.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 transition-all overflow-hidden">
+            <React.Fragment key={req.id}>
+            <CardWrapper>
               <div className="p-5">
+                {/* Header */}
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                      <i className="fas fa-user"></i>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0">
+                      <i className="fas fa-user text-xs"></i>
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-900">{req.userName} is looking for:</div>
-                      <div className="text-xs text-slate-400">{new Date(req.createdAt).toLocaleDateString()} • {req.town}</div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-900 truncate">{req.userName}</div>
+                      <div className="text-xs text-slate-400">{new Date(req.createdAt).toLocaleDateString()} · {req.town}</div>
                     </div>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${req.status === 'open' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase flex-shrink-0 ml-2 ${req.status === 'open' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
                     {req.status === 'open' ? 'Looking' : 'Answered'}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{req.serviceNeeded}</h3>
-                <p className="text-slate-600 text-sm mb-4">{req.description}</p>
+                {/* Title */}
+                <h3 className="text-lg font-bold text-slate-900 mb-1">{req.serviceNeeded}</h3>
+                <p className="text-slate-500 text-sm line-clamp-2">{req.description}</p>
 
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <button
-                    className="text-orange-600 font-bold text-sm hover:underline"
-                    onClick={() => {
-                      if (!user) { setNotice('Please log in to give a recommendation.'); return; }
-                      setNotice('');
-                      setReplyText('');
-                      setReplyError('');
-                      setReplyingTo(isReplying ? null : req.id);
-                    }}
-                  >
-                    <i className="fas fa-reply mr-2"></i>
-                    {isReplying ? 'Cancel' : 'Give Recommendation'}
-                  </button>
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-400 text-xs font-medium">
-                      {req.responseCount} {req.responseCount === 1 ? 'suggestion' : 'suggestions'}
-                    </span>
-                    {!!(user && user.id !== req.userId && !isAdminOrMod) && (
-                      <button
-                        onClick={() => { setReportingId(reportingId === req.id ? null : req.id); setReportReason(''); }}
-                        className="text-slate-300 hover:text-red-400 transition-colors text-xs"
-                        title="Report this request"
-                      >
-                        <i className="fas fa-flag"></i>
-                      </button>
-                    )}
-                    {!!(user && (user.id === req.userId || isAdminOrMod)) && (
-                      <>
-                        {req.status === 'open' && (
-                          <button onClick={() => handleResolve(req.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-700">
-                            Mark as Answered
-                          </button>
-                        )}
-                        {req.status === 'resolved' && (
-                          <button onClick={() => handleUnresolve(req.id)} className="text-xs font-bold text-blue-600 hover:text-blue-700">
-                            Still Looking
-                          </button>
-                        )}
-                        <button onClick={() => handleDelete(req.id)} className="text-xs font-bold text-red-400 hover:text-red-600">
-                          Delete
-                        </button>
-                      </>
-                    )}
+                {/* Top pick preview */}
+                {topPick && (
+                  <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 mt-0.5">Top Pick</span>
+                    <p className="text-slate-700 text-xs line-clamp-2 flex-1">{topPick.recommendation}</p>
                   </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 pb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-400 text-xs font-medium">
+                    <i className="fas fa-comment mr-1"></i>
+                    {req.responseCount} {req.responseCount === 1 ? 'recommendation' : 'recommendations'}
+                  </span>
+                  {detailTo && (
+                    <span className="text-blue-500 text-xs font-semibold">
+                      View all <i className="fas fa-arrow-right text-[10px] ml-0.5"></i>
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2" onClick={e => e.preventDefault()}>
+                  {!!(user && user.id !== req.userId && !isAdminOrMod) && (
+                    <button
+                      onClick={() => { setReportingId(reportingId === req.id ? null : req.id); setReportReason(''); }}
+                      className="text-slate-300 hover:text-red-400 transition-colors text-xs p-1"
+                      title="Report this request"
+                    >
+                      <i className="fas fa-flag"></i>
+                    </button>
+                  )}
+                  {!!(user && (user.id === req.userId || isAdminOrMod)) && (
+                    <button onClick={() => handleDelete(req.id)} className="text-xs font-bold text-red-400 hover:text-red-600">
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  )}
                 </div>
               </div>
 
+              {/* Report form */}
               {reportingId === req.id && (
-                <div className="border-t border-slate-100 bg-slate-50 px-5 pb-4 pt-3">
+                <div className="border-t border-slate-100 bg-slate-50 px-5 pb-4 pt-3" onClick={e => e.preventDefault()}>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Report this request</p>
                   <textarea
                     value={reportReason}
@@ -381,130 +291,22 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                   </div>
                 </div>
               )}
-
-              {/* Inline reply form */}
-              {isReplying && (
-                <div className="border-t border-blue-100 bg-blue-50 p-5">
-                  <p className="text-xs font-bold text-blue-700 uppercase tracking-widest mb-3">Your Recommendation</p>
-                  <form onSubmit={e => handleReply(e, req.id)} className="space-y-3">
-                    <textarea
-                      required
-                      rows={3}
-                      autoFocus
-                      placeholder={`Who would you recommend for "${req.serviceNeeded}"? Include their name, phone, or Facebook if you have it.`}
-                      className="w-full bg-white border border-blue-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                      value={replyText}
-                      onChange={e => setReplyText(e.target.value)}
-                    />
-                    {replyError && (
-                      <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{replyError}</div>
-                    )}
-                    <button type="submit" disabled={replyLoading} className="bg-orange-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-60 text-sm">
-                      {replyLoading ? 'Submitting...' : 'Submit Recommendation'}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* Responses sorted by votes */}
-              {reqResponses.length > 0 && (
-                <div className="border-t border-slate-100 divide-y divide-slate-50">
-                  {reqResponses.map((r, idx) => {
-                    const voted = userVotes.has(r.id);
-                    const isVoting = votingId === r.id;
-                    const isTop = idx === 0 && r.voteCount > 0;
-                    return (
-                      <div key={r.id} className={`px-5 py-4 flex items-start space-x-3 ${isTop ? 'bg-amber-50' : ''}`}>
-                        {/* Vote button */}
-                        <button
-                          onClick={() => handleVote(r.id)}
-                          disabled={isVoting}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex-shrink-0 mt-0.5 disabled:opacity-50 ${
-                            voted
-                              ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                              : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300 hover:text-orange-500'
-                          }`}
-                        >
-                          <i className="fas fa-arrow-up text-[10px]"></i>
-                          <span>{voted ? 'Voted' : 'Upvote'}</span>
-                          <span className={`font-bold tabular-nums ${voted ? 'text-orange-100' : 'text-slate-400'}`}>
-                            {r.voteCount}
-                          </span>
-                        </button>
-
-                        {/* Avatar + content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-[10px] uppercase flex-shrink-0">
-                              {r.userName.charAt(0)}
-                            </div>
-                            <span className="text-xs font-bold text-slate-700">{r.userName}</span>
-                            <span className="text-slate-400 text-xs font-normal">· {new Date(r.createdAt).toLocaleDateString()}</span>
-                            {isTop && (
-                              <span className="ml-auto text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                                Top Pick
-                              </span>
-                            )}
-                            {!!(user && user.id !== r.userId && !isAdminOrMod) && (
-                              <button
-                                onClick={() => { setReportingId(reportingId === r.id ? null : r.id); setReportReason(''); }}
-                                className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-[10px]"
-                                title="Report this response"
-                              >
-                                <i className="fas fa-flag"></i>
-                              </button>
-                            )}
-                            {!!(user && (user.id === r.userId || isAdminOrMod)) && (
-                              <button
-                                onClick={() => handleDeleteResponse(req.id, r.id)}
-                                className="ml-auto text-[10px] font-bold text-red-400 hover:text-red-600"
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-slate-700 text-sm">{r.recommendation}</p>
-                          {reportingId === r.id && (
-                            <div className="mt-2 bg-slate-50 border border-slate-100 rounded-xl p-3">
-                              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Report this response</p>
-                              <textarea
-                                value={reportReason}
-                                onChange={e => setReportReason(e.target.value)}
-                                placeholder="Why are you reporting this? (optional)"
-                                rows={2}
-                                className="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-1 focus:ring-red-300 outline-none resize-none mb-2"
-                              />
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleSubmitReport(r.id, `Response by ${r.userName}`, 'recommendation_response')}
-                                  disabled={submittingReport}
-                                  className="text-xs font-bold bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50"
-                                >
-                                  {submittingReport ? 'Reporting...' : 'Submit Report'}
-                                </button>
-                                <button
-                                  onClick={() => { setReportingId(null); setReportReason(''); }}
-                                  className="text-xs font-bold text-slate-500 px-3 py-1.5 rounded-lg hover:bg-slate-200"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            </CardWrapper>
+            </React.Fragment>
           );
         })}
         {requests.length === 0 && (
-          <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-            <p className="text-slate-400">
-              No requests yet. Be the first to ask!
-            </p>
+          <div className="py-12 px-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
+            <div className="mb-4 flex justify-center text-slate-300"><IconMessageCircle size={48} stroke={1.5} /></div>
+            <p className="text-slate-700 font-semibold text-base mb-5">Be the first to ask a question in your community.</p>
+            <ul className="text-xs italic text-slate-400 space-y-2 text-left max-w-xs mx-auto mb-5">
+              <li>• Any apartments available under $1,200?</li>
+              <li>• Looking for a reliable babysitter in {tenant.towns[0]}</li>
+              <li>• Who installs fences locally?</li>
+            </ul>
+            <Link to="/" className="inline-block text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+              Browse Local Businesses instead
+            </Link>
           </div>
         )}
       </div>

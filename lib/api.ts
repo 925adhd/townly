@@ -179,6 +179,30 @@ function mapLostFound(row: any): LostFoundPost {
   };
 }
 
+const SLUG_STOP_WORDS = new Set([
+  'a','an','the','is','are','was','were','be','been','being',
+  'i','me','my','we','our','you','your','he','his','she','her','it','its','they','their',
+  'in','on','at','to','for','of','with','by','from','up','about','into','through',
+  'and','or','but','nor','so','yet','not',
+  'do','does','did','have','has','had','will','would','could','should','may','might',
+  'who','what','where','when','how','which','that','this','these','those',
+  'any','some','all','no','know','good','best','looking','anyone','someone',
+  'can','need','want','find','get','like','use','make','go','see','one',
+  'there','here','just','also','only','very','really','please','help','does',
+]);
+
+/** Convert a question title to a short, readable URL slug (max 8 meaningful words / 60 chars). */
+function slugify(text: string): string {
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 0 && !SLUG_STOP_WORDS.has(w));
+  // Take up to 8 meaningful words, hard-cap at 60 chars, strip trailing hyphen from cutoff
+  return words.slice(0, 8).join('-').slice(0, 60).replace(/-+$/, '');
+}
+
 function mapRequest(row: any): RecommendationRequest {
   return {
     id: row.id,
@@ -190,6 +214,8 @@ function mapRequest(row: any): RecommendationRequest {
     status: row.status as 'open' | 'resolved',
     responseCount: row.response_count || 0,
     createdAt: row.created_at,
+    slug: row.slug ?? undefined,
+    acceptedResponseId: row.accepted_response_id ?? undefined,
   };
 }
 
@@ -241,6 +267,18 @@ export async function rejectProvider(id: string): Promise<void> {
   await supabase.from('audit_log').insert({ actor_id: adminId, action: 'reject_provider', target_table: 'providers', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
+export async function deleteOwnReview(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw error;
+}
+
 export async function deleteReview(id: string): Promise<void> {
   const actorId = await requireModOrAdmin();
   const { error } = await supabase
@@ -265,7 +303,7 @@ export async function deleteProvider(id: string): Promise<void> {
 
 export async function updateProvider(
   id: string,
-  input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string }
+  input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string; description?: string; tags?: string[]; address?: string; hours?: string; image?: string; listingTier?: 'none' | 'standard' | 'featured' | 'spotlight' }
 ): Promise<Provider> {
   await requireModOrAdmin();
   const { error } = await supabase
@@ -278,6 +316,12 @@ export async function updateProvider(
       town: input.town,
       facebook: input.facebook ? validateUrl(input.facebook) : null,
       website: input.website ? validateUrl(input.website) : null,
+      description: input.description ? sanitize(input.description, 2000) : null,
+      address: input.address ? sanitize(input.address, 300) : null,
+      hours: input.hours ? sanitize(input.hours, 500) : null,
+      image: input.image ? validateUrl(input.image) : null,
+      ...(input.listingTier !== undefined && { listing_tier: input.listingTier }),
+      ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
     })
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
@@ -379,6 +423,23 @@ export async function addReview(
     }
     throw error;
   }
+  // Recalculate and persist provider stats
+  const { data: allReviews } = await supabase
+    .from('reviews')
+    .select('rating, would_hire_again')
+    .eq('provider_id', input.providerId);
+  if (allReviews && allReviews.length > 0) {
+    const count = allReviews.length;
+    const avgRating = allReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / count;
+    const hireAgainPercent = Math.round(
+      (allReviews.filter((r: any) => r.would_hire_again).length / count) * 100
+    );
+    await supabase
+      .from('providers')
+      .update({ average_rating: avgRating, review_count: count, hire_again_percent: hireAgainPercent })
+      .eq('id', input.providerId);
+  }
+
   return mapReview(data);
 }
 
@@ -532,6 +593,20 @@ export async function addRequest(
   const serviceNeeded = sanitize(input.serviceNeeded, 200);
   const description = sanitize(input.description, 1000);
   if (!serviceNeeded) throw new Error('Service type is required.');
+
+  // Generate a unique slug; fall back if title yields no meaningful words
+  const baseSlug = slugify(serviceNeeded) || `community-question-${Math.floor(1000 + Math.random() * 9000)}`;
+  let slug = baseSlug;
+  const { data: existing } = await supabase
+    .from('recommendation_requests')
+    .select('id')
+    .eq('slug', slug)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  if (existing) {
+    slug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
   const { data, error } = await supabase
     .from('recommendation_requests')
     .insert({
@@ -541,6 +616,7 @@ export async function addRequest(
       description,
       town: input.town,
       tenant_id: getCurrentTenant().id,
+      slug,
     })
     .select()
     .single();
@@ -548,13 +624,34 @@ export async function addRequest(
   return mapRequest(data);
 }
 
-export async function resolveRequest(id: string): Promise<void> {
+export async function fetchRequestBySlug(slug: string): Promise<RecommendationRequest | null> {
+  const { data, error } = await supabase
+    .from('recommendation_requests')
+    .select('*')
+    .eq('slug', slug)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapRequest(data);
+}
+
+export async function fetchResponsesByRequestId(requestId: string): Promise<RecommendationResponse[]> {
+  const { data, error } = await supabase
+    .from('recommendation_responses')
+    .select('*')
+    .eq('request_id', requestId)
+    .order('vote_count', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapResponse);
+}
+
+export async function acceptResponse(requestId: string, responseId: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('recommendation_requests')
-    .update({ status: 'resolved' })
-    .eq('id', id)
+    .update({ status: 'resolved', accepted_response_id: responseId })
+    .eq('id', requestId)
     .eq('user_id', session.user.id);
   if (error) throw error;
 }
@@ -564,7 +661,7 @@ export async function unresolveRequest(id: string): Promise<void> {
   if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('recommendation_requests')
-    .update({ status: 'open' })
+    .update({ status: 'open', accepted_response_id: null })
     .eq('id', id)
     .eq('user_id', session.user.id);
   if (error) throw error;
@@ -577,6 +674,16 @@ export async function deleteRequest(id: string): Promise<void> {
     .eq('id', id);
   if (error) throw error;
   if (count === 0) throw new Error('Permission denied: you can only delete your own requests.');
+}
+
+export async function updateResponse(id: string, recommendation: string): Promise<void> {
+  const sanitized = sanitize(recommendation, 2000);
+  if (!sanitized) throw new Error('Recommendation cannot be empty.');
+  const { error } = await supabase
+    .from('recommendation_responses')
+    .update({ recommendation: sanitized })
+    .eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteResponse(id: string): Promise<void> {
@@ -910,6 +1017,7 @@ export async function updateOwnerListing(
     website?: string;
     image?: string;
     tags?: string[];
+    town?: string;
   }
 ): Promise<Provider> {
   // Defence-in-depth: verify session and ownership before issuing the UPDATE.
@@ -935,6 +1043,7 @@ export async function updateOwnerListing(
       facebook: input.facebook ? validateUrl(input.facebook) : null,
       website: input.website ? validateUrl(input.website) : null,
       image: input.image ? validateUrl(input.image) : null,
+      ...(input.town !== undefined && { town: input.town }),
       ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
     })
     .eq('id', id);
@@ -972,6 +1081,7 @@ function mapReviewReply(row: any): ReviewReply {
     ownerName: row.owner_name,
     replyText: row.reply_text,
     createdAt: row.created_at,
+    resolvedByReviewer: row.resolved_by_reviewer ?? null,
   };
 }
 
@@ -1020,6 +1130,41 @@ export async function submitReviewReply(
     .single();
   if (error) throw error;
   return mapReviewReply(data);
+}
+
+export async function markReplyResolution(replyId: string, resolved: boolean | null): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { error } = await supabase
+    .from('review_replies')
+    .update({ resolved_by_reviewer: resolved })
+    .eq('id', replyId);
+  if (error) throw error;
+}
+
+export async function updateReviewReply(replyId: string, replyText: string): Promise<void> {
+  const sanitized = sanitize(replyText, 1000);
+  if (!sanitized) throw new Error('Reply cannot be empty.');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { error } = await supabase
+    .from('review_replies')
+    .update({ reply_text: sanitized })
+    .eq('id', replyId)
+    .eq('owner_id', session.user.id);
+  if (error) throw error;
+}
+
+export async function deleteOwnReviewReply(replyId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { error } = await supabase
+    .from('review_replies')
+    .delete()
+    .eq('id', replyId)
+    .eq('owner_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw new Error('Failed to delete reply.');
 }
 
 export async function deleteReviewReply(replyId: string): Promise<void> {
@@ -1735,13 +1880,20 @@ export async function fetchEarlyAccessRequests(): Promise<EarlyAccessRequest[]> 
   }));
 }
 
-export async function updateEarlyAccessStatus(id: string, status: EarlyAccessRequest['status']): Promise<void> {
+export async function updateEarlyAccessStatus(id: string, status: EarlyAccessRequest['status'], providerId?: string): Promise<void> {
   await requireAdmin();
   const { error } = await supabase
     .from('early_access_requests')
     .update({ status })
     .eq('id', id);
   if (error) throw new Error('Failed to update status.');
+  if (status === 'approved' && providerId) {
+    const { error: providerError } = await supabase
+      .from('providers')
+      .update({ listing_tier: 'featured' })
+      .eq('id', providerId);
+    if (providerError) throw new Error('Failed to upgrade provider tier.');
+  }
 }
 
 export async function checkEarlyAccessRequest(providerId: string): Promise<boolean> {

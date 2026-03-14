@@ -7,6 +7,7 @@ interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
   communityAlert: CommunityAlert | null;
   setCommunityAlert: (alert: CommunityAlert | null) => void;
+  setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
 }
 
 const contentTypeLabel: Record<ReportContentType, string> = {
@@ -23,7 +24,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
   recommendation_response: 'bg-slate-100 text-slate-600',
 };
 
-const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }) => {
+const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, setProviders }) => {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings' | 'access' | 'activity'>('pending');
 
   // Pending providers
@@ -204,6 +205,10 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
     try {
       await approveClaim(claim.id);
       setClaims(prev => prev.filter(c => c.id !== claim.id));
+      setProviders(prev => prev.map(p => p.id === claim.providerId
+        ? { ...p, claimStatus: 'claimed' as const, claimedBy: claim.userId }
+        : p
+      ));
     } catch (e: any) {
       setClaimsError(e.message || 'Failed to approve claim.');
     } finally {
@@ -1071,12 +1076,26 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert }
                           Mark Contacted
                         </button>
                       )}
-                      {req.status !== 'approved' && (
+                      {req.status !== 'approved' ? (
                         <button
-                          onClick={async () => { await updateEarlyAccessStatus(req.id, 'approved'); setAccessRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r)); }}
+                          onClick={async () => {
+                            await updateEarlyAccessStatus(req.id, 'approved', req.providerId);
+                            setAccessRequests((prev: EarlyAccessRequest[]) => prev.map((r: EarlyAccessRequest) => r.id === req.id ? { ...r, status: 'approved' } : r));
+                            setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === req.providerId ? { ...p, listingTier: 'featured' as const } : p));
+                          }}
                           className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
                         >
                           Approve
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            await updateEarlyAccessStatus(req.id, 'approved', req.providerId);
+                            setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === req.providerId ? { ...p, listingTier: 'featured' as const } : p));
+                          }}
+                          className="bg-slate-50 text-slate-500 hover:bg-amber-50 hover:text-amber-700 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Re-apply tier
                         </button>
                       )}
                       {confirmDeleteAccessId === req.id ? (

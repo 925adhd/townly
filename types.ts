@@ -67,6 +67,7 @@ export interface ReviewReply {
   ownerName: string;
   replyText: string;
   createdAt: string;
+  resolvedByReviewer: boolean | null;
 }
 
 export type LostFoundType = 'lost_pet' | 'found_pet' | 'lost_item' | 'found_item' | 'lost_package' | 'found_package';
@@ -97,6 +98,8 @@ export interface RecommendationRequest {
   status: 'open' | 'resolved';
   createdAt: string;
   responseCount: number;
+  slug?: string;
+  acceptedResponseId?: string;
 }
 
 export interface RecommendationResponse {
