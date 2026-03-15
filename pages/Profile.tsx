@@ -81,7 +81,7 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
     setSettingsLoading(true); setSettingsError(''); setSettingsMsg('');
     try {
       await updateEmail(newEmail.trim());
-      setSettingsMsg('Confirmation email sent. Check your inbox.');
+      setSettingsMsg('Confirmation links sent. Check both your current and new email and click both links.');
       setNewEmail(''); setActiveSettings(null);
     } catch (err: any) { setSettingsError(err.message || 'Failed to update email.'); }
     finally { setSettingsLoading(false); }
@@ -112,10 +112,10 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto pb-10 px-4 space-y-8">
+    <div className="max-w-6xl mx-auto pb-10 px-4">
 
       {/* Header */}
-      <div className="pt-2 flex items-center justify-between">
+      <div className="pt-2 flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
           {user.email && <p className="text-slate-400 text-sm mt-0.5">{user.email}</p>}
@@ -135,15 +135,78 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
       )}
 
       {!loading && (
-        <>
+        <div className="space-y-8">
+
+          {/* Account Settings bar */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Account Settings</h2>
+            {settingsMsg && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3 py-2.5 rounded-xl mb-3">{settingsMsg}</div>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => { setActiveSettings(activeSettings === 'email' ? null : 'email'); setSettingsError(''); setSettingsMsg(''); }}
+                  className={`text-sm font-medium px-4 py-2 rounded-xl border transition-colors ${activeSettings === 'email' ? 'bg-slate-100 border-slate-300 text-slate-900' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  Change Email <i className={`fas fa-chevron-${activeSettings === 'email' ? 'up' : 'down'} text-slate-300 text-xs ml-1`}></i>
+                </button>
+                <button
+                  onClick={() => { setActiveSettings(activeSettings === 'password' ? null : 'password'); setSettingsError(''); setSettingsMsg(''); }}
+                  className={`text-sm font-medium px-4 py-2 rounded-xl border transition-colors ${activeSettings === 'password' ? 'bg-slate-100 border-slate-300 text-slate-900' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  Change Password <i className={`fas fa-chevron-${activeSettings === 'password' ? 'up' : 'down'} text-slate-300 text-xs ml-1`}></i>
+                </button>
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-sm font-medium px-4 py-2 rounded-xl border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
+              >
+                Delete Account
+              </button>
+            </div>
+
+            {activeSettings === 'email' && (
+              <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-2.5 items-start">
+                  <i className="fas fa-triangle-exclamation text-amber-500 text-sm mt-0.5 flex-shrink-0"></i>
+                  <p className="text-sm text-amber-800 leading-snug">
+                    <span className="font-bold">Check both inboxes.</span> You'll receive a confirmation link at your <span className="font-semibold">current</span> email and your <span className="font-semibold">new</span> email. You must click <span className="font-semibold">both links</span> for the change to take effect.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="flex-1 min-w-[200px]">
+                    <input type="email" placeholder="New email address" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {settingsError && <p className="text-xs text-red-500">{settingsError}</p>}
+                    <button onClick={handleUpdateEmail} disabled={settingsLoading || !newEmail.trim()} className="bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl disabled:opacity-50 transition-colors whitespace-nowrap">
+                      {settingsLoading ? 'Saving…' : 'Update Email'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {activeSettings === 'password' && (
+              <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3 items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <input type="password" placeholder="New password (min 8 characters)" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  {settingsError && <p className="text-xs text-red-500">{settingsError}</p>}
+                  <button onClick={handleUpdatePassword} disabled={settingsLoading || newPassword.length < 8} className="bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl disabled:opacity-50 transition-colors whitespace-nowrap">
+                    {settingsLoading ? 'Saving…' : 'Update Password'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Claimed Listing */}
           {claimed && (
-            <section>
+            <section className="w-full">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Business</h2>
-              <Link
-                to={`/provider/${claimed.id}`}
-                className="flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-200 hover:shadow-sm transition-all"
-              >
+              <Link to={`/provider/${claimed.id}`} className="flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-200 hover:shadow-sm transition-all">
                 <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
                   <i className="fas fa-store text-slate-400 text-lg"></i>
                 </div>
@@ -156,9 +219,9 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
             </section>
           )}
 
-          {/* Bookings */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
+          {/* Bookings — full width */}
+          <section className="w-full">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Your Bookings</h2>
               <div className="flex items-center gap-2">
                 <Link to="/book/spotlight" className="text-xs font-bold bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors">
@@ -175,12 +238,12 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
               </div>
             </div>
             {bookings.length === 0 ? (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center">
-                <p className="text-slate-400 text-sm">No bookings yet.</p>
+              <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center">
+                <p className="text-slate-400 text-sm">No paid bookings yet.</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {bookings.slice(0, 3).map(b => {
+              <div className="grid md:grid-cols-2 gap-2">
+                {bookings.slice(0, 4).map(b => {
                   const badge = statusBadge(b.status);
                   return (
                     <div key={b.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-center gap-3">
@@ -193,179 +256,104 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
                     </div>
                   );
                 })}
-                {bookings.length > 3 && (
-                  <Link to="/my-bookings" className="block text-center text-xs font-semibold text-slate-400 hover:text-orange-500 py-1">
-                    View all {bookings.length} bookings
-                  </Link>
-                )}
               </div>
+            )}
+            {bookings.length > 4 && (
+              <Link to="/my-bookings" className="block text-center text-xs font-semibold text-slate-400 hover:text-orange-500 py-2">
+                View all {bookings.length} bookings
+              </Link>
             )}
           </section>
 
-          {/* Posts */}
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Posts</h2>
-            {posts.length === 0 ? (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
-                <p className="text-slate-400 text-sm">You haven't posted anything yet.</p>
-                <Link to="/events" className="text-xs font-bold text-orange-500 hover:underline">Post on the Community Board →</Link>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {posts.map(post => (
-                  <div key={post.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 leading-tight">{post.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {new Date(post.createdAt).toLocaleDateString()} · {post.town}
-                        {post.status === 'pending' && <span className="ml-2 text-amber-500 font-medium">Pending review</span>}
-                      </p>
+          {/* 2x2 grid for activity sections */}
+          <div className="grid md:grid-cols-2 gap-6">
+
+            {/* Posts */}
+            <section className="w-full">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Posts</h2>
+              {posts.length === 0 ? (
+                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
+                  <p className="text-slate-400 text-sm">You haven't posted anything yet.</p>
+                  <Link to="/events" className="text-xs font-bold text-orange-500 hover:underline">Post on the Community Board →</Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {posts.map(post => (
+                    <div key={post.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 leading-tight">{post.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {new Date(post.createdAt).toLocaleDateString()} · {post.town}
+                          {post.status === 'pending' && <span className="ml-2 text-amber-500 font-medium">Pending review</span>}
+                        </p>
+                      </div>
+                      <button onClick={() => handleDeletePost(post.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+                        <i className="fas fa-trash text-xs"></i>
+                      </button>
                     </div>
-                    <button onClick={() => handleDeletePost(post.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-                      <i className="fas fa-trash text-xs"></i>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Lost & Found */}
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Lost & Found</h2>
-            {lostFound.length === 0 ? (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
-                <p className="text-slate-400 text-sm">No lost & found posts yet.</p>
-                <Link to="/lost-found/new" className="text-xs font-bold text-orange-500 hover:underline">Post to Lost & Found →</Link>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {lostFound.map(post => (
-                  <div key={post.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 leading-tight">{post.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        <span className={`font-medium ${post.type === 'lost' ? 'text-red-400' : 'text-emerald-500'}`}>{post.type === 'lost' ? 'Lost' : 'Found'}</span>
-                        {' · '}{new Date(post.createdAt).toLocaleDateString()} · {post.town}
-                      </p>
-                    </div>
-                    <button onClick={() => handleDeleteLostFound(post.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-                      <i className="fas fa-trash text-xs"></i>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Questions */}
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Questions</h2>
-            {requests.length === 0 ? (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
-                <p className="text-slate-400 text-sm">No questions asked yet.</p>
-                <Link to="/ask" className="text-xs font-bold text-orange-500 hover:underline">Ask the Community →</Link>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {requests.map(req => (
-                  <div key={req.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 leading-tight">{req.serviceNeeded}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {new Date(req.createdAt).toLocaleDateString()} · {req.town}
-                        {' · '}<span className={req.status === 'open' ? 'text-blue-400' : 'text-emerald-500'}>{req.status === 'open' ? 'Open' : 'Answered'}</span>
-                      </p>
-                    </div>
-                    <button onClick={() => handleDeleteRequest(req.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-                      <i className="fas fa-trash text-xs"></i>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Account Settings */}
-          <section className="border-t border-slate-100 pt-6 space-y-3">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Account Settings</h2>
-
-            {settingsMsg && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-4 py-2.5 rounded-xl">{settingsMsg}</div>
-            )}
-
-            {/* Change Email */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <button
-                onClick={() => { setActiveSettings(activeSettings === 'email' ? null : 'email'); setSettingsError(''); setSettingsMsg(''); }}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                Change Email
-                <i className={`fas fa-chevron-${activeSettings === 'email' ? 'up' : 'down'} text-slate-300 text-xs`}></i>
-              </button>
-              {activeSettings === 'email' && (
-                <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
-                  <input
-                    type="email"
-                    placeholder="New email address"
-                    value={newEmail}
-                    onChange={e => setNewEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  {settingsError && <p className="text-xs text-red-500">{settingsError}</p>}
-                  <button
-                    onClick={handleUpdateEmail}
-                    disabled={settingsLoading || !newEmail.trim()}
-                    className="bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-xl disabled:opacity-50 transition-colors"
-                  >
-                    {settingsLoading ? 'Saving…' : 'Update Email'}
-                  </button>
+                  ))}
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* Change Password */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <button
-                onClick={() => { setActiveSettings(activeSettings === 'password' ? null : 'password'); setSettingsError(''); setSettingsMsg(''); }}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                Change Password
-                <i className={`fas fa-chevron-${activeSettings === 'password' ? 'up' : 'down'} text-slate-300 text-xs`}></i>
-              </button>
-              {activeSettings === 'password' && (
-                <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
-                  <input
-                    type="password"
-                    placeholder="New password (min 8 characters)"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                  {settingsError && <p className="text-xs text-red-500">{settingsError}</p>}
-                  <button
-                    onClick={handleUpdatePassword}
-                    disabled={settingsLoading || newPassword.length < 8}
-                    className="bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-xl disabled:opacity-50 transition-colors"
-                  >
-                    {settingsLoading ? 'Saving…' : 'Update Password'}
-                  </button>
+            {/* Lost & Found */}
+            <section className="w-full">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Lost & Found</h2>
+              {lostFound.length === 0 ? (
+                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
+                  <p className="text-slate-400 text-sm">No lost & found posts yet.</p>
+                  <Link to="/lost-found/new" className="text-xs font-bold text-orange-500 hover:underline">Post to Lost & Found →</Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {lostFound.map(post => (
+                    <div key={post.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 leading-tight">{post.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          <span className={`font-medium ${post.type === 'lost' ? 'text-red-400' : 'text-emerald-500'}`}>{post.type === 'lost' ? 'Lost' : 'Found'}</span>
+                          {' · '}{new Date(post.createdAt).toLocaleDateString()} · {post.town}
+                        </p>
+                      </div>
+                      <button onClick={() => handleDeleteLostFound(post.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+                        <i className="fas fa-trash text-xs"></i>
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* Delete Account */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
-              >
-                Delete Account
-                <i className="fas fa-chevron-right text-red-200 text-xs"></i>
-              </button>
-            </div>
-          </section>
-        </>
+            {/* Questions */}
+            <section className="w-full">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Questions</h2>
+              {requests.length === 0 ? (
+                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
+                  <p className="text-slate-400 text-sm">No questions asked yet.</p>
+                  <Link to="/ask" className="text-xs font-bold text-orange-500 hover:underline">Ask the Community →</Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {requests.map(req => (
+                    <div key={req.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 leading-tight">{req.serviceNeeded}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {new Date(req.createdAt).toLocaleDateString()} · {req.town}
+                          {' · '}<span className={req.status === 'open' ? 'text-blue-400' : 'text-emerald-500'}>{req.status === 'open' ? 'Open' : 'Answered'}</span>
+                        </p>
+                      </div>
+                      <button onClick={() => handleDeleteRequest(req.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+                        <i className="fas fa-trash text-xs"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+          </div>
+        </div>
       )}
 
       {/* Delete Account Modal */}
