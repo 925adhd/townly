@@ -77,7 +77,7 @@ const Auth: React.FC = () => {
         </div>
       )}
       <div className="bg-white p-4 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-2 sm:mb-6 select-none">
+        <div className="text-center mb-2 sm:mb-6">
            <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-10 h-10 sm:w-20 sm:h-20 mx-auto mb-1 sm:mb-2 object-contain animate-rock" />
            <h1 className="text-lg sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : 'Join Townly'}</h1>
            <p className="text-orange-600 font-semibold text-xs sm:text-sm mt-0.5">{tenant.tagline}</p>

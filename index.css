@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
 @layer base {
-  button { cursor: pointer; }
+  * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    cursor: text;
+  }
+  button, a { cursor: pointer; }
 }
