@@ -99,15 +99,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const handleShareEvent = async (ev: CommunityEvent) => {
     const base = `${window.location.origin}${window.location.pathname}`;
     const url = `${base}#/spotlights?event=${ev.id}`;
-    const lines = [ev.title];
-    if (ev.location) lines.push(`📍 ${ev.location}${ev.town ? `, ${ev.town}` : ''}`);
-    if (ev.eventDate) lines.push(`📅 ${formatEventDate(ev.eventDate)}`);
-    lines.push('', url);
-    const text = lines.join('\n');
     if (navigator.share) {
-      try { await navigator.share({ text }); } catch { /* dismissed */ }
+      try { await navigator.share({ title: 'Events — Grayson County Townly', url }); } catch { /* dismissed */ }
     } else {
-      try { await navigator.clipboard.writeText(text); alert('Link copied!'); } catch { alert('Could not copy link.'); }
+      try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
     }
   };
 
