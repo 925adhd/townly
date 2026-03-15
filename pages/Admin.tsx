@@ -1,12 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, reorderAlerts, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
-  communityAlert: CommunityAlert | null;
-  setCommunityAlert: (alert: CommunityAlert | null) => void;
+  communityAlerts: CommunityAlert[];
+  setCommunityAlerts: React.Dispatch<React.SetStateAction<CommunityAlert[]>>;
   setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
 }
 
@@ -24,7 +24,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
   recommendation_response: 'bg-slate-100 text-slate-600',
 };
 
-const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, setProviders }) => {
+const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts, setProviders }) => {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings' | 'access' | 'activity'>('pending');
 
   // Pending providers
@@ -83,8 +83,21 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
   // Community alerts
   const [alertTitle, setAlertTitle] = useState('');
   const [alertDescription, setAlertDescription] = useState('');
+  const [alertIcon, setAlertIcon] = useState('fa-triangle-exclamation');
   const [alertActing, setAlertActing] = useState(false);
   const [alertError, setAlertError] = useState('');
+  const alertFormRef = React.useRef<HTMLDivElement>(null);
+
+  const ALERT_ICONS = [
+    { id: 'fa-triangle-exclamation', label: 'Warning',      color: 'text-amber-500' },
+    { id: 'fa-bell',                  label: 'General',      color: 'text-slate-500' },
+    { id: 'fa-bullhorn',              label: 'Announcement', color: 'text-blue-500'  },
+    { id: 'fa-cloud-bolt',            label: 'Weather',      color: 'text-indigo-500'},
+    { id: 'fa-droplet',               label: 'Water',        color: 'text-cyan-500'  },
+    { id: 'fa-fire',                  label: 'Fire',         color: 'text-orange-500'},
+    { id: 'fa-road-barrier',          label: 'Road',         color: 'text-yellow-600'},
+    { id: 'fa-house-flood-water',     label: 'Flood',        color: 'text-teal-500'  },
+  ];
 
   useEffect(() => {
     fetchPendingProviders()
@@ -260,11 +273,11 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
     setAlertActing(true);
     setAlertError('');
     try {
-      if (communityAlert) await dismissAlert(communityAlert.id);
-      const newAlert = await createAlert(alertTitle.trim(), alertDescription.trim(), user.id);
-      setCommunityAlert(newAlert);
+      const newAlert = await createAlert(alertTitle.trim(), alertDescription.trim(), user.id, alertIcon);
+      setCommunityAlerts(prev => [newAlert, ...prev]);
       setAlertTitle('');
       setAlertDescription('');
+      setAlertIcon('fa-triangle-exclamation');
     } catch (e: any) {
       setAlertError(e.message || 'Failed to post alert.');
     } finally {
@@ -272,13 +285,21 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
     }
   };
 
-  const handleDismissAlert = async () => {
-    if (!communityAlert) return;
+  const handleMoveAlert = async (index: number, direction: 'up' | 'down') => {
+    const newAlerts = [...communityAlerts];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newAlerts.length) return;
+    [newAlerts[index], newAlerts[swapIndex]] = [newAlerts[swapIndex], newAlerts[index]];
+    setCommunityAlerts(newAlerts);
+    await reorderAlerts(newAlerts.map(a => a.id));
+  };
+
+  const handleDismissAlert = async (id: string) => {
     setAlertActing(true);
     setAlertError('');
     try {
-      await dismissAlert(communityAlert.id);
-      setCommunityAlert(null);
+      await dismissAlert(id);
+      setCommunityAlerts(prev => prev.filter(a => a.id !== id));
     } catch (e: any) {
       setAlertError(e.message || 'Failed to dismiss alert.');
     } finally {
@@ -410,9 +431,9 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
               {pendingEvents.length} events
             </span>
           )}
-          {communityAlert && (
+          {communityAlerts.length > 0 && (
             <span className="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full">
-              1 alert live
+              {communityAlerts.length} alert{communityAlerts.length > 1 ? 's' : ''} live
             </span>
           )}
         </div>
@@ -426,7 +447,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
             { key: 'flagged', icon: 'fa-flag', label: 'Flagged', badge: flagged.length, badgeColor: 'bg-red-500' },
             { key: 'claims', icon: 'fa-store', label: 'Claims', badge: claims.length, badgeColor: 'bg-blue-500' },
             { key: 'events', icon: 'fa-calendar', label: 'Events', badge: pendingEvents.length, badgeColor: 'bg-purple-500' },
-            { key: 'alerts', icon: 'fa-triangle-exclamation', label: 'Alerts', badge: communityAlert ? 1 : 0, badgeColor: 'bg-red-500' },
+            { key: 'alerts', icon: 'fa-triangle-exclamation', label: 'Alerts', badge: communityAlerts.length, badgeColor: 'bg-red-500' },
             { key: 'bookings', icon: 'fa-star', label: 'Bookings', badge: bookings.filter(b => b.status === 'pending_review').length, badgeColor: 'bg-amber-500' },
             { key: 'access', icon: 'fa-bolt', label: 'Early Access', badge: accessRequests.filter(r => r.status === 'pending').length, badgeColor: 'bg-amber-500' },
             { key: 'activity', icon: 'fa-clock-rotate-left', label: 'Activity', badge: 0, badgeColor: '' },
@@ -655,38 +676,92 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlert, setCommunityAlert, 
             </div>
           )}
 
-          {/* Current active alert */}
-          {communityAlert ? (
-            <div className="bg-red-50 border border-red-200 rounded-3xl p-5 space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700">🚨 Live Alert</span>
-                    <span className="text-xs text-slate-400">{new Date(communityAlert.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <h2 className="font-bold text-slate-900 text-base">{communityAlert.title}</h2>
-                  <p className="text-slate-600 text-sm">{communityAlert.description}</p>
-                </div>
-                <button
-                  onClick={handleDismissAlert}
-                  disabled={alertActing}
-                  className="bg-white border border-red-200 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  Dismiss Alert
-                </button>
-              </div>
-            </div>
-          ) : (
+          {/* Active alerts list */}
+          {communityAlerts.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5 flex items-center gap-3 text-slate-400 text-sm">
               <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
-              No active alert. Community is all clear.
+              No active alerts. Community is all clear.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {communityAlerts.map(alert => (
+                <div key={alert.id} className="bg-red-50 border border-red-200 rounded-3xl p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700">🚨 Live Alert</span>
+                        <span className="text-xs text-slate-400">{new Date(alert.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                        <i className={`fas ${alert.icon} ${ALERT_ICONS.find(o => o.id === alert.icon)?.color ?? 'text-slate-500'} text-sm`}></i>
+                        {alert.title}
+                      </h2>
+                      <p className="text-slate-600 text-sm">{alert.description}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {communityAlerts.length > 1 && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleMoveAlert(communityAlerts.indexOf(alert), 'up')}
+                            disabled={communityAlerts.indexOf(alert) === 0}
+                            className="bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs px-2.5 py-2 rounded-xl transition-colors disabled:opacity-30"
+                            title="Move up"
+                          >
+                            <i className="fas fa-chevron-up"></i>
+                          </button>
+                          <button
+                            onClick={() => handleMoveAlert(communityAlerts.indexOf(alert), 'down')}
+                            disabled={communityAlerts.indexOf(alert) === communityAlerts.length - 1}
+                            className="bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs px-2.5 py-2 rounded-xl transition-colors disabled:opacity-30"
+                            title="Move down"
+                          >
+                            <i className="fas fa-chevron-down"></i>
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          setAlertTitle(alert.title);
+                          setAlertDescription(alert.description);
+                          setAlertIcon(alert.icon);
+                          alertFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }}
+                        disabled={alertActing}
+                        className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDismissAlert(alert.id)}
+                        disabled={alertActing}
+                        className="bg-white border border-red-200 text-red-600 hover:bg-red-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Post new alert form */}
-          <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
-            <h3 className="font-bold text-slate-900 text-sm">{communityAlert ? 'Replace Alert' : 'Post New Alert'}</h3>
+          <div ref={alertFormRef} className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm">Post New Alert</h3>
             <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {ALERT_ICONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setAlertIcon(opt.id)}
+                    title={opt.label}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${alertIcon === opt.id ? 'bg-red-50 border-red-400 text-red-600' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'}`}
+                  >
+                    <i className={`fas ${opt.id} text-sm ${opt.color}`}></i>
+                    <span className="text-xs">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
               <input
                 type="text"
                 placeholder="Alert title (e.g. Boil Water Advisory)"

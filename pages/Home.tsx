@@ -11,14 +11,26 @@ const tenant = getCurrentTenant();
 interface HomeProps {
   providers: Provider[];
   lostFound: LostFoundPost[];
-  communityAlert: CommunityAlert | null;
-  setCommunityAlert: (alert: CommunityAlert | null) => void;
+  communityAlerts: CommunityAlert[];
 }
 
 
 const PRELOAD_IMAGES = ['/images/lakebackground.webp', '/images/townly.webp'];
 
-const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => {
+const ALERT_ICON_COLORS: Record<string, string> = {
+  'fa-triangle-exclamation': 'text-amber-500',
+  'fa-bell':                 'text-red-700',
+  'fa-bullhorn':             'text-blue-500',
+  'fa-cloud-bolt':           'text-indigo-500',
+  'fa-droplet':              'text-cyan-500',
+  'fa-fire':                 'text-orange-500',
+  'fa-road-barrier':         'text-yellow-600',
+  'fa-house-flood-water':    'text-teal-500',
+};
+
+const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) => {
+  const [alertIndex, setAlertIndex] = useState(0);
+  const [alertVisible, setAlertVisible] = useState(true);
   const [search, setSearch] = useState('');
   const [imagesReady, setImagesReady] = useState(false);
   const [currentSpotlight, setCurrentSpotlight] = useState<SpotlightBooking | null>(null);
@@ -41,6 +53,20 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
       .then(subs => setCurrentSpotlight(subs.find(s => s.type === 'spotlight') ?? null))
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (communityAlerts.length <= 1) return;
+    const timer = setInterval(() => {
+      setAlertVisible(false);
+      setTimeout(() => {
+        setAlertIndex(i => (i + 1) % communityAlerts.length);
+        setAlertVisible(true);
+      }, 400);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [communityAlerts.length]);
+
+  const activeAlert = communityAlerts[alertIndex] ?? null;
 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
@@ -212,19 +238,31 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
 
             {/* Community Alert Card */}
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 self-start mb-2">
-                🚨 Community Alert
-              </span>
-              {communityAlert ? (
-                <>
-                  <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{communityAlert.title}</h3>
-                  <p className="text-slate-600 text-xs leading-relaxed mt-1">{communityAlert.description}</p>
-                </>
+              {activeAlert ? (
+                <div style={{ opacity: alertVisible ? 1 : 0, transition: 'opacity 0.4s ease' }}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 flex items-center gap-1.5">
+                      <i className={`fas ${activeAlert.icon} text-xs ${ALERT_ICON_COLORS[activeAlert.icon] ?? 'text-red-700'}`}></i>
+                      {activeAlert.title}
+                    </span>
+                    {communityAlerts.length > 1 && (
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-200 text-red-700 flex-shrink-0">
+                        {alertIndex + 1}/{communityAlerts.length}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-600 text-xs leading-relaxed">{activeAlert.description}</p>
+                </div>
               ) : (
-                <p className="text-slate-500 text-xs leading-relaxed mt-1 flex items-center gap-1.5">
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
-                  No alerts reported in {tenant.name} today.
-                </p>
+                <>
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 self-start mb-2">
+                    🚨 Community Alert
+                  </span>
+                  <p className="text-slate-500 text-xs leading-relaxed flex items-center gap-1.5">
+                    <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+                    No alerts reported in {tenant.name} today.
+                  </p>
+                </>
               )}
             </div>
 

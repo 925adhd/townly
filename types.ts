@@ -134,6 +134,7 @@ export interface CommunityAlert {
   title: string;
   description: string;
   createdAt: string;
+  icon: string;
 }
 
 export interface SpotlightBooking {

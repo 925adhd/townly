@@ -1382,22 +1382,32 @@ function mapCommunityAlert(row: any): CommunityAlert {
     title: row.title,
     description: row.description,
     createdAt: row.created_at,
+    icon: row.icon || 'fa-triangle-exclamation',
   };
 }
 
-export async function fetchActiveAlert(): Promise<CommunityAlert | null> {
+export async function fetchActiveAlerts(): Promise<CommunityAlert[]> {
   const { data, error } = await supabase
     .from('community_alerts')
     .select('*')
     .eq('tenant_id', getCurrentTenant().id)
     .is('dismissed_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .order('position', { ascending: true })
+    .order('created_at', { ascending: false });
   if (error) throw error;
-  return data && data.length > 0 ? mapCommunityAlert(data[0]) : null;
+  return (data ?? []).map(mapCommunityAlert);
 }
 
-export async function createAlert(title: string, description: string, userId: string): Promise<CommunityAlert> {
+export async function reorderAlerts(ids: string[]): Promise<void> {
+  await requireAdmin();
+  await Promise.all(
+    ids.map((id, i) =>
+      supabase.from('community_alerts').update({ position: i }).eq('id', id)
+    )
+  );
+}
+
+export async function createAlert(title: string, description: string, userId: string, icon = 'fa-triangle-exclamation'): Promise<CommunityAlert> {
   await requireAdmin();
   const sanitizedTitle = sanitize(title, 200);
   const sanitizedDescription = sanitize(description, 1000);
@@ -1410,6 +1420,7 @@ export async function createAlert(title: string, description: string, userId: st
       description: sanitizedDescription,
       created_by: userId,
       tenant_id: getCurrentTenant().id,
+      icon,
     })
     .select()
     .single();

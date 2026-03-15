@@ -24,7 +24,7 @@ import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
 import MyBookings from './pages/MyBookings';
 import { supabase } from './lib/supabase';
-import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlert, signOut } from './lib/api';
+import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlerts, signOut } from './lib/api';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Provider, Review, LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
 
@@ -36,7 +36,7 @@ const App: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [lostFound, setLostFound] = useState<LostFoundPost[]>([]);
   const [requests, setRequests] = useState<RecommendationRequest[]>([]);
-  const [communityAlert, setCommunityAlert] = useState<CommunityAlert | null>(null);
+  const [communityAlerts, setCommunityAlerts] = useState<CommunityAlert[]>([]);
   const [user, setUser] = useState<{ id: string, name: string, email?: string, role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasBookings, setHasBookings] = useState(() => !!localStorage.getItem('townly_has_bookings'));
@@ -48,13 +48,13 @@ const App: React.FC = () => {
       fetchReviews(),
       fetchLostFound(),
       fetchRequests(),
-      fetchActiveAlert(),
-    ]).then(([p, r, lf, req, alert]) => {
+      fetchActiveAlerts(),
+    ]).then(([p, r, lf, req, alerts]) => {
       setProviders(p);
       setReviews(r);
       setLostFound(lf);
       setRequests(req);
-      setCommunityAlert(alert);
+      setCommunityAlerts(alerts);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
@@ -191,7 +191,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <Routes>
-              <Route path="/" element={<Home providers={providers} lostFound={lostFound} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} />} />
+              <Route path="/" element={<Home providers={providers} lostFound={lostFound} communityAlerts={communityAlerts} />} />
               <Route path="/directory" element={<Directory providers={providers} user={user} />} />
               <Route path="/provider/:id" element={<ProviderDetail providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
               <Route path="/lost-found" element={<LostFound posts={lostFound} setPosts={setLostFound} user={user} />} />
@@ -205,7 +205,7 @@ const App: React.FC = () => {
               <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
-              <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} setProviders={setProviders} />} />
+              <Route path="/admin" element={<Admin user={user} communityAlerts={communityAlerts} setCommunityAlerts={setCommunityAlerts} setProviders={setProviders} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           )}
