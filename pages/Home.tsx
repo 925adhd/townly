@@ -228,7 +228,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) =>
           ) : (
             <Link to="/events" state={{ scrollTo: 'pricing' }} className="block bg-white rounded-2xl border border-dashed border-amber-200 px-6 py-5 text-center hover:border-amber-400 transition-colors">
               <i className="fas fa-star text-amber-300 text-2xl mb-2 block"></i>
-              <p className="font-semibold text-slate-500 text-sm">No spotlight this week</p>
+              <p className="font-semibold text-slate-500 text-sm">No spotlight this week yet</p>
               <p className="text-xs text-slate-400 mt-1">Be the first — <span className="text-orange-500 font-medium">book a spotlight</span></p>
             </Link>
           )}
