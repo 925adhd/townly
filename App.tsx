@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -96,11 +96,11 @@ const App: React.FC = () => {
     localStorage.removeItem('spotlight_draft');
     localStorage.removeItem('featured_draft');
     localStorage.removeItem('townly_has_bookings');
-    window.location.hash = '/';
+    window.location.href = '/';
   };
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col nav-page-pb">
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 h-20">
@@ -115,8 +115,8 @@ const App: React.FC = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setChairRocking(true);
-                    const onHome = ['', '#', '#/'].includes(window.location.hash);
-                    if (!onHome) window.location.hash = '#/';
+                    const onHome = window.location.pathname === '/';
+                    if (!onHome) window.location.href = '/';
                     else e.preventDefault();
                   }}
                   onAnimationEnd={() => setChairRocking(false)}
@@ -234,7 +234,7 @@ const App: React.FC = () => {
           </div>
         </nav>
       </div>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 

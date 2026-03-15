@@ -170,7 +170,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
-  const [localQuery, setLocalQuery] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] || '').get('q') || '');
+  const [localQuery, setLocalQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -204,11 +204,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
     }
   };
 
-  // HashRouter stores params in the hash, not window.location.search.
-  // useSearchParams may not parse them correctly on back-navigation, so read from the hash directly.
-  const _hp = new URLSearchParams(window.location.hash.split('?')[1] || '');
-
-  const query    = searchParams.get('q') || _hp.get('q') || '';
+  const query    = searchParams.get('q') || '';
 
   // Debounce search input → only update URL (and trigger filter) after typing stops
   useEffect(() => {
@@ -218,10 +214,10 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   // Sync local input if URL changes externally (e.g. browser back)
   useEffect(() => { setLocalQuery(query); }, [query]);
-  const category     = ((searchParams.get('cat') || _hp.get('cat')) as Category) || 'All';
-  const town         = ((searchParams.get('town') || _hp.get('town')) as Town) || 'All';
-  const sortBy       = ((searchParams.get('sort') || _hp.get('sort')) as 'rating' | 'reviews' | 'newest') || 'rating';
-  const denomination = searchParams.get('denom') || _hp.get('denom') || 'All';
+  const category     = (searchParams.get('cat') as Category) || 'All';
+  const town         = (searchParams.get('town') as Town) || 'All';
+  const sortBy       = (searchParams.get('sort') as 'rating' | 'reviews' | 'newest') || 'rating';
+  const denomination = searchParams.get('denom') || 'All';
 
   const towns: Town[] = tenant.towns;
   const categories: Category[] = ['Food & Drink', 'Shopping', 'Home Services', 'Automotive', 'Personal Care', 'Health & Medical', 'Professional Services', 'Housing & Rentals', 'Churches', 'Schools & Education', 'Government & Public Services', 'Events & Community', 'Parks & Recreation'];
@@ -301,7 +297,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
 
   function handleProviderClick() {
     sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
-    const filterStr = window.location.hash.split('?')[1] || '';
+    const filterStr = window.location.search.slice(1);
     if (filterStr) sessionStorage.setItem(FILTER_KEY, filterStr);
     else sessionStorage.removeItem(FILTER_KEY);
   }

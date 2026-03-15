@@ -97,8 +97,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   };
 
   const handleShareEvent = async (ev: CommunityEvent) => {
-    const base = `${window.location.origin}${window.location.pathname}`;
-    const url = `${base}#/spotlights?event=${ev.id}`;
+    const url = `${window.location.origin}/spotlights?event=${ev.id}`;
     if (navigator.share) {
       try { await navigator.share({ title: 'Events — Grayson County Townly', url }); } catch { /* dismissed */ }
     } else {

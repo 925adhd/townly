@@ -32,7 +32,7 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Stat
             An unexpected error occurred. Try refreshing the page — your data is safe.
           </p>
           <button
-            onClick={() => { this.setState({ hasError: false, message: '' }); window.location.hash = '/'; }}
+            onClick={() => { this.setState({ hasError: false, message: '' }); window.location.href = '/'; }}
             className="bg-slate-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-orange-600 transition-colors text-sm"
           >
             Go Home

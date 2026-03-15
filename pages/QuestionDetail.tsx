@@ -116,7 +116,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
   useEffect(() => {
     if (!request) return;
     document.title = `${request.serviceNeeded} — Ask the Community | ${tenant.displayName}`;
-    const shareUrl = `${window.location.origin}${window.location.pathname}#/ask/${request.slug}`;
+    const shareUrl = `${window.location.origin}/ask/${request.slug}`;
     setMetaTag('og:title', request.serviceNeeded);
     setMetaTag('og:description', request.description.slice(0, 150));
     setMetaTag('og:type', 'website');
@@ -126,7 +126,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
 
   // ── Share ──────────────────────────────────────────────────────────────────
   const handleShare = useCallback(async () => {
-    const url = `${window.location.origin}${window.location.pathname}#/ask/${slug}`;
+    const url = `${window.location.origin}/ask/${slug}`;
     if (navigator.share) {
       try { await navigator.share({ title: request?.serviceNeeded ?? 'Ask the Community', url }); } catch { /* dismissed */ }
     } else {

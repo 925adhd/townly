@@ -288,8 +288,8 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user, providers }) => {
       }));
 
       const origin = window.location.origin;
-      const successUrl = `${origin}/#/book/success?session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${origin}/#/book/${bookingType}`;
+      const successUrl = `${origin}/book/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${origin}/book/${bookingType}`;
       const { url } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
       localStorage.removeItem(DRAFT_KEY);
       window.location.href = url;
