@@ -87,7 +87,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     const base = `${window.location.origin}${window.location.pathname}`;
     const url = req.slug ? `${base}#/ask/${req.slug}` : `${base}#/ask`;
     if (navigator.share) {
-      try { await navigator.share({ title: req.serviceNeeded, url }); } catch { /* dismissed */ }
+      try { await navigator.share({ title: 'Ask — Grayson County Townly', url }); } catch { /* dismissed */ }
     } else {
       try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
     }
