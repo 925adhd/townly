@@ -19,8 +19,19 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       const el = document.getElementById(scrollTo);
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     }
+    const params = new URLSearchParams(location.search);
+    const eventId = params.get('event');
+    if (eventId) {
+      // Wait for events to load then scroll
+      const tryScroll = () => {
+        const el = document.getElementById(`event-${eventId}`);
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('ring-2', 'ring-orange-400'); }
+      };
+      setTimeout(tryScroll, 600);
+      return;
+    }
     window.scrollTo(0, 0);
-  }, [location.state]);
+  }, [location.search, location.state]);
   // DB-driven flyer lightbox — stores the image URL to show, or null
   const [dbFlyerUrl, setDbFlyerUrl] = useState<string | null>(null);
 
@@ -82,13 +93,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   };
 
   const handleShareEvent = async (ev: CommunityEvent) => {
-    const url = `${window.location.origin}${window.location.pathname}#/spotlights`;
-    const locationPart = [ev.location, ev.town].filter(Boolean).join(' · ');
-    const text = `${ev.title}${locationPart ? ` — ${locationPart}` : ''}`;
+    const base = `${window.location.origin}${window.location.pathname}`;
+    const url = `${base}#/spotlights?event=${ev.id}`;
     if (navigator.share) {
-      try { await navigator.share({ title: ev.title, text, url }); } catch { /* dismissed */ }
+      try { await navigator.share({ title: ev.title, url }); } catch { /* dismissed */ }
     } else {
-      try { await navigator.clipboard.writeText(`${text}\n${url}`); alert('Copied to clipboard!'); } catch { alert('Could not copy link.'); }
+      try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
     }
   };
 
@@ -388,7 +398,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {filteredEvents.map((ev: CommunityEvent) => (
-              <div key={ev.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2 min-w-0 overflow-hidden">
+              <div key={ev.id} id={`event-${ev.id}`} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2 min-w-0 overflow-hidden transition-all">
                 <div className="flex items-center justify-between gap-2">
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${POST_TYPE_COLORS[ev.postType ?? 'event']}`}>
                     {POST_TYPE_LABELS[ev.postType ?? 'event']}
