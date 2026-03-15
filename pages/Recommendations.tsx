@@ -113,15 +113,15 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 text-center md:text-left">
-        <div className="space-y-1">
+      <div className="flex flex-col items-center text-center gap-4">
+        <div className="space-y-1.5">
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
-          <p className="text-slate-500 text-sm">Try the <Link to="/" className="text-blue-600 hover:underline font-medium">Local Businesses</Link> directory first. If you can't find what you need, ask below.</p>
-          <p className="text-slate-400 text-xs pt-0.5">Need a recommendation, service, or local advice? Ask the community.</p>
+          <p className="text-slate-500 text-sm">Need a recommendation, service, or local advice?</p>
+          <p className="text-slate-500 text-sm">Try searching the <Link to="/" className="text-blue-600 hover:underline font-medium">Local Businesses</Link> directory first. If you can't find what you need, ask the community.</p>
         </div>
-        <div className="flex items-center justify-center md:justify-start gap-3 flex-shrink-0">
-          {!showForm && (
-            user ? (
+        {!showForm && (
+          <div className="pt-1">
+            {user ? (
               <button
                 onClick={() => setShowForm(true)}
                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
@@ -136,9 +136,9 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
               >
                 Ask a Question
               </Link>
-            )
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showForm && (
