@@ -5,6 +5,18 @@
   ],
   "headers": [
     {
+      "source": "/images/(.*\\.png)",
+      "headers": [
+        { "key": "Content-Type", "value": "image/png" }
+      ]
+    },
+    {
+      "source": "/images/(.*\\.webp)",
+      "headers": [
+        { "key": "Content-Type", "value": "image/webp" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Frame-Options", "value": "DENY" },
