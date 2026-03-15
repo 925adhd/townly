@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { IconMessageCircle } from '@tabler/icons-react';
 import { RecommendationRequest, RecommendationResponse, Town } from '../types';
 import { addRequest, deleteRequest, fetchAllRecommendationResponses, submitReport } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
@@ -114,12 +113,13 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-center md:text-left">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 text-center md:text-left">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
-          <p className="text-slate-500">Try searching the <Link to="/" className="text-blue-600 hover:underline font-medium">Local Businesses</Link> directory first. If you can't find what you need, ask the community for recommendations.</p>
+          <p className="text-slate-500 text-sm">Try the <Link to="/" className="text-blue-600 hover:underline font-medium">Local Businesses</Link> directory first. If you can't find what you need, ask below.</p>
+          <p className="text-slate-400 text-xs pt-0.5">Need a recommendation, service, or local advice? Ask the community.</p>
         </div>
-        <div className="flex items-center justify-center md:justify-start gap-3">
+        <div className="flex items-center justify-center md:justify-start gap-3 flex-shrink-0">
           {!showForm && (
             user ? (
               <button
@@ -313,20 +313,6 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
             </React.Fragment>
           );
         })}
-        {requests.length === 0 && (
-          <div className="py-12 px-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
-            <div className="mb-4 flex justify-center text-slate-300"><IconMessageCircle size={48} stroke={1.5} /></div>
-            <p className="text-slate-700 font-semibold text-base mb-5">Be the first to ask a question in your community.</p>
-            <ul className="text-xs italic text-slate-400 space-y-2 text-left max-w-xs mx-auto mb-5">
-              <li>• Any apartments available under $1,200?</li>
-              <li>• Looking for a reliable babysitter in {tenant.towns[0]}</li>
-              <li>• Who installs fences locally?</li>
-            </ul>
-            <Link to="/" className="inline-block text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors">
-              Browse Local Businesses instead
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
