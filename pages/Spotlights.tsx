@@ -21,17 +21,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     }
     const params = new URLSearchParams(location.search);
     const eventId = params.get('event');
-    if (eventId) {
-      // Wait for events to load then scroll
-      const tryScroll = () => {
-        const el = document.getElementById(`event-${eventId}`);
-        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('ring-2', 'ring-orange-400'); }
-      };
-      setTimeout(tryScroll, 600);
-      return;
-    }
-    window.scrollTo(0, 0);
+    if (!eventId) { window.scrollTo(0, 0); }
   }, [location.search, location.state]);
+
   // DB-driven flyer lightbox — stores the image URL to show, or null
   const [dbFlyerUrl, setDbFlyerUrl] = useState<string | null>(null);
 
@@ -64,6 +56,18 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       .catch(console.error);
   }, []);
 
+  // Scroll to shared event once events are loaded
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const eventId = params.get('event');
+    if (!eventId || loadingEvents) return;
+    const el = document.getElementById(`event-${eventId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-orange-400');
+    }
+  }, [loadingEvents, location.search]);
+
   const isAdmin = user?.role === 'admin';
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; isAdmin: boolean } | null>(null);
@@ -95,10 +99,15 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const handleShareEvent = async (ev: CommunityEvent) => {
     const base = `${window.location.origin}${window.location.pathname}`;
     const url = `${base}#/spotlights?event=${ev.id}`;
+    const lines = [ev.title];
+    if (ev.location) lines.push(`📍 ${ev.location}${ev.town ? `, ${ev.town}` : ''}`);
+    if (ev.eventDate) lines.push(`📅 ${formatEventDate(ev.eventDate)}`);
+    lines.push('', '👉 See full details on Townly');
+    const text = lines.join('\n');
     if (navigator.share) {
-      try { await navigator.share({ title: ev.title, url }); } catch { /* dismissed */ }
+      try { await navigator.share({ title: ev.title, text, url }); } catch { /* dismissed */ }
     } else {
-      try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
+      try { await navigator.clipboard.writeText(`${text}\n${url}`); alert('Link copied!'); } catch { alert('Could not copy link.'); }
     }
   };
 
