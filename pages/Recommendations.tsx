@@ -115,7 +115,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         <div className="space-y-1.5">
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
           <p className="text-slate-500 text-sm">Need a recommendation, service, or local advice? Ask your neighbors.</p>
-          <p className="text-slate-400 text-xs mt-2">Try the <Link to="/directory" className="text-blue-400 hover:underline">Business Directory</Link> first. Posting an event or announcement? Use <Link to="/events" className="text-blue-400 hover:underline">Events</Link>.</p>
+          <p className="text-slate-400 text-xs mt-2">Try the <Link to="/directory" className="text-blue-400 hover:underline">Business Directory</Link> first. Posting an event or announcement? Use the <Link to="/events" className="text-blue-400 hover:underline">Events page</Link>.</p>
         </div>
         {!showForm && (
           <div className="pt-1">
