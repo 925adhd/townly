@@ -10,13 +10,13 @@ const routes = [
   {
     path: 'spotlights',
     title: 'Events & Announcements — Grayson County Townly',
-    description: 'See what\'s happening in Grayson County — events, yard sales, announcements, and more.',
+    description: 'See what\'s happening on the front porch — events, yard sales, announcements, and more.',
     url: 'https://www.townly.us/spotlights',
   },
   {
     path: 'ask',
     title: 'Ask the Community — Grayson County Townly',
-    description: 'Ask your neighbors for recommendations on local services, businesses, and more.',
+    description: 'Ask your neighbors for recommendations on local services, businesses, and more in Grayson County.',
     url: 'https://www.townly.us/ask',
   },
   {
