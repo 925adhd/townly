@@ -123,7 +123,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) =>
               What's happening in your town?
             </h1>
             <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-6">
-              Discover local events, businesses, and updates from the community.
+              Find local events, businesses, and community updates around {tenant.name}.
             </p>
 
             {/* CTA Buttons — hidden on mobile */}
@@ -179,11 +179,11 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) =>
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
             </span>
-            <h2 className="text-base font-semibold text-slate-900">Upcoming This Week</h2>
+            <h2 className="text-base font-semibold text-slate-900">Upcoming</h2>
           </div>
           <Link to="/events" className="text-amber-700 font-semibold text-xs whitespace-nowrap hover:text-amber-900 hover:underline flex-shrink-0 flex items-center gap-1">See all events <i className="fas fa-arrow-right text-[9px]"></i></Link>
         </div>
-        <p className="text-slate-400 text-xs px-1 mb-2">Events and announcements in {tenant.name} this week.</p>
+        <p className="text-slate-400 text-xs px-1 mb-2">Events and announcements in {tenant.name}.</p>
 
         <div className="space-y-3">
 

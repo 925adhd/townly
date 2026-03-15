@@ -189,13 +189,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const filteredEvents = events.filter((ev: CommunityEvent) => matchesSearch([ev.title, ev.description, ev.location, ev.town]));
 
   return (
-    <div className="space-y-10 pb-10 -mt-6 md:mt-0">
+    <div className="space-y-10 pb-6 -mt-6 md:mt-0">
 
       {/* Header + Search */}
       <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 mb-1">Around Town</h1>
-          <p className="text-slate-500 text-sm">Events and announcements around {tenant.name} this week.</p>
+          <p className="text-slate-500 text-sm">Local events, yard sales, announcements, and community updates.</p>
         </div>
         <div className="relative">
           <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
@@ -220,9 +220,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
       {/* Current Spotlights */}
       <div>
-        <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-          <i className="fas fa-star text-[9px]"></i> Weekly Spotlight
-        </p>
+        <h2 className="text-xl font-bold text-orange-500 leading-tight flex items-center gap-2 mb-1">
+          <i className="fas fa-star"></i> Weekly Spotlight
+        </h2>
+        <p className="text-slate-500 text-sm mb-3">Promote an event, business, or announcement.</p>
         <div className="grid gap-4">
 
           {filteredSpotlight ? (
@@ -288,7 +289,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           ) : (
             <div className="rounded-3xl border border-slate-100 bg-white p-10 text-center text-slate-400 shadow-sm">
               <i className="fas fa-star text-3xl mb-3 block text-slate-200"></i>
-              <p className="font-semibold text-slate-500 text-sm">No spotlight this week</p>
+              <p className="font-semibold text-slate-500 text-sm">No spotlight yet this week</p>
               <p className="text-xs mt-1">Be the first — <Link to="/book/spotlight" className="text-orange-500 hover:underline font-medium">book a spotlight</Link></p>
             </div>
           )}
@@ -299,7 +300,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Featured Listings */}
       <div>
         <h2 className="text-xl font-bold text-slate-900 mb-1 px-1 -mt-4">Featured Listings</h2>
-        <p className="text-slate-400 text-xs mb-4 px-1">Paid posts with extra visibility this week.</p>
+        <p className="text-slate-400 text-xs mb-4 px-1">Posts with extra visibility this week.</p>
         <div className="grid md:grid-cols-2 gap-4">
 
           {filteredFeatured.length > 0 ? (
@@ -353,7 +354,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           ) : (
             <div className="col-span-2 bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 shadow-sm">
               <i className="fas fa-bullhorn text-2xl mb-3 block text-slate-200"></i>
-              <p className="font-semibold text-slate-500 text-sm">No featured listings this week</p>
+              <p className="font-semibold text-slate-500 text-sm">No featured listings yet this week</p>
               <p className="text-xs mt-1">Be the first — <Link to="/book/featured" className="text-orange-500 hover:underline font-medium">get featured</Link></p>
             </div>
           )}
@@ -382,7 +383,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </Link>
           )}
         </div>
-        <p className="text-slate-400 text-xs mb-3 px-1">Free · post events, yard sales, announcements, and local news. For questions, use <Link to="/ask" className="underline hover:text-slate-600">Ask the Community</Link>.</p>
+        <p className="text-slate-400 text-xs mb-3 px-1">Free · Share events, yard sales, announcements, and local news. For questions, use <Link to="/ask" className="underline hover:text-slate-600">Ask the Community</Link>.</p>
 
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
@@ -396,7 +397,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         ) : filteredEvents.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
             <i className="fas fa-calendar-plus text-2xl mb-3 block text-slate-200"></i>
-            {searchQ ? 'No posts match your search.' : <><div>Nothing on the community board yet.</div><div className="mt-1">Be the first to post →</div></>}
+            {searchQ ? 'No posts match your search.' : <><div>No posts on the community board yet.</div><div className="mt-1">Be the first to post →</div></>}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -475,10 +476,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       </div>
 
       {/* Pricing tiers */}
-      <div id="pricing">
-        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Get Your Event or Post Noticed</h2>
-        <p className="text-slate-500 text-sm mb-4 px-1">Promote an event or announcement for extra visibility this week.</p>
-        <div className="space-y-5">
+      <hr className="border-slate-200 mt-8 mb-6" />
+      <div id="pricing" className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1">Promote Your Post</h2>
+        <p className="text-slate-500 text-sm mb-4 px-1">Promote an event, business, or announcement for extra visibility this week.</p>
+        <div className="space-y-4">
 
           {/* Local Spotlight — full width */}
           <div className="bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200 rounded-3xl p-8 space-y-3 shadow-md">
@@ -487,7 +489,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <h2 className="text-xl font-bold text-slate-900">Weekly Spotlight</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The most visible placement on Townly.<br />Your event appears at the very top of the Home and Events pages all week.
+              The most visible placement on Townly.<br />Your post appears prominently on the Home and Events pages.
             </p>
             <div className="pt-1">
               <span className="text-3xl font-bold text-amber-600">$25</span>
@@ -495,12 +497,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <ul className="space-y-1.5 text-sm text-slate-600">
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Priority placement on the Home and Events pages</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large spotlight banner for your event</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Highlighted with an amber spotlight card to stand out</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large spotlight banner for your event or announcement</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Clickable flyer or event image</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-amber-700"><i className="fas fa-lock text-amber-500 text-xs"></i> Only 1 spotlight available each week</li>
             </ul>
-            <p className="text-xs text-amber-700/80 font-medium">Perfect for grand openings, major events, and time-sensitive announcements.</p>
+            <p className="text-xs text-amber-700/80 font-medium">Perfect for grand openings, sales, local events, and time-sensitive announcements.</p>
             <Link
               to={user ? '/book/spotlight' : '/login?signup=true'}
               className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
@@ -511,23 +514,23 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           </div>
 
           {/* Featured Post */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-2.5 shadow-sm">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm">
             <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
               <i className="fas fa-bullhorn text-slate-400 text-base"></i>
             </div>
             <h2 className="text-base font-bold text-slate-800">Featured Post</h2>
             <p className="text-slate-500 text-xs leading-relaxed">
-              Promote your business or announcement this week.
+              Promote your event, business, sale, or announcement this week.
             </p>
             <div className="pt-0.5">
               <span className="text-xl font-bold text-slate-700">$5</span>
               <span className="text-slate-400 text-xs font-medium"> / week</span>
             </div>
             <ul className="space-y-1.5 text-xs text-slate-500">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown above regular free posts</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown above regular community posts</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Upload an image <em className="text-slate-400">(free posts are text-only)</em></li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Active for the full week</li>
-              <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
+              <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Only 5 featured posts available each week</li>
             </ul>
             <p className="text-xs text-slate-400 font-medium">Perfect for yard sales, fundraisers, local events, and community announcements.</p>
             <Link
@@ -542,8 +545,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         </div>
 
         {/* Content Policy Disclaimer */}
-        <p className="text-xs text-slate-400 mt-4 px-1">
-          By submitting a paid post you agree that content violating community standards — including misleading, obscene, or fraudulent posts — may be removed by the admin without refund, and may result in a permanent account ban.
+        <p className="text-xs text-slate-400 mt-3 mb-1 px-1">
+          By submitting a paid post you agree that content violating community standards — including misleading, obscene, or fraudulent posts — may be removed by the admin without refund.
         </p>
       </div>
 
