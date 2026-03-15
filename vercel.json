@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/ask/:slug", "destination": "/ask/index.html" },
     { "source": "/((?!_vercel|images|assets|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
