@@ -86,11 +86,10 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
   const handleShare = async (req: RecommendationRequest) => {
     const base = `${window.location.origin}${window.location.pathname}`;
     const url = req.slug ? `${base}#/ask/${req.slug}` : `${base}#/ask`;
-    const text = `Looking for a recommendation: ${req.serviceNeeded}${req.description ? `\n${req.description}` : ''}`;
     if (navigator.share) {
-      try { await navigator.share({ title: req.serviceNeeded, text, url }); } catch { /* dismissed */ }
+      try { await navigator.share({ title: req.serviceNeeded, url }); } catch { /* dismissed */ }
     } else {
-      try { await navigator.clipboard.writeText(`${text}\n${url}`); alert('Copied to clipboard!'); } catch { alert('Could not copy link.'); }
+      try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
     }
   };
 
@@ -231,8 +230,8 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-slate-900 mb-1">{req.serviceNeeded}</h3>
-                <p className="text-slate-500 text-sm line-clamp-2">{req.description}</p>
+                <h3 className="text-lg font-bold text-slate-900 mb-1 break-words">{req.serviceNeeded}</h3>
+                <p className="text-slate-500 text-sm line-clamp-2 break-words">{req.description}</p>
 
                 {/* Top pick preview */}
                 {topPick && (

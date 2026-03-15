@@ -125,13 +125,17 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
   }, [request]);
 
   // ── Share ──────────────────────────────────────────────────────────────────
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     const url = `${window.location.origin}${window.location.pathname}#/ask/${slug}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }, [slug]);
+    if (navigator.share) {
+      try { await navigator.share({ title: request?.serviceNeeded ?? 'Ask the Community', url }); } catch { /* dismissed */ }
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      });
+    }
+  }, [slug, request?.serviceNeeded]);
 
   // ── Vote ───────────────────────────────────────────────────────────────────
   const handleVote = async (responseId: string) => {
@@ -235,7 +239,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
 
   if (notFound || !request) {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center">
+      <div className="max-w-3xl mx-auto py-16 text-center">
         <p className="text-slate-500 text-lg mb-4">This question doesn't exist or was removed.</p>
         <Link to="/ask" className="text-blue-600 hover:underline font-medium">Back to Ask the Community</Link>
       </div>
@@ -246,16 +250,16 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
   const ShareButton = () => (
     <button
       onClick={handleShare}
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:border-blue-300 hover:text-blue-600 transition-all shadow-sm"
+      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:border-blue-300 hover:text-blue-600 transition-all shadow-sm flex-shrink-0"
     >
       <i className={`fas ${copied ? 'fa-check text-emerald-500' : 'fa-share-nodes'}`}></i>
-      {copied ? 'Link copied!' : 'Share this Question'}
+      <span className="hidden sm:inline">{copied ? 'Link copied!' : 'Share'}</span>
     </button>
   );
 
   return (
     // pb-24 ensures content clears the mobile nav bar (h-16 = 64px)
-    <div className="max-w-2xl mx-auto space-y-6 pb-24">
+    <div className="max-w-3xl mx-auto space-y-6 pb-24">
       {/* Back nav */}
       <Link to="/ask" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors">
         <i className="fas fa-arrow-left text-xs"></i>
@@ -289,7 +293,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
             <ShareButton />
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900 mb-3">{request.serviceNeeded}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-3 break-words">{request.serviceNeeded}</h1>
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mb-4">
             <span className="flex items-center gap-1">
@@ -310,7 +314,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
             </span>
           </div>
 
-          <p className="text-slate-700 leading-relaxed">{request.description}</p>
+          <p className="text-slate-700 leading-relaxed break-words">{request.description}</p>
 
         </div>
       </div>
@@ -374,7 +378,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
               </button>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-xs uppercase flex-shrink-0">
                     {r.userName.charAt(0)}
@@ -392,7 +396,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
                   )}
                 </div>
 
-                <p className="text-slate-700 text-sm leading-relaxed">{r.recommendation}</p>
+                <p className="text-slate-700 text-sm leading-relaxed break-words">{r.recommendation}</p>
 
                 {/* Accept button — owner only, question still open */}
                 {isOwner && !isAnswered && (
@@ -445,7 +449,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
         )}
 
         {/* Reply form */}
-        {user ? (
+        {user && isOwner ? null : user ? (
           hasResponded && myResponse ? (
             editingMyResponse ? (
               <div className="bg-blue-50 rounded-2xl border border-blue-100 p-5">
