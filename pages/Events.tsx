@@ -194,7 +194,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Header + Search */}
       <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Around Town</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Around Town</h1>
           <p className="text-slate-500 text-sm">Events and announcements around {tenant.name} this week.</p>
         </div>
         <div className="relative">
