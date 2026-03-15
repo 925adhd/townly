@@ -114,8 +114,8 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
       <div className="flex flex-col items-center text-center gap-4">
         <div className="space-y-1.5">
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
-          <p className="text-slate-500 text-sm">Need a recommendation, service, or local advice? Ask your neighbors.</p>
-          <p className="text-slate-400 text-xs mt-2">Try the <Link to="/directory" className="text-blue-400 hover:underline">Business Directory</Link> first. Posting an event or announcement? Use the <Link to="/events" className="text-blue-400 hover:underline">Events page</Link>.</p>
+          <p className="text-slate-400 text-xs mt-2">Looking for a business? Try the <Link to="/directory" className="text-blue-400 hover:underline">Business Directory</Link> first.</p>
+          <p className="text-slate-400 text-xs">If you don't find what you need, ask the community for advice.</p>
         </div>
         {!showForm && (
           <div className="pt-1">
@@ -192,6 +192,13 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
       )}
 
       <div className="space-y-4">
+        {requests.length === 0 && (
+          <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
+            <i className="fas fa-comments text-2xl mb-3 block text-slate-200"></i>
+            <div>No questions yet.</div>
+            <div className="mt-1">Be the first to ask the community →</div>
+          </div>
+        )}
         {requests.map(req => {
           const reqResponses = [...(responses[req.id] || [])].sort((a, b) => b.voteCount - a.voteCount);
           const topPick = reqResponses[0] ?? null;
