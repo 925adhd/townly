@@ -82,8 +82,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   };
 
   const handleShareEvent = async (ev: CommunityEvent) => {
-    const url = `${window.location.origin}${window.location.pathname}#/events`;
-    const text = `${ev.title}\n📍 ${ev.location}${ev.town ? ` · ${ev.town}` : ''}\n${ev.description}`;
+    const url = `${window.location.origin}${window.location.pathname}#/spotlights`;
+    const locationPart = [ev.location, ev.town].filter(Boolean).join(' · ');
+    const text = `${ev.title}${locationPart ? ` — ${locationPart}` : ''}`;
     if (navigator.share) {
       try { await navigator.share({ title: ev.title, text, url }); } catch { /* dismissed */ }
     } else {
