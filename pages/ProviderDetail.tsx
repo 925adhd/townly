@@ -9,7 +9,8 @@ import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
-// TODO: Replace with your Stripe payment link when ready
+// When you're ready to accept payments for Featured listings, set this to your Stripe payment link.
+// While empty, owners see an "early access" email form instead.
 const FEATURED_STRIPE_LINK = '';
 
 interface ProviderDetailProps {

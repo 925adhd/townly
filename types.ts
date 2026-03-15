@@ -112,6 +112,8 @@ export interface RecommendationResponse {
   createdAt: string;
 }
 
+export type CommunityPostType = 'event' | 'announcement' | 'yard_sale' | 'free_item' | 'prayer_request' | 'other';
+
 export interface CommunityEvent {
   id: string;
   userId: string;
@@ -122,6 +124,7 @@ export interface CommunityEvent {
   location: string;
   town: Town;
   photoUrl?: string;
+  postType: CommunityPostType;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }

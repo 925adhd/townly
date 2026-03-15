@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LostFoundPost, LostFoundType, Town } from '../types';
 import { addLostFoundPost } from '../lib/api';
@@ -35,6 +35,7 @@ const CreateLostFound: React.FC<CreateLostFoundProps> = ({ setPosts, user }) => 
   const [contact, setContact] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoPreviewRef = useRef<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -65,11 +66,24 @@ const CreateLostFound: React.FC<CreateLostFoundProps> = ({ setPosts, user }) => 
     </div>
   );
 
+  // Revoke any existing blob URL when a new one is created or on unmount
+  useEffect(() => {
+    return () => {
+      if (photoPreviewRef.current) URL.revokeObjectURL(photoPreviewRef.current);
+    };
+  }, []);
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
+    if (photoPreviewRef.current) {
+      URL.revokeObjectURL(photoPreviewRef.current);
+      photoPreviewRef.current = null;
+    }
     setPhotoFile(file);
     if (file) {
-      setPhotoPreview(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      photoPreviewRef.current = url;
+      setPhotoPreview(url);
     } else {
       setPhotoPreview(null);
     }

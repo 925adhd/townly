@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { fetchMyBookings, updateMyBooking, uploadSpotlightImage } from '../lib/api';
 import type { SpotlightBooking } from '../types';
@@ -65,6 +65,14 @@ const MyBookings: React.FC<Props> = ({ user }) => {
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const bannerRef = useRef<HTMLInputElement>(null);
+  const bannerBlobRef = useRef<string | null>(null);
+
+  // Revoke blob URL when edit is cancelled or component unmounts
+  useEffect(() => {
+    return () => {
+      if (bannerBlobRef.current) URL.revokeObjectURL(bannerBlobRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -264,7 +272,10 @@ const MyBookings: React.FC<Props> = ({ user }) => {
                       onChange={e => {
                         const f = e.target.files?.[0];
                         if (!f) return;
-                        setEditState(s => s ? { ...s, bannerFile: f, bannerPreview: URL.createObjectURL(f) } : s);
+                        if (bannerBlobRef.current) URL.revokeObjectURL(bannerBlobRef.current);
+                        const url = URL.createObjectURL(f);
+                        bannerBlobRef.current = url;
+                        setEditState(s => s ? { ...s, bannerFile: f, bannerPreview: url } : s);
                       }}
                     />
                   </div>

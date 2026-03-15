@@ -46,7 +46,7 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews,
 
   if (!provider) return <div className="text-center">Business not found.</div>;
 
-  if (provider.category === 'Churches & Faith') return (
+  if (provider.category === 'Churches') return (
     <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
       <i className="fas fa-church text-4xl text-violet-300 mb-4"></i>
       <h2 className="text-xl font-bold mb-2">Reviews not available</h2>

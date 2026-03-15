@@ -595,7 +595,7 @@ export async function addRequest(
   if (!serviceNeeded) throw new Error('Service type is required.');
 
   // Generate a unique slug; fall back if title yields no meaningful words
-  const baseSlug = slugify(serviceNeeded) || `community-question-${Math.floor(1000 + Math.random() * 9000)}`;
+  const baseSlug = slugify(serviceNeeded) || `community-question-${crypto.randomUUID().slice(0, 8)}`;
   let slug = baseSlug;
   const { data: existing } = await supabase
     .from('recommendation_requests')
@@ -604,7 +604,7 @@ export async function addRequest(
     .eq('tenant_id', getCurrentTenant().id)
     .maybeSingle();
   if (existing) {
-    slug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    slug = `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`;
   }
 
   const { data, error } = await supabase
@@ -1253,6 +1253,7 @@ function mapCommunityEvent(row: any): CommunityEvent {
     location: row.location,
     town: row.town,
     photoUrl: row.photo_url ?? undefined,
+    postType: (row.post_type ?? 'event') as CommunityEvent['postType'],
     status: row.status as 'pending' | 'approved' | 'rejected',
     createdAt: row.created_at,
   };
@@ -1287,7 +1288,8 @@ export async function submitCommunityEvent(
   eventDate: string,
   location: string,
   town: string,
-): Promise<void> {
+  postType: CommunityEvent['postType'] = 'event',
+): Promise<CommunityEvent> {
   // Resolve identity from the server-side session — never trust caller-supplied IDs.
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be signed in to submit an event.');
@@ -1302,7 +1304,7 @@ export async function submitCommunityEvent(
   const sanitizedLocation = sanitize(location, 300);
   if (!sanitizedTitle) throw new Error('Event title is required.');
   if (!sanitizedDescription) throw new Error('Event description is required.');
-  const { error } = await supabase.from('community_events').insert({
+  const { data, error } = await supabase.from('community_events').insert({
     user_id: session.user.id,
     user_name: sanitize(resolvedName, 100),
     title: sanitizedTitle,
@@ -1310,15 +1312,17 @@ export async function submitCommunityEvent(
     event_date: eventDate,
     location: sanitizedLocation,
     town: sanitize(town, 100),
+    post_type: postType,
     tenant_id: getCurrentTenant().id,
     status: 'approved',
-  });
+  }).select().single();
   if (error) {
     if (error.message.includes('RATE_LIMIT_EVENTS')) {
       throw new Error('You\'ve submitted too many events today. Please try again tomorrow.');
     }
     throw new Error('Failed to submit event. Please try again.');
   }
+  return mapCommunityEvent(data);
 }
 
 export async function approveCommunityEvent(id: string): Promise<void> {

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CommunityEvent, SpotlightBooking } from '../types';
+import { CommunityEvent, CommunityPostType, SpotlightBooking } from '../types';
 import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions, deleteCommunityEvent, deleteOwnCommunityEvent, flagCommunityEvent } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
@@ -38,6 +38,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const [eDate, setEDate] = useState('');
   const [eLocation, setELocation] = useState('');
   const [eTown, setETown] = useState(tenant.towns[0] ?? '');
+  const [ePostType, setEPostType] = useState<CommunityPostType>('event');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -54,23 +55,29 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
   const isAdmin = user?.role === 'admin';
 
-  const handleDeleteEvent = async (id: string) => {
-    if (!confirm('Delete this community event? This cannot be undone.')) return;
-    try {
-      await deleteCommunityEvent(id);
-      setEvents(prev => prev.filter(ev => ev.id !== id));
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete event.');
-    }
-  };
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; isAdmin: boolean } | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
-  const handleDeleteOwnEvent = async (id: string) => {
-    if (!confirm('Remove your event? This cannot be undone.')) return;
+  const handleDeleteEvent = (id: string) => setDeleteConfirm({ id, isAdmin: true });
+  const handleDeleteOwnEvent = (id: string) => setDeleteConfirm({ id, isAdmin: false });
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    setDeleteError('');
     try {
-      await deleteOwnCommunityEvent(id);
-      setEvents(prev => prev.filter(ev => ev.id !== id));
+      if (deleteConfirm.isAdmin) {
+        await deleteCommunityEvent(deleteConfirm.id);
+      } else {
+        await deleteOwnCommunityEvent(deleteConfirm.id);
+      }
+      setEvents(prev => prev.filter(ev => ev.id !== deleteConfirm.id));
+      setDeleteConfirm(null);
     } catch (err: any) {
-      alert(err.message || 'Failed to remove event.');
+      setDeleteError(err.message || 'Failed to delete. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -105,10 +112,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      await submitCommunityEvent(eTitle, eDesc, eDate, eLocation, eTown);
+      const newEvent = await submitCommunityEvent(eTitle, eDesc, eDate, eLocation, eTown, ePostType);
+      setEvents(prev => [...prev, newEvent].sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()));
       setSubmitted(true);
       setShowForm(false);
-      setETitle(''); setEDesc(''); setEDate(''); setELocation(''); setETown(tenant.towns[0] ?? '');
+      setETitle(''); setEDesc(''); setEDate(''); setELocation(''); setETown(tenant.towns[0] ?? ''); setEPostType('event');
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to submit. Please try again.');
     } finally {
@@ -120,6 +128,24 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
+
+  const POST_TYPE_LABELS: Record<CommunityPostType, string> = {
+    event: 'Community Event',
+    announcement: 'Announcement',
+    yard_sale: 'Yard Sale',
+    free_item: 'Free Item',
+    prayer_request: 'Prayer Request',
+    other: 'Post',
+  };
+
+  const POST_TYPE_COLORS: Record<CommunityPostType, string> = {
+    event: 'bg-blue-50 text-blue-600 border-blue-100',
+    announcement: 'bg-amber-50 text-amber-700 border-amber-100',
+    yard_sale: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    free_item: 'bg-green-50 text-green-600 border-green-200 shadow-md shadow-green-200',
+    prayer_request: 'bg-violet-50 text-violet-700 border-violet-100',
+    other: 'bg-slate-50 text-slate-600 border-slate-200',
+  };
 
   function tagColor(tag: string): string {
     const t = tag.toLowerCase();
@@ -324,7 +350,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* ── Community Events ── */}
       <div>
         <div className="flex items-center justify-between mb-1 px-1">
-          <h2 className="text-xl font-bold text-slate-900">Community Board</h2>
+          <h2 className="text-xl font-bold text-slate-900">Events & Announcements</h2>
           {user ? (
             <button
               onClick={() => { setShowForm(true); setSubmitted(false); }}
@@ -342,12 +368,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </Link>
           )}
         </div>
-        <p className="text-slate-400 text-xs mb-3 px-1">Free · share local events and announcements. No business promotions.</p>
+        <p className="text-slate-400 text-xs mb-3 px-1">Free · post events, yard sales, announcements, and local news. For questions, use <Link to="/ask" className="underline hover:text-slate-600">Ask the Community</Link>.</p>
 
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
             <i className="fas fa-check-circle"></i>
-            Your post is live! Scroll down to see it.
+            Your post is live!
           </div>
         )}
 
@@ -361,9 +387,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {filteredEvents.map((ev: CommunityEvent) => (
-              <div key={ev.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2">
+              <div key={ev.id} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2 min-w-0 overflow-hidden">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100">Community Event</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${POST_TYPE_COLORS[ev.postType ?? 'event']}`}>
+                    {POST_TYPE_LABELS[ev.postType ?? 'event']}
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400 text-xs">{formatEventDate(ev.eventDate)}</span>
                     <button
@@ -418,13 +446,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     ) : null}
                   </div>
                 </div>
-                <h3 className="font-bold text-slate-900 text-sm leading-tight">{ev.title}</h3>
-                <p className="text-slate-500 text-xs flex items-center gap-1">
-                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {ev.location}
+                <h3 className="font-bold text-slate-900 text-sm leading-tight break-words">{ev.title}</h3>
+                <p className="text-slate-500 text-xs flex items-center gap-1 break-words">
+                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px] flex-shrink-0"></i> {ev.location}
                   {ev.town && <span className="text-slate-300 mx-1">·</span>}
                   {ev.town}
                 </p>
-                <p className="text-slate-500 text-xs leading-relaxed">{ev.description}</p>
+                <p className="text-slate-500 text-xs leading-relaxed break-words">{ev.description}</p>
                 <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
               </div>
             ))}
@@ -505,12 +533,45 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         </p>
       </div>
 
+      {/* Delete Confirm Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-trash text-red-500"></i>
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 text-sm">Delete this post?</p>
+                <p className="text-slate-500 text-xs mt-0.5">This cannot be undone.</p>
+              </div>
+            </div>
+            {deleteError && <p className="text-xs text-red-500">{deleteError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setDeleteConfirm(null); setDeleteError(''); }}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-colors disabled:opacity-60"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Submit Event Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pb-20 sm:pb-4" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 overflow-y-auto max-h-[80vh] sm:max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">Post to Community Board</h3>
+              <h3 className="text-lg font-bold text-slate-900">Post to Events & Announcements</h3>
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <i className="fas fa-times"></i>
               </button>
@@ -520,6 +581,21 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">What kind of post is this?</label>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.entries(POST_TYPE_LABELS) as [CommunityPostType, string][]).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setEPostType(value)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${ePostType === value ? POST_TYPE_COLORS[value] + ' shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title</label>
                 <input
@@ -532,7 +608,16 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date</label>
+                    <button
+                      type="button"
+                      onClick={() => setEDate(new Date().toISOString().split('T')[0])}
+                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide"
+                    >
+                      Today
+                    </button>
+                  </div>
                   <input
                     required
                     type="date"

@@ -7,11 +7,12 @@ type Stage = 'verifying' | 'submitting' | 'done' | 'error';
 
 interface BookingSuccessProps {
   user: { id: string; name: string; email?: string } | null;
+  onBookingConfirmed?: () => void;
 }
 
 const STORAGE_KEY = 'townly_pending_booking';
 
-const BookingSuccess: React.FC<BookingSuccessProps> = ({ user }) => {
+const BookingSuccess: React.FC<BookingSuccessProps> = ({ user, onBookingConfirmed }) => {
   const location = useLocation();
   const [stage, setStage] = useState<Stage>('verifying');
   const [errorMsg, setErrorMsg] = useState('');
@@ -94,6 +95,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user }) => {
 
         sessionStorage.removeItem(STORAGE_KEY);
         localStorage.setItem('townly_has_bookings', '1');
+        onBookingConfirmed?.();
         setStage('done');
       } catch (err: any) {
         if (err.message === 'WEEK_TAKEN') {

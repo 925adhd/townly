@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -25,6 +25,7 @@ import Admin from './pages/Admin';
 import MyBookings from './pages/MyBookings';
 import { supabase } from './lib/supabase';
 import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlert, signOut } from './lib/api';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Provider, Review, LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
 
 const tenant = getCurrentTenant();
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [communityAlert, setCommunityAlert] = useState<CommunityAlert | null>(null);
   const [user, setUser] = useState<{ id: string, name: string, email?: string, role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasBookings, setHasBookings] = useState(() => !!localStorage.getItem('townly_has_bookings'));
 
   // Load data from Supabase on mount
   useEffect(() => {
@@ -80,9 +82,20 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Keep hasBookings in sync if BookingSuccess sets the flag in the same tab
+  useEffect(() => {
+    const onStorage = () => setHasBookings(!!localStorage.getItem('townly_has_bookings'));
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const handleLogout = async () => {
     await signOut();
     setUser(null);
+    // Clear any persisted spotlight drafts and booking flags so the next user on this device starts clean
+    localStorage.removeItem('spotlight_draft');
+    localStorage.removeItem('featured_draft');
+    localStorage.removeItem('townly_has_bookings');
     window.location.hash = '/';
   };
 
@@ -127,7 +140,7 @@ const App: React.FC = () => {
               {user ? (
                 <div className="flex items-center space-x-3">
                   <span className="text-slate-500 text-sm">Hi, {user.name}</span>
-                  {localStorage.getItem('townly_has_bookings') && (
+                  {hasBookings && (
                     <Link to="/my-bookings" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">My Bookings</Link>
                   )}
                   {user.role === 'admin' && (
@@ -143,7 +156,7 @@ const App: React.FC = () => {
             <div className="md:hidden flex items-center space-x-3">
               {user ? (
                 <>
-                  {localStorage.getItem('townly_has_bookings') && (
+                  {hasBookings && (
                     <Link to="/my-bookings" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
                       <i className="fas fa-calendar-check text-lg"></i>
                       <span className="text-[10px] mt-1 font-medium">Bookings</span>
@@ -171,6 +184,7 @@ const App: React.FC = () => {
         </header>
 
         <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-6">
+          <ErrorBoundary>
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="text-slate-400 text-sm font-medium">Loading...</div>
@@ -189,11 +203,13 @@ const App: React.FC = () => {
               <Route path="/auth" element={<Auth />} />
               <Route path="/spotlights" element={<Spotlights user={user} />} />
               <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
-              <Route path="/book/success" element={<BookingSuccess user={user} />} />
+              <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
               <Route path="/admin" element={<Admin user={user} communityAlert={communityAlert} setCommunityAlert={setCommunityAlert} setProviders={setProviders} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           )}
+          </ErrorBoundary>
         </main>
 
         {/* Mobile Navigation */}
