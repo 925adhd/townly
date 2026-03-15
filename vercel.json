@@ -5,15 +5,9 @@
   ],
   "headers": [
     {
-      "source": "/images/(.*\\.png)",
+      "source": "/images/background.png",
       "headers": [
         { "key": "Content-Type", "value": "image/png" }
-      ]
-    },
-    {
-      "source": "/images/(.*\\.webp)",
-      "headers": [
-        { "key": "Content-Type", "value": "image/webp" }
       ]
     },
     {
