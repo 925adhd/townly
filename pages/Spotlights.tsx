@@ -105,7 +105,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     lines.push('', '👉 See full details on Townly');
     const text = lines.join('\n');
     if (navigator.share) {
-      try { await navigator.share({ title: ev.title, text, url }); } catch { /* dismissed */ }
+      try { await navigator.share({ text, url }); } catch { /* dismissed */ }
     } else {
       try { await navigator.clipboard.writeText(`${text}\n${url}`); alert('Link copied!'); } catch { alert('Could not copy link.'); }
     }
