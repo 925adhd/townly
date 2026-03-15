@@ -1611,6 +1611,82 @@ export async function fetchMyBookings(): Promise<SpotlightBooking[]> {
   return (data ?? []).map(mapSpotlightBooking);
 }
 
+/** Fetch the current user's own lost & found posts, newest first. */
+export async function fetchMyLostFound(): Promise<LostFoundPost[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return [];
+  const { data, error } = await supabase
+    .from('lost_found_posts')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapLostFound);
+}
+
+/** Fetch the current user's own Ask the Community requests, newest first. */
+export async function fetchMyRequests(): Promise<RecommendationRequest[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return [];
+  const { data, error } = await supabase
+    .from('recommendation_requests')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapRequest);
+}
+
+/** Soft-delete the calling user's account and anonymize their content. */
+export async function softDeleteAccount(): Promise<void> {
+  const { error } = await supabase.rpc('soft_delete_account');
+  if (error) throw new Error(error.message);
+  await supabase.auth.signOut();
+}
+
+/** Update the current user's email address. */
+export async function updateEmail(newEmail: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  if (error) throw new Error(error.message);
+}
+
+/** Update the current user's password. */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
+}
+
+/** Fetch the current user's own community posts, newest first. */
+export async function fetchMyPosts(): Promise<CommunityEvent[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return [];
+  const { data, error } = await supabase
+    .from('community_events')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapCommunityEvent);
+}
+
+/** Fetch the provider claimed by the current user, if any. */
+export async function fetchMyClaimedListing(): Promise<Provider | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
+  const { data, error } = await supabase
+    .from('providers')
+    .select('*')
+    .eq('claimed_by', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapProvider(data);
+}
+
 /** Update the user's own pending booking (resets to pending_review for re-approval). */
 export async function updateMyBooking(
   id: string,

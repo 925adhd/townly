@@ -23,6 +23,7 @@ import BookSpotlight from './pages/BookSpotlight';
 import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
 import MyBookings from './pages/MyBookings';
+import Profile from './pages/Profile';
 import { supabase } from './lib/supabase';
 import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlerts, signOut } from './lib/api';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -58,15 +59,33 @@ const App: React.FC = () => {
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
+  // Handle auth callback tokens (email change, password reset, etc.)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type');
+    if (tokenHash && type) {
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as any })
+        .then(() => {
+          window.history.replaceState({}, '', window.location.pathname);
+        });
+    }
+  }, []);
+
   // Sync auth session
   useEffect(() => {
     const loadUser = async (supabaseUser: { id: string; user_metadata?: any; email?: string }) => {
       const name = supabaseUser.user_metadata?.name || supabaseUser.email || 'User';
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, deleted_at')
         .eq('id', supabaseUser.id)
         .single();
+      if (profile?.deleted_at) {
+        await supabase.auth.signOut();
+        setUser(null);
+        return;
+      }
       setUser({ id: supabaseUser.id, name, email: supabaseUser.email ?? undefined, role: profile?.role ?? undefined });
     };
 
@@ -139,10 +158,7 @@ const App: React.FC = () => {
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
                 <div className="flex items-center space-x-3">
-                  <span className="text-slate-500 text-sm">Hi, {user.name}</span>
-                  {hasBookings && (
-                    <Link to="/my-bookings" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">My Bookings</Link>
-                  )}
+                  <Link to="/profile" className="text-sm font-medium text-slate-500 hover:text-orange-600 transition-colors">Hi, {user.name}</Link>
                   {user.role === 'admin' && (
                     <Link to="/admin" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">Admin</Link>
                   )}
@@ -156,12 +172,10 @@ const App: React.FC = () => {
             <div className="md:hidden flex items-center space-x-3">
               {user ? (
                 <>
-                  {hasBookings && (
-                    <Link to="/my-bookings" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
-                      <i className="fas fa-calendar-check text-lg"></i>
-                      <span className="text-[10px] mt-1 font-medium">Bookings</span>
-                    </Link>
-                  )}
+                  <Link to="/profile" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
+                    <i className="fas fa-user-circle text-lg"></i>
+                    <span className="text-[10px] mt-1 font-medium">Account</span>
+                  </Link>
                   {user.role === 'admin' && (
                     <Link to="/admin" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
                       <i className="fas fa-shield-halved text-lg"></i>
@@ -205,6 +219,7 @@ const App: React.FC = () => {
               <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
+              <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
               <Route path="/admin" element={<Admin user={user} communityAlerts={communityAlerts} setCommunityAlerts={setCommunityAlerts} setProviders={setProviders} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
