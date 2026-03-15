@@ -825,23 +825,18 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
               <span className="font-semibold">Currently in early access</span> — this feature is being piloted with a small group of businesses before a full launch.
             </div>
             <div className={`border rounded-2xl p-5 space-y-3 ${provider.listingTier === 'featured' ? 'bg-amber-100 border-amber-400' : featuredSlots !== null && featuredSlots >= 3 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-gradient-to-br from-amber-50 to-orange-50/60 border-amber-300'}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <span className="font-bold text-slate-900 text-base flex items-center gap-1.5">
-                    <i className="fas fa-bolt text-amber-500 text-sm"></i>Top of Category Placement
-                  </span>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    Be one of the three businesses shown first when locals browse services in your category on Townly.
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>Only three businesses can hold this placement in each category.</p>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <span className="text-xl font-bold text-amber-700">$99</span>
-                  <span className="text-xs font-medium text-amber-500">/mo</span>
-                </div>
+              <div>
+                <span className="font-bold text-slate-900 text-base flex items-center gap-1.5">
+                  <i className="fas fa-bolt text-amber-500 text-sm"></i>Top of Category Placement
+                </span>
+                <p className="text-xs font-medium text-amber-600 mt-0.5">Premium monthly placement (subscription)</p>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Be one of the three businesses shown first when locals browse your category on Townly.
+                </p>
               </div>
               <ul className="space-y-1 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Top 3 placement in your category</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> More visibility than standard listings</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Guaranteed Top 3 placement in your category</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Always visible to local customers</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Gold-highlighted listing that stands out</li>
                 <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-[10px]"></i> Direct call and website buttons</li>
@@ -853,20 +848,20 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                   ) : featuredSlots !== null && featuredSlots >= 3 ? (
                     'All 3 spots filled — check back soon'
                   ) : (
-                    'Limited to 3 businesses per category'
+                    'Only 3 businesses per category can hold this placement'
                   )}
                 </li>
                 {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && featuredSlots !== null && (
-                  <li className="flex items-center gap-2 pl-4" style={{ fontSize: '12px', color: '#92400E' }}>
-                    {3 - featuredSlots} of 3 spot{3 - featuredSlots !== 1 ? 's' : ''} remaining in your category
+                  <li className="flex flex-col gap-0.5 pl-4" style={{ fontSize: '12px', color: '#92400E' }}>
+                    <span>{3 - featuredSlots} spot{3 - featuredSlots !== 1 ? 's' : ''} currently available in your category</span>
+                    <span className="text-amber-700 font-medium">Claiming a spot now reserves it before competitors claim it.</span>
                   </li>
                 )}
-                <li className="flex items-center gap-2 text-slate-600"><i className="fas fa-tag text-amber-500 text-[10px]"></i> Member pricing on promotions</li>
               </ul>
 
-              {/* Member Promotion Pricing */}
+              {/* Member Promotion Discounts */}
               <div className="mt-4 rounded-xl px-3 py-3 space-y-2" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '14px' }}>
-                <p style={{ fontSize: '12px', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', marginBottom: '8px', fontWeight: 600 }}>Member Promotion Pricing</p>
+                <p style={{ fontSize: '12px', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#64748B', marginBottom: '8px', fontWeight: 600 }}>Member Promotion Discounts</p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="flex-1 px-3 py-2 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
                     <p className="text-xs font-semibold text-slate-700">Weekly Spotlight</p>
@@ -964,7 +959,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                       className="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors shadow-sm disabled:opacity-60"
                     >
                       <i className="fas fa-star text-[10px]"></i>
-                      {earlyAccessLoading ? 'Submitting...' : 'Request Early Access'}
+                      {earlyAccessLoading ? 'Submitting...' : 'Request Placement & Pricing'}
                     </button>
                   </>
                 )
@@ -1388,7 +1383,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="none">Not a Member</option>
-                <option value="featured">Member ($99/mo)</option>
+                <option value="featured">Member</option>
               </select>
             </div>
 
