@@ -161,7 +161,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user, onBookingConfirme
         </p>
       )}
       <Link
-        to="/spotlights"
+        to="/events"
         className="inline-block mt-4 bg-slate-900 text-white font-bold px-6 py-3 rounded-xl text-sm"
       >
         Back to Events

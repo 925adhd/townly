@@ -103,7 +103,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
             {/* CTA Buttons — hidden on mobile */}
             <div className="hidden md:flex flex-row justify-center gap-3 mb-5">
               <Link
-                to="/spotlights"
+                to="/events"
                 className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow transition-all hover:scale-105 active:scale-95"
               >
                 Browse Events
@@ -155,7 +155,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
             </span>
             <h2 className="text-base font-semibold text-slate-900">Upcoming This Week</h2>
           </div>
-          <Link to="/spotlights" className="text-amber-700 font-semibold text-xs whitespace-nowrap hover:text-amber-900 hover:underline flex-shrink-0 flex items-center gap-1">See all events <i className="fas fa-arrow-right text-[9px]"></i></Link>
+          <Link to="/events" className="text-amber-700 font-semibold text-xs whitespace-nowrap hover:text-amber-900 hover:underline flex-shrink-0 flex items-center gap-1">See all events <i className="fas fa-arrow-right text-[9px]"></i></Link>
         </div>
         <p className="text-slate-400 text-xs px-1 mb-2">Events and announcements in {tenant.name} this week.</p>
 
@@ -163,7 +163,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
 
           {/* Spotlight Card — accent bar style */}
           {currentSpotlight ? (
-            <Link to="/spotlights" className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
+            <Link to="/events" className="block bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 border border-slate-100 border-l-4 border-l-amber-400 flex flex-col md:flex-row md:items-center md:gap-6 px-6 py-[18px]">
               {(currentSpotlight.thumbnailUrl || currentSpotlight.imageUrl) && (
                 <div className="hidden md:block flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-100">
                   <img
@@ -200,7 +200,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlert }) => 
               </div>
             </Link>
           ) : (
-            <Link to="/spotlights" state={{ scrollTo: 'pricing' }} className="block bg-white rounded-2xl border border-dashed border-amber-200 px-6 py-5 text-center hover:border-amber-400 transition-colors">
+            <Link to="/events" state={{ scrollTo: 'pricing' }} className="block bg-white rounded-2xl border border-dashed border-amber-200 px-6 py-5 text-center hover:border-amber-400 transition-colors">
               <i className="fas fa-star text-amber-300 text-2xl mb-2 block"></i>
               <p className="font-semibold text-slate-500 text-sm">No spotlight this week</p>
               <p className="text-xs text-slate-400 mt-1">Be the first — <span className="text-orange-500 font-medium">book a spotlight</span></p>

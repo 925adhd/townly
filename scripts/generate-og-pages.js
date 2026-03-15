@@ -8,10 +8,10 @@ const base = readFileSync(join(distDir, 'index.html'), 'utf8');
 
 const routes = [
   {
-    path: 'spotlights',
+    path: 'events',
     title: 'Events & Announcements — Grayson County Townly',
     description: 'See what\'s happening on the front porch — events, yard sales, announcements, and more.',
-    url: 'https://www.townly.us/spotlights',
+    url: 'https://www.townly.us/events',
   },
   {
     path: 'ask',
@@ -32,6 +32,7 @@ for (const route of routes) {
     .replace(/(<meta property="og:title" content=")[^"]*(")/,   `$1${route.title}$2`)
     .replace(/(<meta property="og:description" content=")[^"]*(")/,   `$1${route.description}$2`)
     .replace(/(<meta property="og:url" content=")[^"]*(")/,   `$1${route.url}$2`)
+    .replace(/(<meta name="description" content=")[^"]*(")/,   `$1${route.description}$2`)
     .replace(/(<title>)[^<]*(<\/title>)/, `$1${route.title}$2`);
 
   const dir = join(distDir, route.path);

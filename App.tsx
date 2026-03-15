@@ -18,7 +18,7 @@ import AddReview from './pages/AddReview';
 import Recommendations from './pages/Recommendations';
 import QuestionDetail from './pages/QuestionDetail';
 import Auth from './pages/Auth';
-import Spotlights from './pages/Spotlights';
+import Spotlights from './pages/Events';
 import BookSpotlight from './pages/BookSpotlight';
 import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
@@ -133,7 +133,7 @@ const App: React.FC = () => {
             </Link>
 
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/spotlights" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
+              <Link to="/events" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
               <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Businesses</Link>
               <Link to="/lost-found" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Lost & Found</Link>
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
@@ -201,7 +201,7 @@ const App: React.FC = () => {
               <Route path="/ask" element={<Recommendations requests={requests} setRequests={setRequests} user={user} />} />
               <Route path="/ask/:slug" element={<QuestionDetail providers={providers} user={user} />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/spotlights" element={<Spotlights user={user} />} />
+              <Route path="/events" element={<Spotlights user={user} />} />
               <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
@@ -223,7 +223,7 @@ const App: React.FC = () => {
               <i className="fas fa-search text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Businesses</span>
             </Link>
-            <Link to="/spotlights" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+            <Link to="/events" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
               <i className="fas fa-calendar-alt text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Events</span>
             </Link>
