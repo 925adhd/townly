@@ -494,7 +494,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <span className="text-slate-400 text-sm font-medium"> / week</span>
             </div>
             <ul className="space-y-1.5 text-sm text-slate-600">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Top placement on the Home and Events pages</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Priority placement on the Home and Events pages</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Large spotlight banner for your event</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Clickable flyer or event image</li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-amber-500 text-xs"></i> Pinned for the full week</li>
@@ -524,8 +524,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <span className="text-slate-400 text-xs font-medium"> / week</span>
             </div>
             <ul className="space-y-1.5 text-xs text-slate-500">
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown above regular community posts</li>
-              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Upload an image <em className="text-slate-400">(community posts are text-only)</em></li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Shown above regular free posts</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Upload an image <em className="text-slate-400">(free posts are text-only)</em></li>
               <li className="flex items-center gap-2"><i className="fas fa-check text-slate-400 text-[10px]"></i> Active for the full week</li>
               <li className="flex items-center gap-2 font-semibold text-slate-600 text-sm"><i className="fas fa-lock text-slate-400 text-xs"></i> Limited to 5 featured posts per week</li>
             </ul>
@@ -592,7 +592,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <div className="bg-amber-50 border border-amber-100 text-amber-800 text-xs px-3 py-2.5 rounded-xl leading-relaxed space-y-0.5">
               <p>No buying, selling, or business ads • no gossip</p>
-              <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
+              <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> or <Link to={user ? '/book/spotlight' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Spotlight</Link>.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
