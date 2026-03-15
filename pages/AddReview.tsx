@@ -35,10 +35,10 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews,
       </div>
       <h2 className="text-xl font-bold text-slate-900 mb-2">Leave a Review</h2>
       <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to share your experience and help your neighbors find great local businesses.</p>
-      <Link to="/auth?signup=true" state={{ from: location.pathname + location.search }} className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
+      <Link to="/login?signup=true" state={{ from: location.pathname + location.search }} className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
         Create Free Account
       </Link>
-      <Link to="/auth" state={{ from: location.pathname + location.search }} className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+      <Link to="/login" state={{ from: location.pathname + location.search }} className="mt-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
         Already have an account? Sign in
       </Link>
     </div>

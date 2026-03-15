@@ -86,7 +86,7 @@ const MyBookings: React.FC<Props> = ({ user }) => {
     return (
       <div className="max-w-lg mx-auto pt-16 text-center space-y-4 px-4">
         <p className="text-slate-500 text-sm">You must be logged in to view your bookings.</p>
-        <Link to="/auth?signup=true" state={{ from: location.pathname }} className="inline-block bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm">Sign In</Link>
+        <Link to="/login?signup=true" state={{ from: location.pathname }} className="inline-block bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm">Sign In</Link>
       </div>
     );
   }

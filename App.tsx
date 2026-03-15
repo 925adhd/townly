@@ -149,7 +149,7 @@ const App: React.FC = () => {
                   <button onClick={handleLogout} className="text-sm font-semibold text-orange-600">Logout</button>
                 </div>
               ) : (
-                <Link to="/auth" className="bg-slate-900 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors shadow-sm">Login</Link>
+                <Link to="/login" className="bg-slate-900 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors shadow-sm">Login</Link>
               )}
             </nav>
 
@@ -174,7 +174,7 @@ const App: React.FC = () => {
                   </button>
                 </>
               ) : (
-                <Link to="/auth" className="flex flex-col items-center text-orange-600 hover:text-orange-700 transition-colors">
+                <Link to="/login" className="flex flex-col items-center text-orange-600 hover:text-orange-700 transition-colors">
                   <i className="fas fa-user text-lg"></i>
                   <span className="text-[10px] mt-1 font-medium">Login</span>
                 </Link>
@@ -200,7 +200,7 @@ const App: React.FC = () => {
               <Route path="/review/:providerId" element={<AddReview providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
               <Route path="/ask" element={<Recommendations requests={requests} setRequests={setRequests} user={user} />} />
               <Route path="/ask/:slug" element={<QuestionDetail providers={providers} user={user} />} />
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/login" element={<Auth />} />
               <Route path="/events" element={<Spotlights user={user} />} />
               <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />

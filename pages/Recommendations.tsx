@@ -128,7 +128,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
               </button>
             ) : (
               <Link
-                to="/auth?signup=true"
+                to="/login?signup=true"
                 state={{ from: location.pathname }}
                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
               >

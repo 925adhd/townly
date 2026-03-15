@@ -1291,7 +1291,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
             <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your business?'}</p>
             <p className="text-slate-500 text-xs mt-0.5">Create a free account to claim and manage this listing.</p>
           </div>
-          <Link to="/auth" state={{ from: location.pathname }} className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
+          <Link to="/login" state={{ from: location.pathname }} className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
             Sign Up to Claim
           </Link>
         </div>

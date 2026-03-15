@@ -538,7 +538,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
           )
         ) : (
           <Link
-            to="/auth?signup=true"
+            to="/login?signup=true"
             className="block text-center w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold hover:border-blue-300 hover:text-blue-600 transition-all"
           >
             Log in to help answer this question

@@ -374,7 +374,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </button>
           ) : (
             <Link
-              to="/auth?signup=true"
+              to="/login?signup=true"
               state={{ from: location.pathname }}
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
@@ -502,7 +502,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </ul>
             <p className="text-xs text-amber-700/80 font-medium">Perfect for grand openings, major events, and time-sensitive announcements.</p>
             <Link
-              to={user ? '/book/spotlight' : '/auth?signup=true'}
+              to={user ? '/book/spotlight' : '/login?signup=true'}
               className="mt-2 w-full inline-flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-xl shadow-sm transition-colors text-sm"
             >
               <i className="fas fa-star"></i>
@@ -531,7 +531,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </ul>
             <p className="text-xs text-slate-400 font-medium">Perfect for yard sales, fundraisers, local events, and community announcements.</p>
             <Link
-              to={user ? '/book/featured' : '/auth?signup=true'}
+              to={user ? '/book/featured' : '/login?signup=true'}
               className="mt-1 w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors text-xs"
             >
               <i className="fas fa-bullhorn text-[10px]"></i>
@@ -592,7 +592,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </div>
             <div className="bg-amber-50 border border-amber-100 text-amber-800 text-xs px-3 py-2.5 rounded-xl leading-relaxed space-y-0.5">
               <p>No buying, selling, or business ads • no gossip</p>
-              <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/auth?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
+              <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link>.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>

@@ -190,7 +190,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user, providers }) => {
     return (
       <div className="max-w-lg mx-auto pt-10 text-center space-y-4">
         <p className="text-slate-600 text-sm">You must be logged in to book a spotlight.</p>
-        <Link to="/auth?signup=true" className="inline-block bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm">
+        <Link to="/login?signup=true" className="inline-block bg-orange-600 text-white font-bold px-6 py-3 rounded-xl text-sm">
           Sign In / Create Account
         </Link>
       </div>
