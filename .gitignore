@@ -25,7 +25,7 @@ supabase/LIVE_DB_STATE.md
 # Dev-only / non-functional files
 mockData.ts
 metadata.json
-scripts/
+scripts/seed-providers.js
 README.md
 supabase/config.toml
 
