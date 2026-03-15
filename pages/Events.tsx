@@ -101,10 +101,11 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     if (navigator.share) {
       try { await navigator.share({ title: 'Events — Grayson County Townly', url }); } catch { /* dismissed */ }
     } else {
-      try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
+      try { await navigator.clipboard.writeText(url); setCopiedEventId(ev.id); setTimeout(() => setCopiedEventId(null), 2500); } catch { /* silent */ }
     }
   };
 
+  const [copiedEventId, setCopiedEventId] = useState<string | null>(null);
   const [flaggingEventId, setFlaggingEventId] = useState<string | null>(null);
   const [flagSubmitting, setFlagSubmitting] = useState(false);
 
@@ -403,36 +404,24 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           <div className="grid gap-3 md:grid-cols-2">
             {filteredEvents.map((ev: CommunityEvent) => (
               <div key={ev.id} id={`event-${ev.id}`} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2 min-w-0 overflow-hidden transition-all">
+                {/* Top row: badge + date + share + flag */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${POST_TYPE_COLORS[ev.postType ?? 'event']}`}>
-                    {POST_TYPE_LABELS[ev.postType ?? 'event']}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-xs">{formatEventDate(ev.eventDate)}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex-shrink-0 ${POST_TYPE_COLORS[ev.postType ?? 'event']}`}>
+                      {POST_TYPE_LABELS[ev.postType ?? 'event']}
+                    </span>
+                    {ev.eventDate && <span className="text-slate-400 text-xs truncate">{formatEventDate(ev.eventDate)}</span>}
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <button
                       onClick={() => handleShareEvent(ev)}
-                      className="text-slate-300 hover:text-blue-400 transition-colors"
+                      className="text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1"
                       title="Share this post"
                     >
-                      <i className="fas fa-share-alt text-xs"></i>
+                      <i className={`fas ${copiedEventId === ev.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
+                      {copiedEventId === ev.id && <span className="text-[10px] font-semibold text-emerald-500">Copied!</span>}
                     </button>
-                    {isAdmin ? (
-                      <button
-                        onClick={() => handleDeleteEvent(ev.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
-                        title="Delete event (admin)"
-                      >
-                        <i className="fas fa-trash-alt text-xs"></i>
-                      </button>
-                    ) : user?.id === ev.userId ? (
-                      <button
-                        onClick={() => handleDeleteOwnEvent(ev.id)}
-                        className="text-slate-300 hover:text-red-400 transition-colors"
-                        title="Remove your event"
-                      >
-                        <i className="fas fa-trash-alt text-xs"></i>
-                      </button>
-                    ) : user ? (
+                    {user && user.id !== ev.userId && !isAdmin && (
                       flaggingEventId === ev.id ? (
                         <div className="flex items-center gap-1">
                           <button
@@ -442,12 +431,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                           >
                             {flagSubmitting ? 'Flagging...' : 'Confirm'}
                           </button>
-                          <button
-                            onClick={() => setFlaggingEventId(null)}
-                            className="text-[10px] text-slate-400 hover:text-slate-600"
-                          >
-                            Cancel
-                          </button>
+                          <button onClick={() => setFlaggingEventId(null)} className="text-[10px] text-slate-400 hover:text-slate-600">Cancel</button>
                         </div>
                       ) : (
                         <button
@@ -455,12 +439,14 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                           className="text-slate-300 hover:text-orange-400 transition-colors"
                           title="Flag as inappropriate"
                         >
-                          <i className="fas fa-flag text-xs"></i>
+                          <i className="fas fa-flag text-sm"></i>
                         </button>
                       )
-                    ) : null}
+                    )}
                   </div>
                 </div>
+
+                {/* Content */}
                 <h3 className="font-bold text-slate-900 text-sm leading-tight break-words">{ev.title}</h3>
                 <p className="text-slate-500 text-xs flex items-center gap-1 break-words">
                   <i className="fas fa-map-marker-alt text-orange-400 text-[10px] flex-shrink-0"></i> {ev.location}
@@ -468,7 +454,28 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   {ev.town}
                 </p>
                 <p className="text-slate-500 text-xs leading-relaxed break-words">{ev.description}</p>
-                <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
+
+                {/* Bottom row: posted by + delete */}
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
+                  {isAdmin ? (
+                    <button
+                      onClick={() => handleDeleteEvent(ev.id)}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                      title="Delete (admin)"
+                    >
+                      <i className="fas fa-trash-alt text-sm"></i>
+                    </button>
+                  ) : user?.id === ev.userId ? (
+                    <button
+                      onClick={() => handleDeleteOwnEvent(ev.id)}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                      title="Remove your post"
+                    >
+                      <i className="fas fa-trash-alt text-sm"></i>
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>

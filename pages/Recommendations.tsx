@@ -88,7 +88,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
     if (navigator.share) {
       try { await navigator.share({ title: 'Ask — Grayson County Townly', url }); } catch { /* dismissed */ }
     } else {
-      try { await navigator.clipboard.writeText(url); alert('Link copied!'); } catch { alert('Could not copy link.'); }
+      try { await navigator.clipboard.writeText(url); setNotice('Link copied!'); setTimeout(() => setNotice(''), 2500); } catch { /* silent */ }
     }
   };
 
@@ -260,7 +260,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                     className="text-slate-300 hover:text-blue-400 transition-colors text-xs p-1"
                     title="Share this request"
                   >
-                    <i className="fas fa-share-alt"></i>
+                    <i className="fas fa-share-from-square"></i>
                   </button>
                   {!!(user && user.id !== req.userId && !isAdminOrMod) && (
                     <button
