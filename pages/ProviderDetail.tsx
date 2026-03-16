@@ -854,7 +854,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && featuredSlots !== null && (
                   <li className="flex flex-col gap-0.5 pl-4" style={{ fontSize: '12px', color: '#92400E' }}>
                     <span>{3 - featuredSlots} spot{3 - featuredSlots !== 1 ? 's' : ''} currently available in your category</span>
-                    <span className="text-amber-700 font-medium">Claiming a spot now reserves it before competitors claim it.</span>
+                    <span className="text-amber-700 font-medium">Claiming a spot now reserves it before competitors take it.</span>
                   </li>
                 )}
               </ul>
