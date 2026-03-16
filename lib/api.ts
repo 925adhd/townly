@@ -476,10 +476,12 @@ export async function addReview(
   rejectHtml(serviceDescription, 'Service description');
   rejectHtml(reviewText, 'Review text');
   // Prevent owners from reviewing their own claimed listing.
+  // tenant_id filter ensures cross-tenant UUIDs can't be used to bypass this check.
   const { data: provider } = await supabase
     .from('providers')
     .select('claimed_by')
     .eq('id', input.providerId)
+    .eq('tenant_id', getCurrentTenant().id)
     .single();
   if (provider?.claimed_by && provider.claimed_by === userId) {
     throw new Error('You cannot review a listing you own.');
@@ -902,7 +904,9 @@ export async function signUp(email: string, password: string, name: string) {
 
 export async function signIn(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  // Generic error — prevents account enumeration via distinct error messages
+  // (Supabase distinguishes "email not found" vs "wrong password" vs "not confirmed").
+  if (error) throw new Error('Invalid email or password.');
   return data.user;
 }
 
@@ -1238,6 +1242,18 @@ export async function submitReviewReply(
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be signed in to reply.');
   if (session.user.id !== ownerId) throw new Error('Owner ID mismatch.');
+
+  // Verify the caller actually owns THIS specific listing — prevents any claimed
+  // owner from posting "Business Owner" replies on a competitor's reviews.
+  const { data: providerCheck } = await supabase
+    .from('providers')
+    .select('id')
+    .eq('id', providerId)
+    .eq('claimed_by', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  if (!providerCheck) throw new Error('You do not own this listing.');
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('name')
@@ -1285,7 +1301,8 @@ export async function markReplyResolution(replyId: string, resolved: boolean | n
   const { error } = await supabase
     .from('review_replies')
     .update({ resolved_by_reviewer: resolved })
-    .eq('id', replyId);
+    .eq('id', replyId)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
 }
 

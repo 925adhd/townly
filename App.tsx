@@ -95,8 +95,14 @@ const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const tokenHash = params.get('token_hash');
     const type = params.get('type');
-    if (tokenHash && type) {
-      supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as any })
+    // Whitelist valid OTP types — prevents arbitrary strings from being passed
+    // to the SDK via crafted callback URLs.
+    const VALID_OTP_TYPES = ['email', 'recovery', 'signup', 'invite', 'magiclink', 'email_change'] as const;
+    type ValidOtpType = typeof VALID_OTP_TYPES[number];
+    const isValidType = (t: string | null): t is ValidOtpType =>
+      !!t && (VALID_OTP_TYPES as readonly string[]).includes(t);
+    if (tokenHash && isValidType(type)) {
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type })
         .then(() => {
           window.history.replaceState({}, '', window.location.pathname);
         });
