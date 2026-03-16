@@ -12,6 +12,7 @@ interface HomeProps {
   providers: Provider[];
   lostFound: LostFoundPost[];
   communityAlerts: CommunityAlert[];
+  nwsAlerts: { id: string; event: string; headline: string; severity: string; senderName: string; expires: string | null }[];
 }
 
 
@@ -28,7 +29,7 @@ const ALERT_ICON_COLORS: Record<string, string> = {
   'fa-house-flood-water':    'text-teal-500',
 };
 
-const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) => {
+const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsAlerts }) => {
   const [alertIndex, setAlertIndex] = useState(0);
   const [alertVisible, setAlertVisible] = useState(true);
   const [search, setSearch] = useState('');
@@ -54,19 +55,35 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) =>
       .catch(console.error);
   }, []);
 
+
+  // Unified alert pool: NWS first, then community alerts
+  const allAlerts = [
+    ...nwsAlerts.map(a => ({
+      id: a.id,
+      title: a.event,
+      description: a.headline,
+      icon: 'fa-cloud-bolt',
+      isNws: true,
+      severity: a.severity,
+      expires: a.expires,
+      senderName: a.senderName,
+    })),
+    ...communityAlerts.map(a => ({ ...a, isNws: false, severity: null, expires: null, senderName: null })),
+  ];
+
   useEffect(() => {
-    if (communityAlerts.length <= 1) return;
+    if (allAlerts.length <= 1) return;
     const timer = setInterval(() => {
       setAlertVisible(false);
       setTimeout(() => {
-        setAlertIndex(i => (i + 1) % communityAlerts.length);
+        setAlertIndex(i => (i + 1) % allAlerts.length);
         setAlertVisible(true);
       }, 400);
     }, 5000);
     return () => clearInterval(timer);
-  }, [communityAlerts.length]);
+  }, [allAlerts.length]);
 
-  const activeAlert = communityAlerts[alertIndex] ?? null;
+  const activeAlert = allAlerts[alertIndex] ?? null;
 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
@@ -237,25 +254,43 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts }) =>
           <div className="grid md:grid-cols-2 gap-3">
 
             {/* Community Alert Card */}
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-              {activeAlert ? (
-                <div style={{ opacity: alertVisible ? 1 : 0, transition: 'opacity 0.4s ease' }}>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 flex items-center gap-1.5">
-                      <i className={`fas ${activeAlert.icon} text-xs ${ALERT_ICON_COLORS[activeAlert.icon] ?? 'text-red-700'}`}></i>
-                      {activeAlert.title}
-                    </span>
-                    {communityAlerts.length > 1 && (
-                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-200 text-red-700 flex-shrink-0">
-                        {alertIndex + 1}/{communityAlerts.length}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-slate-600 text-xs leading-relaxed">{activeAlert.description}</p>
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+              {allAlerts.length > 0 ? (
+                <div style={{ display: 'grid' }}>
+                  {/* All alerts share the same grid cell — height locks to the tallest */}
+                  {allAlerts.map((alert, i) => {
+                    const isActive = i === alertIndex;
+                    const isSevereNws = alert.isNws && (alert.severity === 'Extreme' || alert.severity === 'Severe');
+                    return (
+                      <div
+                        key={alert.id}
+                        style={{ gridArea: '1/1', opacity: isActive ? (alertVisible ? 1 : 0) : 0, transition: 'opacity 0.4s ease', visibility: isActive ? 'visible' : 'hidden', pointerEvents: isActive ? 'auto' : 'none' }}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 ${isSevereNws ? 'bg-red-200 text-red-700' : alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                            <i className={`fas ${alert.icon} text-xs ${ALERT_ICON_COLORS[alert.icon] ?? 'text-red-700'}`}></i>
+                            {alert.isNws ? `${alert.severity} · NWS` : alert.title}
+                          </span>
+                          {allAlerts.length > 1 && isActive && (
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-200 text-red-700 flex-shrink-0">
+                              {alertIndex + 1}/{allAlerts.length}
+                            </span>
+                          )}
+                        </div>
+                        {alert.isNws && <p className="text-slate-700 text-xs font-semibold leading-snug mb-1">{alert.title}</p>}
+                        <p className="text-slate-600 text-xs leading-relaxed">{alert.description}</p>
+                        {alert.isNws && alert.expires && (
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {alert.senderName} · Expires {new Date(alert.expires).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <>
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 self-start mb-2">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 inline-block mb-2">
                     🚨 Community Alert
                   </span>
                   <p className="text-slate-500 text-xs leading-relaxed flex items-center gap-1.5">

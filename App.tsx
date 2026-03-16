@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [lostFound, setLostFound] = useState<LostFoundPost[]>([]);
   const [requests, setRequests] = useState<RecommendationRequest[]>([]);
   const [communityAlerts, setCommunityAlerts] = useState<CommunityAlert[]>([]);
+  const [nwsAlerts, setNwsAlerts] = useState<{ id: string; event: string; headline: string; severity: string; senderName: string; expires: string | null }[]>([]);
   const [user, setUser] = useState<{ id: string, name: string, email?: string, role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasBookings, setHasBookings] = useState(() => !!localStorage.getItem('townly_has_bookings'));
@@ -57,6 +58,26 @@ const App: React.FC = () => {
       setRequests(req);
       setCommunityAlerts(alerts);
     }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  // Fetch NWS alerts for Grayson County — poll every 5 minutes
+  useEffect(() => {
+    const fetchNWS = () => {
+      fetch('https://api.weather.gov/alerts/active?zone=KYZ021,KYC085', { headers: { Accept: 'application/geo+json' } })
+        .then(r => r.json())
+        .then(data => setNwsAlerts((data.features ?? []).map((f: any) => ({
+          id: f.id,
+          event: f.properties.event as string,
+          headline: f.properties.headline as string,
+          severity: f.properties.severity as string,
+          senderName: f.properties.senderName as string,
+          expires: f.properties.expires ?? null,
+        }))))
+        .catch(() => {});
+    };
+    fetchNWS();
+    const interval = setInterval(fetchNWS, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Handle auth callback tokens (email change, password reset, etc.)
@@ -122,7 +143,16 @@ const App: React.FC = () => {
     <BrowserRouter>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col nav-page-pb">
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-50 h-20">
+        {/* Sticky top wrapper — tornado banner + header stay together */}
+        <div className="sticky top-0 z-50">
+          {nwsAlerts.some(a => a.event.toLowerCase().includes('tornado warning')) && (
+            <div className="bg-red-700 text-white px-4 py-2.5 flex items-center justify-center gap-3 text-sm font-bold tracking-wide">
+              <i className="fas fa-tornado text-base animate-pulse"></i>
+              <span>TORNADO WARNING IN EFFECT FOR GRAYSON COUNTY</span>
+              <i className="fas fa-tornado text-base animate-pulse"></i>
+            </div>
+          )}
+        <header className="bg-white border-b border-slate-200 h-20">
           <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
             <span className="md:hidden absolute left-1/2 -translate-x-1/2 font-bold text-slate-900 text-base pointer-events-none">{tenant.name}</span>
             <Link to="/" className="flex items-center space-x-2">
@@ -158,7 +188,9 @@ const App: React.FC = () => {
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
                 <div className="flex items-center space-x-3">
-                  <Link to="/profile" className="text-sm font-medium text-slate-500 hover:text-orange-600 transition-colors">Hi, {user.name}</Link>
+                  <Link to="/profile" className="text-sm font-medium text-slate-500 hover:text-orange-600 transition-colors flex items-center gap-1.5">
+                    <i className="fas fa-user-circle text-base"></i> {user.name}
+                  </Link>
                   {user.role === 'admin' && (
                     <Link to="/admin" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">Admin</Link>
                   )}
@@ -196,6 +228,7 @@ const App: React.FC = () => {
             </div>
           </div>
         </header>
+        </div>{/* end sticky top wrapper */}
 
         <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-6">
           <ErrorBoundary>
@@ -205,7 +238,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <Routes>
-              <Route path="/" element={<Home providers={providers} lostFound={lostFound} communityAlerts={communityAlerts} />} />
+              <Route path="/" element={<Home providers={providers} lostFound={lostFound} communityAlerts={communityAlerts} nwsAlerts={nwsAlerts} />} />
               <Route path="/directory" element={<Directory providers={providers} user={user} />} />
               <Route path="/provider/:id" element={<ProviderDetail providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
               <Route path="/lost-found" element={<LostFound posts={lostFound} setPosts={setLostFound} user={user} />} />
