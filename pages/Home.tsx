@@ -71,6 +71,11 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsA
     ...communityAlerts.map(a => ({ ...a, isNws: false, severity: null, expires: null, senderName: null })),
   ];
 
+  // Reset index when pool size changes to avoid out-of-bounds
+  useEffect(() => {
+    setAlertIndex(0);
+  }, [allAlerts.length]);
+
   useEffect(() => {
     if (allAlerts.length <= 1) return;
     const timer = setInterval(() => {
@@ -83,7 +88,8 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsA
     return () => clearInterval(timer);
   }, [allAlerts.length]);
 
-  const activeAlert = allAlerts[alertIndex] ?? null;
+  const safeIndex = allAlerts.length > 0 ? alertIndex % allAlerts.length : 0;
+  const activeAlert = allAlerts[safeIndex] ?? null;
 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
@@ -259,7 +265,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsA
                 <div style={{ display: 'grid' }}>
                   {/* All alerts share the same grid cell — height locks to the tallest */}
                   {allAlerts.map((alert, i) => {
-                    const isActive = i === alertIndex;
+                    const isActive = i === safeIndex;
                     const isSevereNws = alert.isNws && (alert.severity === 'Extreme' || alert.severity === 'Severe');
                     return (
                       <div
@@ -273,7 +279,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsA
                           </span>
                           {allAlerts.length > 1 && isActive && (
                             <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-200 text-red-700 flex-shrink-0">
-                              {alertIndex + 1}/{allAlerts.length}
+                              {safeIndex + 1}/{allAlerts.length}
                             </span>
                           )}
                         </div>

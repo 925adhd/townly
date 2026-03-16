@@ -65,14 +65,24 @@ const App: React.FC = () => {
     const fetchNWS = () => {
       fetch('https://api.weather.gov/alerts/active?zone=KYZ021,KYC085', { headers: { Accept: 'application/geo+json' } })
         .then(r => r.json())
-        .then(data => setNwsAlerts((data.features ?? []).map((f: any) => ({
-          id: f.id,
-          event: f.properties.event as string,
-          headline: f.properties.headline as string,
-          severity: f.properties.severity as string,
-          senderName: f.properties.senderName as string,
-          expires: f.properties.expires ?? null,
-        }))))
+        .then(data => {
+          const seen = new Set<string>();
+          const alerts = (data.features ?? [])
+            .map((f: any) => ({
+              id: f.id as string,
+              event: f.properties.event as string,
+              headline: f.properties.headline as string,
+              severity: f.properties.severity as string,
+              senderName: f.properties.senderName as string,
+              expires: f.properties.expires ?? null,
+            }))
+            .filter((a: { id: string }) => {
+              if (seen.has(a.id)) return false;
+              seen.add(a.id);
+              return true;
+            });
+          setNwsAlerts(alerts);
+        })
         .catch(() => {});
     };
     fetchNWS();
