@@ -146,7 +146,7 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsA
               What's happening in your town?
             </h1>
             <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-6">
-              Find local events, businesses, and community updates in Grayson County, KY
+              Find local events, businesses, and community updates in Grayson County KY
             </p>
 
             {/* CTA Buttons — hidden on mobile */}
