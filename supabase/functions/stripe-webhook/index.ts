@@ -47,16 +47,27 @@ Deno.serve(async (req) => {
       return new Response('OK', { status: 200 });
     }
 
+    // Require tenantId from session metadata — set at checkout creation time.
+    // This scopes the DB update to the correct county and prevents cross-tenant
+    // payment status manipulation even if a session ID were ever guessed.
+    const tenantId = session.metadata?.tenantId;
+    if (!tenantId) {
+      console.error('Webhook received session without tenantId in metadata:', session.id);
+      // Do not return 500 (would cause Stripe to retry indefinitely for old sessions).
+      return new Response('OK', { status: 200 });
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Flip the booking from pending → paid
+    // Flip the booking from pending → paid, scoped to the correct tenant.
     const { error } = await supabase
       .from('paid_submissions')
       .update({ payment_status: 'paid' })
       .eq('stripe_session_id', session.id)
+      .eq('tenant_id', tenantId)
       .eq('payment_status', 'pending');
 
     if (error) {

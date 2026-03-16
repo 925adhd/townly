@@ -37,16 +37,35 @@ export const TENANTS: Record<string, TenantConfig> = {
   // row-level default via a JWT claim. Ask Claude Code to do this — it knows the full list.
 };
 
+/**
+ * Explicit whitelist of hostnames → tenant IDs.
+ * Add new entries here when launching a new county — never derive tenant from
+ * an unvalidated hostname string, which could be manipulated in non-standard
+ * proxy/hosting setups.
+ */
+const HOSTNAME_TO_TENANT: Record<string, string> = {
+  // Production
+  'townly.us':          'grayson',
+  'www.townly.us':      'grayson',
+  'grayson.townly.us':  'grayson',
+  // Local dev
+  'localhost':          'grayson',
+  '127.0.0.1':          'grayson',
+  // Add new counties below, e.g.:
+  // 'hardin.townly.us': 'hardincounty',
+};
+
 function resolveTenantId(): string {
   // 1. Env var (set VITE_TENANT_ID in .env for local dev)
   const envId = (import.meta as any).env?.VITE_TENANT_ID as string | undefined;
   if (envId && TENANTS[envId]) return envId;
 
-  // 2. Subdomain (e.g. grayscounty.townly.com → 'grayscounty')
-  const subdomain = window.location.hostname.split('.')[0];
-  if (TENANTS[subdomain]) return subdomain;
+  // 2. Whitelisted hostname — explicit map prevents tenant spoofing via unknown subdomains.
+  const hostname = window.location.hostname;
+  const fromHostname = HOSTNAME_TO_TENANT[hostname];
+  if (fromHostname && TENANTS[fromHostname]) return fromHostname;
 
-  // 3. Default
+  // 3. Default — safe fallback to the primary tenant.
   return 'grayson';
 }
 

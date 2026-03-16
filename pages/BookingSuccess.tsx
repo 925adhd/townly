@@ -57,6 +57,8 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user, onBookingConfirme
 
       if (attempts >= POLL_MAX_ATTEMPTS) {
         clearInterval(interval);
+        // Clear pending booking data — no longer needed and shouldn't linger on shared devices.
+        sessionStorage.removeItem(STORAGE_KEY);
         setErrorMsg(
           'Payment received but confirmation is taking longer than expected. ' +
           'Your booking has been saved — check your email for a Stripe receipt, ' +

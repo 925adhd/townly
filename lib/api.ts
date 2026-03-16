@@ -20,6 +20,39 @@ function sanitize(input: string, maxLength: number): string {
 }
 
 /**
+ * Reject strings that contain HTML tags.
+ * React auto-escapes JSX, so stored HTML renders as plain text today,
+ * but this prevents dirty data from leaking into emails, exports, or
+ * future server-rendered contexts.
+ */
+function rejectHtml(input: string, fieldName = 'Field'): void {
+  if (/<[a-z!/?]/i.test(input)) {
+    throw new Error(`${fieldName} must not contain HTML.`);
+  }
+}
+
+/**
+ * Validate that the supplied town belongs to the current tenant's town list.
+ * Prevents arbitrary strings being stored in the town column via API bypass.
+ */
+function validateTown(town: string): void {
+  const tenant = getCurrentTenant();
+  if (!town || !tenant.towns.includes(town)) {
+    throw new Error('Invalid town selection.');
+  }
+}
+
+/**
+ * Shared password strength rules — enforced on sign-up and password change.
+ */
+function validatePasswordStrength(password: string): void {
+  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+  if (!/[A-Z]/.test(password)) throw new Error('Password must contain at least one uppercase letter.');
+  if (!/[0-9]/.test(password)) throw new Error('Password must contain at least one number.');
+  if (!/[^A-Za-z0-9]/.test(password)) throw new Error('Password must contain at least one special character (e.g. ! @ # $).');
+}
+
+/**
  * Validate a URL string: must be http or https. Throws on invalid input.
  * Returns the normalised href so callers can store it safely.
  */
@@ -387,6 +420,9 @@ export async function addProvider(
 ): Promise<Provider> {
   const name = sanitize(input.name, 200);
   if (!name) throw new Error('Business name is required.');
+  validateTown(input.town);
+  rejectHtml(name, 'Business name');
+  if (input.address) rejectHtml(input.address, 'Address');
   const { data, error } = await supabase
     .from('providers')
     .insert({
@@ -437,6 +473,8 @@ export async function addReview(
   const reviewText = sanitize(input.reviewText, 2000);
   if (!serviceDescription) throw new Error('Service description is required.');
   if (!reviewText) throw new Error('Review text is required.');
+  rejectHtml(serviceDescription, 'Service description');
+  rejectHtml(reviewText, 'Review text');
   // Prevent owners from reviewing their own claimed listing.
   const { data: provider } = await supabase
     .from('providers')
@@ -509,6 +547,10 @@ export async function addLostFoundPost(
   const contactMethod = sanitize(input.contactMethod, 200);
   if (!title) throw new Error('Title is required.');
   if (!description) throw new Error('Description is required.');
+  validateTown(input.town);
+  rejectHtml(title, 'Title');
+  rejectHtml(description, 'Description');
+  rejectHtml(locationDescription, 'Location');
 
   let photoUrl: string | null = null;
 
@@ -631,6 +673,9 @@ export async function addRequest(
   const serviceNeeded = sanitize(input.serviceNeeded, 200);
   const description = sanitize(input.description, 1000);
   if (!serviceNeeded) throw new Error('Service type is required.');
+  validateTown(input.town);
+  rejectHtml(serviceNeeded, 'Service needed');
+  rejectHtml(description, 'Description');
 
   // Generate a unique slug; fall back if title yields no meaningful words
   const baseSlug = slugify(serviceNeeded) || `community-question-${crypto.randomUUID().slice(0, 8)}`;
@@ -845,9 +890,7 @@ export async function toggleResponseVote(
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export async function signUp(email: string, password: string, name: string) {
-  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
-  if (!/[A-Z]/.test(password)) throw new Error('Password must contain at least one uppercase letter.');
-  if (!/[0-9]/.test(password)) throw new Error('Password must contain at least one number.');
+  validatePasswordStrength(password);
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -991,6 +1034,30 @@ export async function submitClaim(
     .select('name')
     .eq('id', session.user.id)
     .single();
+
+  // Reject if this listing is already claimed.
+  const { data: targetProvider } = await supabase
+    .from('providers')
+    .select('claim_status')
+    .eq('id', providerId)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  if (targetProvider?.claim_status === 'claimed') {
+    throw new Error('This listing has already been claimed by a verified owner.');
+  }
+
+  // Reject if there is already a pending claim for this listing (prevents claim-queue flooding).
+  const { data: existingPending } = await supabase
+    .from('listing_claims')
+    .select('id')
+    .eq('provider_id', providerId)
+    .eq('tenant_id', getCurrentTenant().id)
+    .eq('status', 'pending')
+    .maybeSingle();
+  if (existingPending) {
+    throw new Error('This listing already has a claim under review. Please check back after the current claim is resolved.');
+  }
+
   const sanitizedDetail = sanitize(verificationDetail, 500);
   if (!sanitizedDetail) throw new Error('Please provide verification details.');
   const { error } = await supabase.from('listing_claims').insert({
@@ -1093,6 +1160,9 @@ export async function updateOwnerListing(
     .single();
   if (fetchErr || !existing) throw new Error('Listing not found.');
   if (existing.claimed_by !== session.user.id) throw new Error('You do not own this listing.');
+
+  if (input.town !== undefined) validateTown(input.town);
+  if (input.description) rejectHtml(input.description, 'Description');
 
   const { error } = await supabase
     .from('providers')
@@ -1366,6 +1436,9 @@ export async function submitCommunityEvent(
   const sanitizedLocation = sanitize(location, 300);
   if (!sanitizedTitle) throw new Error('Event title is required.');
   if (!sanitizedDescription) throw new Error('Event description is required.');
+  rejectHtml(sanitizedTitle, 'Title');
+  rejectHtml(sanitizedDescription, 'Description');
+  rejectHtml(sanitizedLocation, 'Location');
   const { data, error } = await supabase.from('community_events').insert({
     user_id: session.user.id,
     user_name: sanitize(resolvedName, 100),
@@ -1721,6 +1794,7 @@ export async function updateEmail(newEmail: string): Promise<void> {
 
 /** Update the current user's password. */
 export async function updatePassword(newPassword: string): Promise<void> {
+  validatePasswordStrength(newPassword);
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
 }
@@ -1801,7 +1875,7 @@ export async function createCheckoutSession(
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated.');
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-    body: { type, successUrl, cancelUrl },
+    body: { type, successUrl, cancelUrl, tenantId: getCurrentTenant().id },
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
   if (error) throw new Error('Failed to create checkout session. Please try again.');
@@ -1910,12 +1984,16 @@ export async function submitSpotlightBooking(
 }
 
 /** Poll paid_submissions until the webhook flips payment_status to 'paid'.
- *  Returns the booking once confirmed, or null if not yet paid. */
+ *  Returns the booking once confirmed, or null if not yet paid.
+ *  Scoped to the calling user — prevents session ID enumeration by other users. */
 export async function pollForBooking(sessionId: string): Promise<SpotlightBooking | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
   const { data } = await supabase
     .from('paid_submissions')
     .select('*')
     .eq('stripe_session_id', sessionId)
+    .eq('submitted_by', session.user.id)
     .eq('payment_status', 'paid')
     .maybeSingle();
   return data ? mapSpotlightBooking(data) : null;

@@ -11,6 +11,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 // Add 'http://localhost:5173' here only while doing local dev if needed.
 const ALLOWED_ORIGINS = ['https://townly.us', 'https://www.townly.us'];
 
+// Whitelist of valid tenant IDs — must match the TENANTS object in tenants.ts.
+// Add new counties here when launching.
+const VALID_TENANT_IDS = new Set(['grayson']);
+
 function corsHeaders(requestOrigin: string | null) {
   const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
     ? requestOrigin
@@ -60,11 +64,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { type, successUrl, cancelUrl } = await req.json() as {
+    const { type, successUrl, cancelUrl, tenantId } = await req.json() as {
       type: 'spotlight' | 'featured';
       successUrl: string;
       cancelUrl: string;
+      tenantId: string;
     };
+
+    // Validate tenantId — prevents arbitrary strings from being stored in Stripe metadata.
+    if (!tenantId || !VALID_TENANT_IDS.has(tenantId)) {
+      return new Response(JSON.stringify({ error: 'Invalid tenant.' }), {
+        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Validate redirect URLs — must point back to our own domain.
     if (!isAllowedRedirectUrl(successUrl) || !isAllowedRedirectUrl(cancelUrl)) {
@@ -113,7 +125,7 @@ Deno.serve(async (req) => {
       cancel_url: cancelUrl,
       customer_email: user.email,
       payment_intent_data: { receipt_email: user.email },
-      metadata: { type, userId: user.id },
+      metadata: { type, userId: user.id, tenantId },
     });
 
     return new Response(JSON.stringify({ url: session.url, sessionId: session.id }), {
