@@ -439,12 +439,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                 <div className="flex-grow min-w-0">
                   <div className="flex flex-col gap-1.5 mb-1">
                     <div className="flex items-center flex-wrap gap-1.5">
-                      <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{p.category}</span>
-                      {p.claimStatus === 'claimed' && (
-                        <span className="text-[10px] font-semibold text-emerald-700 px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
-                          <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>Verified Business
-                        </span>
-                      )}
+                      {category === 'All' && <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{p.category}</span>}
                       {p.listingTier === 'featured' && (
                         <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200">
                           Sponsored
@@ -458,7 +453,12 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                     </div>
                     <span className="text-[11px] text-slate-400">{p.town}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{p.name}</h3>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                    {p.name}
+                    {p.claimStatus === 'claimed' && (
+                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0" title="This business has been claimed and verified by its owner"></i>
+                    )}
+                  </h3>
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
                     {p.category === 'Churches' ? null : p.reviewCount > 0 ? (
                       <>

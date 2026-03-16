@@ -414,6 +414,34 @@ export async function updateProvider(
   return mapProvider(data);
 }
 
+export async function lookupUserByEmail(email: string): Promise<{ id: string; email: string } | null> {
+  await requireModOrAdmin();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email')
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function toggleClaimStatus(
+  id: string,
+  status: 'claimed' | 'unclaimed',
+  ownerId?: string
+): Promise<void> {
+  await requireModOrAdmin();
+  const { error } = await supabase
+    .from('providers')
+    .update({
+      claim_status: status,
+      claimed_by: status === 'claimed' ? (ownerId ?? null) : null,
+    })
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw error;
+}
+
 export async function addProvider(
   input: { name: string; category: Category; subcategory?: string; phone?: string; address?: string; town: Town },
   userId: string

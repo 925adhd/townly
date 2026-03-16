@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
+import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch, IconBriefcase, IconKey, IconBuildingStore, IconShoppingBag, IconSchool, IconBuildingBank, IconCalendarEvent, IconTrees } from '@tabler/icons-react';
 
 const tenant = getCurrentTenant();
 
@@ -131,6 +132,46 @@ const categoryIconColor: Record<string, string> = {
 function providerImage(provider: Provider): string | null {
   if (provider.image) return provider.image;
   return null;
+}
+
+const dirCategoryIcon: Record<string, React.ElementType> = {
+  'Home Services': IconHome,
+  'Automotive': IconCar,
+  'Personal Care': IconScissors,
+  'Health & Medical': IconStethoscope,
+  'Food & Drink': IconToolsKitchen2,
+  'Churches': IconBuildingChurch,
+  'Professional Services': IconBriefcase,
+  'Housing & Rentals': IconKey,
+  'Shopping': IconShoppingBag,
+  'Schools & Education': IconSchool,
+  'Government & Public Services': IconBuildingBank,
+  'Events & Community': IconCalendarEvent,
+  'Parks & Recreation': IconTrees,
+  'Other': IconBuildingStore,
+};
+
+const dirCategoryIconColor: Record<string, string> = {
+  'Home Services': 'text-blue-600',
+  'Automotive': 'text-indigo-600',
+  'Personal Care': 'text-pink-500',
+  'Health & Medical': 'text-emerald-600',
+  'Professional Services': 'text-amber-600',
+  'Housing & Rentals': 'text-purple-600',
+  'Food & Drink': 'text-red-500',
+  'Shopping': 'text-orange-500',
+  'Churches': 'text-violet-600',
+  'Schools & Education': 'text-cyan-600',
+  'Government & Public Services': 'text-slate-500',
+  'Events & Community': 'text-rose-500',
+  'Parks & Recreation': 'text-green-600',
+};
+
+function hireAgainLabel(category: string): string {
+  if (category === 'Food & Drink') return 'would return';
+  if (category === 'Personal Care') return 'would book again';
+  if (category === 'Health & Medical') return 'would return';
+  return 'would hire again';
 }
 
 // ── Claim Modal ────────────────────────────────────────────────────────────────
@@ -396,9 +437,10 @@ interface OwnerDashboardProps {
   userId: string;
   onSaved: (updated: Provider) => void;
   onRequestRemoval: () => void;
+  onPreview: () => void;
 }
 
-const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSaved, onRequestRemoval }) => {
+const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSaved, onRequestRemoval, onPreview }) => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -407,8 +449,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
   const [featuredSlots, setFeaturedSlots] = useState<number | null>(null);
   const [stats, setStats] = useState<ListingStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [showFeaturedPreview, setShowFeaturedPreview] = useState(false);
-  const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
+const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
   const [earlyAccessLoading, setEarlyAccessLoading] = useState(false);
   const [earlyAccessError, setEarlyAccessError] = useState('');
   const [earlyAccessEmail, setEarlyAccessEmail] = useState('');
@@ -872,55 +913,15 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
                 </div>
               </div>
 
-              {/* Preview toggle */}
+              {/* Directory card preview */}
               <button
                 type="button"
-                onClick={() => setShowFeaturedPreview((p: boolean) => !p)}
-                className="w-full flex items-center justify-between text-xs text-slate-600 font-semibold py-1.5 px-3 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors mt-2"
+                onClick={onPreview}
+                className="w-full flex items-center justify-center gap-2 text-xs text-slate-600 font-semibold py-1.5 px-3 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors mt-2"
               >
-                <span className="flex items-center gap-1.5">
-                  <i className="fas fa-eye text-slate-400 text-[10px]"></i>
-                  {showFeaturedPreview ? 'Hide preview' : 'See how you\u2019d appear in the directory'}
-                </span>
-                <i className={`fas fa-chevron-${showFeaturedPreview ? 'up' : 'down'} text-slate-400 text-[10px]`}></i>
+                <i className="fas fa-eye text-slate-400 text-[10px]"></i>
+                See how you'd appear in the directory
               </button>
-
-              {/* Directory card mock */}
-              {showFeaturedPreview && (
-                <div className="w-full space-y-2.5" style={{ marginTop: '12px', backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '18px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
-                  <p style={{ fontSize: '12px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748B', marginBottom: '10px', fontWeight: 600 }}>Preview: How Your Business Appears</p>
-                  {/* Card row */}
-                  <div className="p-4 border bg-amber-50 border-amber-300 border-l-4 rounded-t-2xl flex flex-row items-center gap-4 shadow-sm pointer-events-none select-none">
-                    <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
-                      {provider.image
-                        ? <img src={provider.image} alt={provider.name} className="w-full h-full object-cover" />
-                        : <i className={`fas ${categoryIcon[provider.category] ?? 'fa-store'} text-2xl ${categoryIconColor[provider.category] ?? 'text-slate-300'}`}></i>
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-1 mb-0.5">
-                        <span className="font-bold text-slate-900 text-sm truncate">{provider.name}</span>
-                        <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200 flex-shrink-0">Sponsored</span>
-                      </div>
-                      <p className="text-xs text-slate-500 truncate">{provider.category}{provider.town ? ` · ${provider.town}` : ''}</p>
-                      {provider.description && (
-                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{provider.description}</p>
-                      )}
-                    </div>
-                    <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
-                  </div>
-                  {/* Contact bar — always shown in preview */}
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap pointer-events-none select-none">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
-                      <i className="fas fa-phone text-[10px]"></i>{provider.phone || 'Call'}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
-                      <i className="fas fa-globe text-[10px]"></i>Website
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', paddingTop: '2px' }}>This is how your listing appears to customers in the directory.</p>
-                </div>
-              )}
 
               {provider.listingTier !== 'featured' && !(featuredSlots !== null && featuredSlots >= 3) && (
                 FEATURED_STRIPE_LINK ? (
@@ -1046,6 +1047,12 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [eAdminAddress, setEAdminAddress] = useState('');
   const [eAdminHoursSchedule, setEAdminHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
   const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
+  const [togglingClaim, setTogglingClaim] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showGrantModal, setShowGrantModal] = useState(false);
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantError, setGrantError] = useState('');
+  const [grantLoading, setGrantLoading] = useState(false);
 
   if (providerLoading) return <div className="flex items-center justify-center py-20"><div className="text-slate-400 text-sm font-medium">Loading...</div></div>;
   if (!provider) return <div className="text-center py-12">Business not found.</div>;
@@ -1055,6 +1062,47 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const img = providerImage(provider);
   const icon = categoryIcon[provider.category] || 'fa-store';
   const iconColor = categoryIconColor[provider.category] || 'text-slate-300';
+
+  const handleToggleClaim = async () => {
+    setTogglingClaim(true);
+    try {
+      const next = provider.claimStatus === 'claimed' ? 'unclaimed' : 'claimed';
+      await toggleClaimStatus(provider.id, next);
+      setProvider(p => p ? { ...p, claimStatus: next, claimedBy: next === 'unclaimed' ? undefined : p.claimedBy } : p);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTogglingClaim(false);
+    }
+  };
+
+  const handleOpenGrantModal = () => {
+    setGrantEmail('');
+    setGrantError('');
+    setShowGrantModal(true);
+  };
+
+  const handleGrantOwnership = async () => {
+    if (!grantEmail.trim()) { setGrantError('Enter an email address.'); return; }
+    setGrantLoading(true);
+    setGrantError('');
+    try {
+      const found = await lookupUserByEmail(grantEmail);
+      if (!found) {
+        setGrantError("No account found with that email. They'll need to sign up first, then you can assign them.");
+        setGrantLoading(false);
+        return;
+      }
+      await toggleClaimStatus(provider.id, 'claimed', found.id);
+      setProvider(p => p ? { ...p, claimStatus: 'claimed', claimedBy: found.id } : p);
+      setShowGrantModal(false);
+    } catch (e) {
+      setGrantError('Something went wrong. Try again.');
+      console.error(e);
+    } finally {
+      setGrantLoading(false);
+    }
+  };
 
   const handleDelete = () => {
     setConfirmModal({
@@ -1173,6 +1221,25 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
         Back to Directory
       </button>
 
+      {/* Admin toolbar — above card */}
+      {isAdminOrMod && !editing && (
+        <div className="flex gap-2">
+          <button onClick={openEdit} className="text-xs font-semibold text-slate-500 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors flex items-center gap-1">
+            <i className="fas fa-pen text-[10px]"></i> Edit
+          </button>
+          <button onClick={handleDelete} disabled={deleting} className="text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-60">
+            <i className="fas fa-trash text-[10px]"></i> {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+          <button onClick={handleToggleClaim} disabled={togglingClaim} className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-60 ${provider.claimStatus === 'claimed' ? 'text-amber-700 bg-amber-50 hover:bg-amber-100' : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'}`}>
+            <i className={`fas text-[10px] ${provider.claimStatus === 'claimed' ? 'fa-lock-open' : 'fa-circle-check'}`}></i>
+            {togglingClaim ? '...' : provider.claimStatus === 'claimed' ? 'Mark Unclaimed' : 'Mark Claimed'}
+          </button>
+          <button onClick={handleOpenGrantModal} className="text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1">
+            <i className="fas fa-user-plus text-[10px]"></i> Assign Owner
+          </button>
+        </div>
+      )}
+
       {/* Header Info */}
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex flex-row gap-4">
@@ -1186,45 +1253,38 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
 
           {/* Text block */}
           <div className="flex-grow min-w-0">
-            {/* Admin controls */}
-            {isAdminOrMod && !editing && (
-              <div className="flex gap-2 mb-2">
-                <button onClick={openEdit} className="text-xs font-semibold text-slate-500 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors flex items-center gap-1">
-                  <i className="fas fa-pen text-[10px]"></i> Edit
-                </button>
-                <button onClick={handleDelete} disabled={deleting} className="text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-60">
-                  <i className="fas fa-trash text-[10px]"></i> {deleting ? 'Deleting...' : 'Delete'}
-                </button>
+
+            {/* Name — primary anchor */}
+            <h1 className="text-xl md:text-3xl font-bold text-slate-900 leading-tight flex items-center gap-2">
+              {provider.name}
+              {provider.claimStatus === 'claimed' && (
+                <i className="fas fa-circle-check text-emerald-500 text-base" title={provider.category === 'Churches' ? 'Verified Listing' : 'Verified Business'}></i>
+              )}
+            </h1>
+
+            {/* Subcategory + category pill */}
+            <p className="text-slate-500 text-sm mt-0.5">
+              {provider.subcategory || provider.category}
+            </p>
+            {provider.subcategory && (
+              <div className="mt-1">
+                <span className="text-[11px] font-semibold text-blue-600 px-2.5 py-1 bg-blue-50 rounded-full">{provider.category}</span>
               </div>
             )}
 
-            {/* Name — primary anchor */}
-            <h1 className="text-xl md:text-3xl font-bold text-slate-900 leading-tight">{provider.name}</h1>
-
-            {/* Type • Location */}
-            <p className="text-slate-500 text-sm mt-0.5">
-              {provider.subcategory || provider.category} • {provider.town}, KY
-            </p>
-
-            {/* Status badges */}
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {provider.claimStatus !== 'claimed' && (
-                <span className="text-[10px] font-semibold text-slate-400 px-2 py-0.5 bg-slate-100 rounded-full">Unclaimed Listing</span>
-              )}
-              {provider.claimStatus === 'claimed' && (
-                <span className="text-[10px] font-semibold text-emerald-700 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
-                  <i className="fas fa-circle-check mr-0.5 text-[8px]"></i>{provider.category === 'Churches' ? 'Verified Listing' : 'Verified Business'}
-                </span>
-              )}
-              {provider.listingTier === 'featured' && (
-                <span className="text-[10px] font-semibold text-amber-700 px-2 py-0.5 bg-amber-100 rounded-full border border-amber-200">Sponsored</span>
-              )}
-              {provider.listingTier === 'spotlight' && (
-                <span className="text-[10px] font-bold text-amber-600 px-2 py-0.5 bg-amber-50 rounded-full">
-                  <i className="fas fa-star mr-0.5 text-[8px]"></i>Local Spotlight
-                </span>
-              )}
-            </div>
+            {/* Tier badges */}
+            {(provider.listingTier === 'featured' || provider.listingTier === 'spotlight') && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {provider.listingTier === 'featured' && (
+                  <span className="text-[10px] font-semibold text-amber-700 px-2 py-0.5 bg-amber-100 rounded-full border border-amber-200">Sponsored</span>
+                )}
+                {provider.listingTier === 'spotlight' && (
+                  <span className="text-[10px] font-bold text-amber-600 px-2 py-0.5 bg-amber-50 rounded-full">
+                    <i className="fas fa-star mr-0.5 text-[8px]"></i>Local Spotlight
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1307,38 +1367,49 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </div>
           )}
 
-          {/* Category pill */}
-          <div className="pt-1">
-            <span className="text-[11px] font-semibold text-blue-600 px-2.5 py-1 bg-blue-50 rounded-full">{provider.category}</span>
-          </div>
+
         </div>
       </div>
 
-      {/* Claim CTA — unclaimed listings only, not already claimed by this user */}
-      {provider.claimStatus !== 'claimed' && user && !claimSubmitted && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your business?'}</p>
-            <p className="text-slate-500 text-xs mt-0.5">{provider.category === 'Churches' ? 'Claim it for free to keep your info up to date.' : 'Claim it for free to update your info and respond to reviews.'}</p>
+      {/* Claim CTA — unclaimed listings only */}
+      {provider.claimStatus !== 'claimed' && !claimSubmitted && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+          <p className="font-bold text-slate-900 text-base">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Own this business?'}</p>
+          {provider.category === 'Churches' ? (
+            <p className="text-slate-500 text-sm mt-2 leading-relaxed">Claim your listing to keep your info up to date and respond to reviews.</p>
+          ) : (
+            <>
+              <p className="text-slate-500 text-sm mt-2 leading-relaxed">Claim your listing to manage hours, photos, and contact info. Verified businesses can unlock visibility upgrades like top placement in their category.</p>
+              <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
+                <li className="flex items-center gap-2"><i className="fas fa-check text-blue-500 text-[11px]"></i>Update hours, photos, and contact info</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-blue-500 text-[11px]"></i>Respond to customer reviews</li>
+                <li className="flex items-center gap-2"><i className="fas fa-check text-blue-500 text-[11px]"></i>Unlock visibility upgrades like top placement in your category</li>
+              </ul>
+            </>
+          )}
+          <div className="mt-4">
+            {user ? (
+              <button
+                onClick={() => setShowClaimModal(true)}
+                className="w-full bg-blue-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-md"
+              >
+                {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
+              </button>
+            ) : (
+              <>
+                <Link to="/login?signup=true" state={{ from: location.pathname }} className="block w-full text-center bg-blue-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-md">
+                  Claim This Business
+                </Link>
+                <p className="mt-2 text-center text-xs text-slate-400">
+                  Already have an account?{' '}
+                  <Link to="/login" state={{ from: location.pathname }} className="text-blue-500 hover:text-blue-700 underline">Log in</Link>
+                </p>
+              </>
+            )}
           </div>
-          <button
-            onClick={() => setShowClaimModal(true)}
-            className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm"
-          >
-            {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
-          </button>
-        </div>
-      )}
-
-      {provider.claimStatus !== 'claimed' && !user && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <p className="font-semibold text-slate-900 text-sm">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your business?'}</p>
-            <p className="text-slate-500 text-xs mt-0.5">Create a free account to claim and manage this listing.</p>
-          </div>
-          <Link to="/login" state={{ from: location.pathname }} className="shrink-0 bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-600 transition-colors text-sm">
-            Sign Up to Claim
-          </Link>
+          {provider.category !== 'Churches' && (
+            <p className="mt-3 text-xs text-slate-400">Free to claim. Visibility upgrades are optional.</p>
+          )}
         </div>
       )}
 
@@ -1375,6 +1446,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           userId={user!.id}
           onSaved={updated => setProvider(updated)}
           onRequestRemoval={() => setShowUpdateModal(true)}
+          onPreview={() => setShowPreviewModal(true)}
         />
       )}
 
@@ -1872,6 +1944,118 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           <p className="text-slate-400 text-xs">
             Business information sourced from publicly available data. Claim this listing to manage your info, reply to reviews, or request removal.
           </p>
+        </div>
+      )}
+
+      {/* Listing preview modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-4 pt-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">How Your Listing Appears</p>
+              <button onClick={() => setShowPreviewModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">
+                <i className="fas fa-xmark"></i>
+              </button>
+            </div>
+            <div className="px-5 pb-3">
+              <p className="text-xs text-slate-400">This is what customers see when browsing the directory.</p>
+            </div>
+            {/* Exact directory card — forced to featured tier */}
+            <div className="mx-5 mb-5 select-none pointer-events-none">
+              {/* Main card row */}
+              <div className="p-4 border shadow-sm flex flex-row items-center gap-4 rounded-t-2xl bg-amber-50 border-amber-300 border-l-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
+                  {img
+                    ? <img src={img} alt={provider.name} className="w-full h-full object-cover" />
+                    : (() => { const Icon = dirCategoryIcon[provider.category] ?? IconBuildingStore; return <Icon className={`w-7 h-7 ${dirCategoryIconColor[provider.category] ?? 'text-slate-500'}`} stroke={1.5} />; })()
+                  }
+                </div>
+                <div className="flex-grow min-w-0">
+                  <div className="flex flex-col gap-1.5 mb-1">
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      <span className="text-xs font-semibold text-blue-600 px-2 py-0.5 bg-blue-50 rounded-lg">{provider.category}</span>
+                      <span className="text-[10px] font-semibold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded-md border border-amber-200">Sponsored</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">{provider.town}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
+                    {provider.name}
+                    {provider.claimStatus === 'claimed' && (
+                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0" title="Verified Business"></i>
+                    )}
+                  </h3>
+                  <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
+                    {provider.category === 'Churches' ? null : provider.reviewCount > 0 ? (
+                      <>
+                        <div className="flex items-center text-amber-500 font-bold">
+                          <i className="fas fa-star mr-1 text-xs"></i>
+                          {provider.averageRating.toFixed(1)}
+                        </div>
+                        <div className="text-slate-400">({provider.reviewCount} reviews)</div>
+                        <div className="flex items-center text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-lg text-xs">
+                          <i className="fas fa-thumbs-up mr-1 text-[10px]"></i>
+                          {provider.hireAgainPercent}% {hireAgainLabel(provider.category)}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-slate-400 text-xs italic">No reviews yet</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end justify-between self-stretch py-0.5 flex-shrink-0">
+                  <div></div>
+                  <i className="fas fa-chevron-right text-slate-300 pr-2"></i>
+                </div>
+              </div>
+              {/* Contact bar — always shown in preview */}
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-t-0 border-amber-300 border-l-4 rounded-b-2xl flex-wrap">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-lg">
+                  <i className="fas fa-phone text-[10px]"></i>{provider.phone || '(000) 000-0000'}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-lg">
+                  <i className="fas fa-globe text-[10px]"></i>{provider.website ? 'Visit Website' : 'yourwebsite.com'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grant ownership modal */}
+      {showGrantModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-4">
+            <div>
+              <p className="text-slate-900 font-bold text-base">Assign Business Owner</p>
+              <p className="text-slate-500 text-sm mt-1">Enter the owner's email. They must already have a Townly account, or sign up with this email after you assign them.</p>
+            </div>
+            <input
+              type="email"
+              value={grantEmail}
+              onChange={e => { setGrantEmail(e.target.value); setGrantError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleGrantOwnership()}
+              placeholder="owner@email.com"
+              autoComplete="off"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+            {grantError && <p className="text-red-500 text-xs">{grantError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={handleGrantOwnership}
+                disabled={grantLoading}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl transition-colors text-sm"
+              >
+                {grantLoading ? 'Assigning...' : 'Assign Owner'}
+              </button>
+              <button
+                onClick={() => setShowGrantModal(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl transition-colors text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
