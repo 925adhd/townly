@@ -76,9 +76,10 @@ const App: React.FC = () => {
               senderName: f.properties.senderName as string,
               expires: f.properties.expires ?? null,
             }))
-            .filter((a: { id: string }) => {
-              if (seen.has(a.id)) return false;
-              seen.add(a.id);
+            .filter((a: { event: string; expires: string | null }) => {
+              const key = `${a.event}|${a.expires}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
               return true;
             });
           setNwsAlerts(alerts);
