@@ -215,19 +215,16 @@ const App: React.FC = () => {
             <div className="md:hidden flex items-center space-x-3">
               {user ? (
                 <>
-                  <Link to="/profile" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
-                    <i className="fas fa-user-circle text-lg"></i>
-                    <span className="text-[10px] mt-1 font-medium">Account</span>
+                  <Link to="/profile" className="text-slate-400 hover:text-orange-600 transition-colors p-1">
+                    <i className="fas fa-user-circle text-xl"></i>
                   </Link>
                   {user.role === 'admin' && (
-                    <Link to="/admin" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
-                      <i className="fas fa-shield-halved text-lg"></i>
-                      <span className="text-[10px] mt-1 font-medium">Admin</span>
+                    <Link to="/admin" className="text-slate-400 hover:text-orange-600 transition-colors p-1">
+                      <i className="fas fa-shield-halved text-xl"></i>
                     </Link>
                   )}
-                  <button onClick={handleLogout} className="flex flex-col items-center text-slate-500 hover:text-orange-600 transition-colors">
-                    <i className="fas fa-right-from-bracket text-lg"></i>
-                    <span className="text-[10px] mt-1 font-medium">Logout</span>
+                  <button onClick={handleLogout} className="text-slate-400 hover:text-orange-600 transition-colors p-1">
+                    <i className="fas fa-right-from-bracket text-xl"></i>
                   </button>
                 </>
               ) : (
