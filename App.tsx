@@ -77,7 +77,7 @@ const App: React.FC = () => {
               expires: f.properties.expires ?? null,
             }))
             .filter((a: { event: string; expires: string | null }) => {
-              const key = `${a.event}|${a.expires}`;
+              const key = a.event;
               if (seen.has(key)) return false;
               seen.add(key);
               return true;
