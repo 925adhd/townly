@@ -1226,10 +1226,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
             </p>
           )}
           {provider.hours && (
-            <p className="text-slate-500 text-xs mb-2 flex items-center gap-1">
-              <i className="fas fa-clock text-slate-400 text-[10px]"></i>
-              {provider.hours}
-            </p>
+            <div className="text-slate-500 text-xs mb-2 flex items-start gap-1">
+              <i className="fas fa-clock text-slate-400 text-[10px] mt-0.5"></i>
+              <span className="whitespace-pre-line">{provider.hours}</span>
+            </div>
           )}
           {provider.tags && provider.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3 mb-1">
