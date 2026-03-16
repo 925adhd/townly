@@ -1,15 +1,14 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange, fetchMyBookings, updateMyBooking } from '../lib/api';
-import type { SpotlightBooking, Provider } from '../types';
+import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange, fetchMyBookings, updateMyBooking, fetchMyClaimedListing } from '../lib/api';
+import type { SpotlightBooking } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
 interface BookSpotlightProps {
   user: { id: string; name: string; email?: string } | null;
-  providers: Provider[];
 }
 
 function getUpcomingWeeks(): Date[] {
@@ -74,13 +73,16 @@ function ImageUploadSlot({
   );
 }
 
-const BookSpotlight: React.FC<BookSpotlightProps> = ({ user, providers }) => {
+const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
   const { type } = useParams<{ type: 'spotlight' | 'featured' }>();
   const bookingType = type === 'featured' ? 'featured' : 'spotlight';
-  const isMember = !!user && providers.some(
-    p => p.claimedBy === user.id && p.listingTier === 'featured'
-  );
+  const [isMember, setIsMember] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) return;
+    fetchMyClaimedListing().then(p => setIsMember(!!(p && p.listingTier === 'featured'))).catch(console.error);
+  }, [user]);
 
   const [bookedWeeks, setBookedWeeks] = useState<{ spotlight: string[]; featured: { week: string; count: number }[] } | null>(null);
   const [weekStart, setWeekStart] = useState('');

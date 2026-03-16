@@ -1,23 +1,24 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import { Provider, Review, CostRange } from '../types';
-import { addReview } from '../lib/api';
+import { Provider, CostRange } from '../types';
+import { addReview, fetchProviderById } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 
 interface AddReviewProps {
-  providers: Provider[];
-  setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
-  reviews: Review[];
-  setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   user: { id: string, name: string } | null;
 }
 
-const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews, setReviews, user }) => {
+const AddReview: React.FC<AddReviewProps> = ({ user }) => {
   const { providerId } = useParams<{ providerId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const provider = providers.find(p => p.id === providerId);
+  const [provider, setProvider] = useState<Provider | null>(null);
+
+  useEffect(() => {
+    if (!providerId) return;
+    fetchProviderById(providerId).then(setProvider).catch(console.error);
+  }, [providerId]);
 
   const [rating, setRating] = useState(0);
   const [wouldHireAgain, setWouldHireAgain] = useState<boolean | null>(null);
@@ -65,16 +66,6 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews,
     </div>
   );
 
-  const alreadyReviewed = reviews.some(r => r.providerId === provider.id && r.userId === user.id);
-  if (alreadyReviewed) return (
-    <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
-      <i className="fas fa-check-circle text-emerald-500 text-4xl mb-4"></i>
-      <h2 className="text-xl font-bold mb-2">You've already reviewed this business</h2>
-      <p className="text-slate-500 text-sm mb-6">Only one review per business is allowed per account.</p>
-      <Link to={`/provider/${provider.id}`} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Back to Business</Link>
-    </div>
-  );
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) { setError('Please select a star rating.'); return; }
@@ -82,7 +73,7 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews,
     setError('');
     setLoading(true);
     try {
-      const newReview = await addReview(
+      await addReview(
         {
           providerId: provider.id,
           rating,
@@ -95,15 +86,6 @@ const AddReview: React.FC<AddReviewProps> = ({ providers, setProviders, reviews,
         user.id,
         user.name
       );
-      setReviews(prev => [newReview, ...prev]);
-      const allReviews: Review[] = [...reviews.filter(r => r.providerId === provider.id), newReview];
-      const count = allReviews.length;
-      const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / count;
-      const hireAgainPercent = Math.round((allReviews.filter((r: Review) => r.wouldHireAgain).length / count) * 100);
-      setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === provider.id
-        ? { ...p, reviewCount: count, averageRating: avgRating, hireAgainPercent }
-        : p
-      ));
       navigate(`/provider/${provider.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to submit review. Please try again.');

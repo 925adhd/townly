@@ -221,7 +221,10 @@ function mapRequest(row: any): RecommendationRequest {
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
+let _providersCache: Provider[] | null = null;
+
 export async function fetchProviders(): Promise<Provider[]> {
+  if (_providersCache) return _providersCache;
   const { data, error } = await supabase
     .from('providers')
     .select('*')
@@ -230,7 +233,47 @@ export async function fetchProviders(): Promise<Provider[]> {
     .order('created_at', { ascending: false })
     .range(0, 4999);
   if (error) throw error;
-  return (data ?? []).map(mapProvider);
+  _providersCache = (data ?? []).map(mapProvider);
+  return _providersCache;
+}
+
+export function prefetchProviders(): void {
+  fetchProviders().catch(console.error);
+}
+
+export async function fetchProviderById(id: string): Promise<Provider | null> {
+  if (_providersCache) {
+    const hit = _providersCache.find(p => p.id === id);
+    if (hit) return hit;
+  }
+  const { data, error } = await supabase
+    .from('providers')
+    .select('*')
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapProvider(data) : null;
+}
+
+const _reviewsCache = new Map<string, Review[]>();
+
+export async function fetchReviewsByProvider(providerId: string): Promise<Review[]> {
+  if (_reviewsCache.has(providerId)) return _reviewsCache.get(providerId)!;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('provider_id', providerId)
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const reviews = (data ?? []).map(mapReview);
+  _reviewsCache.set(providerId, reviews);
+  return reviews;
+}
+
+export function prefetchProviderDetail(id: string): void {
+  fetchReviewsByProvider(id).catch(console.error);
 }
 
 export async function fetchPendingProviders(): Promise<Provider[]> {
@@ -277,6 +320,7 @@ export async function deleteOwnReview(id: string): Promise<void> {
     .eq('user_id', session.user.id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
+  _reviewsCache.clear();
 }
 
 export async function deleteReview(id: string): Promise<void> {
@@ -287,6 +331,7 @@ export async function deleteReview(id: string): Promise<void> {
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to delete review.');
+  _reviewsCache.clear();
   await supabase.from('audit_log').insert({ actor_id: actorId, action: 'delete_review', target_table: 'reviews', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
@@ -423,22 +468,10 @@ export async function addReview(
     }
     throw error;
   }
-  // Recalculate and persist provider stats
-  const { data: allReviews } = await supabase
-    .from('reviews')
-    .select('rating, would_hire_again')
-    .eq('provider_id', input.providerId);
-  if (allReviews && allReviews.length > 0) {
-    const count = allReviews.length;
-    const avgRating = allReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / count;
-    const hireAgainPercent = Math.round(
-      (allReviews.filter((r: any) => r.would_hire_again).length / count) * 100
-    );
-    await supabase
-      .from('providers')
-      .update({ average_rating: avgRating, review_count: count, hire_again_percent: hireAgainPercent })
-      .eq('id', input.providerId);
-  }
+  // Provider stats (average_rating, review_count, hire_again_percent) are maintained
+  // by the update_provider_stats DB trigger (SECURITY DEFINER) on reviews INSERT/UPDATE/DELETE.
+  // No client-side recalculation needed.
+  _reviewsCache.delete(input.providerId);
 
   return mapReview(data);
 }
@@ -668,31 +701,43 @@ export async function unresolveRequest(id: string): Promise<void> {
 }
 
 export async function deleteRequest(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error, count } = await supabase
     .from('recommendation_requests')
     .delete({ count: 'exact' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
-  if (count === 0) throw new Error('Permission denied: you can only delete your own requests.');
+  if (count === 0) throw new Error('Request not found or permission denied.');
 }
 
 export async function updateResponse(id: string, recommendation: string): Promise<void> {
   const sanitized = sanitize(recommendation, 2000);
   if (!sanitized) throw new Error('Recommendation cannot be empty.');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error } = await supabase
     .from('recommendation_responses')
     .update({ recommendation: sanitized })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
 }
 
 export async function deleteResponse(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
   const { error, count } = await supabase
     .from('recommendation_responses')
     .delete({ count: 'exact' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
-  if (count === 0) throw new Error('Permission denied: you can only delete your own responses.');
+  if (count === 0) throw new Error('Response not found or permission denied.');
 }
 
 // ── Recommendation Responses ──────────────────────────────────────────────────
@@ -1047,13 +1092,15 @@ export async function updateOwnerListing(
       ...(input.town !== undefined && { town: input.town }),
       ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
 
   const { data, error: fetchError } = await supabase
     .from('providers')
     .select('*')
     .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id)
     .single();
   if (fetchError) throw fetchError;
   return mapProvider(data);
@@ -1314,7 +1361,7 @@ export async function submitCommunityEvent(
     town: sanitize(town, 100),
     post_type: postType,
     tenant_id: getCurrentTenant().id,
-    status: 'approved',
+    status: 'pending',
   }).select().single();
   if (error) {
     if (error.message.includes('RATE_LIMIT_EVENTS')) {
@@ -1400,11 +1447,13 @@ export async function fetchActiveAlerts(): Promise<CommunityAlert[]> {
 
 export async function reorderAlerts(ids: string[]): Promise<void> {
   await requireAdmin();
-  await Promise.all(
+  const results = await Promise.all(
     ids.map((id, i) =>
-      supabase.from('community_alerts').update({ position: i }).eq('id', id)
+      supabase.from('community_alerts').update({ position: i }).eq('id', id).eq('tenant_id', getCurrentTenant().id)
     )
   );
+  const failed = results.find(r => r.error);
+  if (failed?.error) throw new Error('Failed to reorder alerts.');
 }
 
 export async function createAlert(title: string, description: string, userId: string, icon = 'fa-triangle-exclamation'): Promise<CommunityAlert> {
@@ -1648,7 +1697,10 @@ export async function softDeleteAccount(): Promise<void> {
 
 /** Update the current user's email address. */
 export async function updateEmail(newEmail: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  const { error } = await supabase.auth.updateUser(
+    { email: newEmail },
+    { emailRedirectTo: window.location.origin }
+  );
   if (error) throw new Error(error.message);
 }
 
@@ -1746,8 +1798,11 @@ export async function createCheckoutSession(
 export async function verifyStripeSession(
   sessionId: string,
 ): Promise<{ paid: boolean; amountTotal: number; type: string | null }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated.');
   const { data, error } = await supabase.functions.invoke('verify-stripe-session', {
     body: { sessionId },
+    headers: { Authorization: `Bearer ${session.access_token}` },
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
@@ -1802,9 +1857,9 @@ export async function submitSpotlightBooking(
     contact_name: sanitize(contactName, 100),
     contact_email: sanitize(contactEmail, 200),
     contact_phone: sanitize(contactPhone, 30),
-    image_url: imageUrl || null,
-    thumbnail_url: thumbnailUrl || null,
-    flyer_url: flyerUrl || null,
+    image_url: imageUrl ? validateUrl(imageUrl) : null,
+    thumbnail_url: thumbnailUrl ? validateUrl(thumbnailUrl) : null,
+    flyer_url: flyerUrl ? validateUrl(flyerUrl) : null,
     submitted_by: session.user.id,
     submitted_by_name: session.user.user_metadata?.full_name || session.user.email || 'Unknown',
     status: 'pending_review',
@@ -1836,7 +1891,10 @@ export async function submitSpotlightBooking(
 }
 
 /** Fetch approved submissions for the current week (public — used to render Events page). */
+let _spotlightCache: SpotlightBooking[] | null = null;
+
 export async function fetchCurrentWeekSubmissions(): Promise<SpotlightBooking[]> {
+  if (_spotlightCache) return _spotlightCache;
   const tenant = getCurrentTenant();
   // Compute the current week's Sunday in Central Time (America/Chicago)
   // so the cutover always happens at exactly 12:00 AM CT, not the visitor's local time.
@@ -1853,7 +1911,38 @@ export async function fetchCurrentWeekSubmissions(): Promise<SpotlightBooking[]>
     .eq('week_start', weekStart)
     .order('type', { ascending: true }); // 'featured' before 'spotlight' alphabetically; reorder in UI
   if (error) throw new Error(error.message);
-  return (data ?? []).map(mapSpotlightBooking);
+  _spotlightCache = (data ?? []).map(mapSpotlightBooking);
+  return _spotlightCache;
+}
+
+export function prefetchCurrentWeekSubmissions(): void {
+  fetchCurrentWeekSubmissions().catch(console.error);
+}
+
+const HOME_IMAGES = ['/images/lakebackground.webp', '/images/townly.webp'];
+let _homeImagesReady = false;
+const _homeImageCallbacks: Array<() => void> = [];
+
+export function prefetchHomeImages(): void {
+  if (_homeImagesReady) return;
+  let loaded = 0;
+  HOME_IMAGES.forEach(src => {
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      loaded++;
+      if (loaded === HOME_IMAGES.length) {
+        _homeImagesReady = true;
+        _homeImageCallbacks.forEach(cb => cb());
+        _homeImageCallbacks.length = 0;
+      }
+    };
+    img.src = src;
+  });
+}
+
+export function onHomeImagesReady(cb: () => void): void {
+  if (_homeImagesReady) { cb(); return; }
+  _homeImageCallbacks.push(cb);
 }
 
 /** Admin: fetch all non-rejected submissions ordered by week. */

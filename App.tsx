@@ -25,16 +25,19 @@ import Admin from './pages/Admin';
 import MyBookings from './pages/MyBookings';
 import Profile from './pages/Profile';
 import { supabase } from './lib/supabase';
-import { fetchProviders, fetchReviews, fetchLostFound, fetchRequests, fetchActiveAlerts, signOut } from './lib/api';
+import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions } from './lib/api';
+
+// Kick off background fetches immediately on module load — before any component mounts
+prefetchProviders();
+prefetchHomeImages();
+prefetchCurrentWeekSubmissions();
 import ErrorBoundary from './components/ErrorBoundary';
-import { Provider, Review, LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
+import { LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
 
 const tenant = getCurrentTenant();
 
 const App: React.FC = () => {
   const [chairRocking, setChairRocking] = useState(false);
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [lostFound, setLostFound] = useState<LostFoundPost[]>([]);
   const [requests, setRequests] = useState<RecommendationRequest[]>([]);
   const [communityAlerts, setCommunityAlerts] = useState<CommunityAlert[]>([]);
@@ -46,14 +49,10 @@ const App: React.FC = () => {
   // Load data from Supabase on mount
   useEffect(() => {
     Promise.all([
-      fetchProviders(),
-      fetchReviews(),
       fetchLostFound(),
       fetchRequests(),
       fetchActiveAlerts(),
-    ]).then(([p, r, lf, req, alerts]) => {
-      setProviders(p);
-      setReviews(r);
+    ]).then(([lf, req, alerts]) => {
       setLostFound(lf);
       setRequests(req);
       setCommunityAlerts(alerts);
@@ -167,7 +166,7 @@ const App: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
             <span className="md:hidden absolute left-1/2 -translate-x-1/2 font-bold text-slate-900 text-base pointer-events-none">{tenant.name}</span>
             <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2" onMouseEnter={() => { prefetchHomeImages(); prefetchCurrentWeekSubmissions(); }}>
               <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
                 <img
                   src="/images/chair-icon.webp"
@@ -202,7 +201,7 @@ const App: React.FC = () => {
 
             <nav className="hidden md:flex items-center space-x-6">
               <Link to="/events" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
-              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Businesses</Link>
+              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors" onMouseEnter={prefetchProviders}>Businesses</Link>
               <Link to="/lost-found" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Lost & Found</Link>
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
@@ -251,22 +250,22 @@ const App: React.FC = () => {
             </div>
           ) : (
             <Routes>
-              <Route path="/" element={<Home providers={providers} lostFound={lostFound} communityAlerts={communityAlerts} nwsAlerts={nwsAlerts} />} />
-              <Route path="/directory" element={<Directory providers={providers} user={user} />} />
-              <Route path="/provider/:id" element={<ProviderDetail providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
+              <Route path="/" element={<Home lostFound={lostFound} communityAlerts={communityAlerts} nwsAlerts={nwsAlerts} />} />
+              <Route path="/directory" element={<Directory user={user} />} />
+              <Route path="/provider/:id" element={<ProviderDetail user={user} />} />
               <Route path="/lost-found" element={<LostFound posts={lostFound} setPosts={setLostFound} user={user} />} />
               <Route path="/lost-found/new" element={<CreateLostFound setPosts={setLostFound} user={user} />} />
-              <Route path="/add-provider" element={<AddProvider setProviders={setProviders} user={user} />} />
-              <Route path="/review/:providerId" element={<AddReview providers={providers} setProviders={setProviders} reviews={reviews} setReviews={setReviews} user={user} />} />
+              <Route path="/add-provider" element={<AddProvider user={user} />} />
+              <Route path="/review/:providerId" element={<AddReview user={user} />} />
               <Route path="/ask" element={<Recommendations requests={requests} setRequests={setRequests} user={user} />} />
-              <Route path="/ask/:slug" element={<QuestionDetail providers={providers} user={user} />} />
+              <Route path="/ask/:slug" element={<QuestionDetail user={user} />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/events" element={<Spotlights user={user} />} />
-              <Route path="/book/:type" element={<BookSpotlight user={user} providers={providers} />} />
+              <Route path="/book/:type" element={<BookSpotlight user={user} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
               <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
-              <Route path="/admin" element={<Admin user={user} communityAlerts={communityAlerts} setCommunityAlerts={setCommunityAlerts} setProviders={setProviders} />} />
+              <Route path="/admin" element={<Admin user={user} communityAlerts={communityAlerts} setCommunityAlerts={setCommunityAlerts} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           )}
@@ -276,11 +275,11 @@ const App: React.FC = () => {
         {/* Mobile Navigation */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="h-16 flex items-center justify-around">
-            <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+            <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600" onMouseEnter={() => { prefetchHomeImages(); prefetchCurrentWeekSubmissions(); }}>
               <i className="fas fa-home text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Home</span>
             </Link>
-            <Link to="/directory" state={{ scrollTop: true }} className="flex flex-col items-center text-slate-400 hover:text-orange-600">
+            <Link to="/directory" state={{ scrollTop: true }} className="flex flex-col items-center text-slate-400 hover:text-orange-600" onMouseEnter={prefetchProviders}>
               <i className="fas fa-store text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Businesses</span>
             </Link>

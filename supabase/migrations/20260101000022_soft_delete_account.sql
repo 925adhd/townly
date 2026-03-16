@@ -28,7 +28,7 @@ BEGIN
   UPDATE lost_found_posts        SET user_name = 'Deleted User' WHERE user_id = v_user_id;
   UPDATE recommendation_requests SET user_name = 'Deleted User' WHERE user_id = v_user_id;
   UPDATE recommendation_responses SET user_name = 'Deleted User' WHERE user_id = v_user_id;
-  UPDATE reviews                 SET reviewer_name = 'Deleted User' WHERE reviewer_id = v_user_id;
+  UPDATE reviews                 SET user_name = 'Deleted User' WHERE user_id = v_user_id;
 END;
 $$;
 

@@ -1,13 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { Provider, ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
+import { ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
 import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, reorderAlerts, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
   communityAlerts: CommunityAlert[];
   setCommunityAlerts: React.Dispatch<React.SetStateAction<CommunityAlert[]>>;
-  setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
 }
 
 const contentTypeLabel: Record<ReportContentType, string> = {
@@ -24,7 +23,7 @@ const contentTypeBadge: Record<ReportContentType, string> = {
   recommendation_response: 'bg-slate-100 text-slate-600',
 };
 
-const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts, setProviders }) => {
+const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts }) => {
   const [activeTab, setActiveTab] = useState<'pending' | 'flagged' | 'claims' | 'events' | 'alerts' | 'bookings' | 'access' | 'activity'>('pending');
 
   // Pending providers
@@ -216,10 +215,6 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
     try {
       await approveClaim(claim.id);
       setClaims(prev => prev.filter(c => c.id !== claim.id));
-      setProviders(prev => prev.map(p => p.id === claim.providerId
-        ? { ...p, claimStatus: 'claimed' as const, claimedBy: claim.userId }
-        : p
-      ));
     } catch (e: any) {
       setClaimsError(e.message || 'Failed to approve claim.');
     } finally {
@@ -1107,7 +1102,6 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
                           onClick={async () => {
                             await updateEarlyAccessStatus(req.id, 'approved', req.providerId);
                             setAccessRequests((prev: EarlyAccessRequest[]) => prev.map((r: EarlyAccessRequest) => r.id === req.id ? { ...r, status: 'approved' } : r));
-                            setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === req.providerId ? { ...p, listingTier: 'featured' as const } : p));
                           }}
                           className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
                         >
@@ -1117,7 +1111,6 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
                         <button
                           onClick={async () => {
                             await updateEarlyAccessStatus(req.id, 'approved', req.providerId);
-                            setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === req.providerId ? { ...p, listingTier: 'featured' as const } : p));
                           }}
                           className="bg-slate-50 text-slate-500 hover:bg-amber-50 hover:text-amber-700 font-bold text-xs px-4 py-2 rounded-xl transition-colors"
                         >

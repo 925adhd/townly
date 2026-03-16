@@ -7,14 +7,36 @@
 import Stripe from 'npm:stripe@14';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Restrict CORS to your own domain so arbitrary sites can't trigger checkouts.
+// Add 'http://localhost:5173' here only while doing local dev if needed.
+const ALLOWED_ORIGINS = ['https://townly.us', 'https://www.townly.us'];
+
+function corsHeaders(requestOrigin: string | null) {
+  const origin = requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)
+    ? requestOrigin
+    : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+/** Validate that a URL belongs to our own origin — prevents open-redirect phishing. */
+function isAllowedRedirectUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return ALLOWED_ORIGINS.includes(u.origin);
+  } catch {
+    return false;
+  }
+}
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const headers = corsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers });
   }
 
   try {
@@ -22,7 +44,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
@@ -34,7 +56,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
@@ -43,6 +65,13 @@ Deno.serve(async (req) => {
       successUrl: string;
       cancelUrl: string;
     };
+
+    // Validate redirect URLs — must point back to our own domain.
+    if (!isAllowedRedirectUrl(successUrl) || !isAllowedRedirectUrl(cancelUrl)) {
+      return new Response(JSON.stringify({ error: 'Invalid redirect URL.' }), {
+        status: 400, headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Check member status server-side — cannot be spoofed by client
     const serviceClient = createClient(
@@ -88,12 +117,12 @@ Deno.serve(async (req) => {
     });
 
     return new Response(JSON.stringify({ url: session.url, sessionId: session.id }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'An error occurred. Please try again.' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
     });
   }
 });

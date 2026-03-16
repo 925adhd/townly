@@ -12,6 +12,7 @@ import {
   fetchUserVotedResponseIds,
   acceptResponse,
   unresolveRequest,
+  fetchProviders,
 } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
@@ -63,11 +64,14 @@ function findMentionedProvider(text: string, providers: Provider[]): Provider | 
 
 // ── Component ─────────────────────────────────────────────────────────────────
 interface QuestionDetailProps {
-  providers: Provider[];
   user: { id: string; name: string; role?: string } | null;
 }
 
-const QuestionDetail: React.FC<QuestionDetailProps> = ({ providers, user }) => {
+const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  useEffect(() => {
+    fetchProviders().then(setProviders).catch(console.error);
+  }, []);
   const { slug } = useParams<{ slug: string }>();
 
   const [request, setRequest] = useState<RecommendationRequest | null>(null);

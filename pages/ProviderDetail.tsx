@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
@@ -14,10 +14,6 @@ const tenant = getCurrentTenant();
 const FEATURED_STRIPE_LINK = '';
 
 interface ProviderDetailProps {
-  providers: Provider[];
-  setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
-  reviews: Review[];
-  setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   user: { id: string; name: string; email?: string; role?: string } | null;
 }
 
@@ -984,11 +980,24 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders, reviews, setReviews, user }) => {
+const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const provider = providers.find(p => p.id === id);
-  const providerReviews = reviews.filter(r => r.providerId === id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [providerReviews, setProviderReviews] = useState<Review[]>([]);
+  const [providerLoading, setProviderLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    setProviderLoading(true);
+    Promise.all([fetchProviderById(id), fetchReviewsByProvider(id)])
+      .then(([p, r]) => {
+        setProvider(p);
+        setProviderReviews(r.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      })
+      .catch(console.error)
+      .finally(() => setProviderLoading(false));
+  }, [id]);
 
   const navigate = useNavigate();
   const [showFullHours, setShowFullHours] = useState(false);
@@ -1038,6 +1047,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
   const [eAdminHoursSchedule, setEAdminHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
   const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
 
+  if (providerLoading) return <div className="flex items-center justify-center py-20"><div className="text-slate-400 text-sm font-medium">Loading...</div></div>;
   if (!provider) return <div className="text-center py-12">Business not found.</div>;
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
@@ -1055,7 +1065,6 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
         setDeleteError('');
         try {
           await deleteProvider(provider.id);
-          setProviders(prev => prev.filter(p => p.id !== provider.id));
           navigate('/directory');
         } catch (err: any) {
           setDeleteError(err.message || 'Failed to delete business.');
@@ -1102,7 +1111,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
         hours: serializeHoursSchedule(eAdminHoursSchedule),
         listingTier: eAdminTier,
       });
-      setProviders(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setProvider(updated);
       setEditing(false);
     } catch (err: any) {
       setEditError(err.message || 'Failed to save changes.');
@@ -1364,7 +1373,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
         <OwnerDashboard
           provider={provider}
           userId={user!.id}
-          onSaved={updated => setProviders(prev => prev.map(p => p.id === updated.id ? updated : p))}
+          onSaved={updated => setProvider(updated)}
           onRequestRemoval={() => setShowUpdateModal(true)}
         />
       )}
@@ -1698,7 +1707,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ providers, setProviders
                           } else {
                             await deleteOwnReview(review.id);
                           }
-                          setReviews(prev => prev.filter(r => r.id !== review.id));
+                          setProviderReviews(prev => prev.filter(r => r.id !== review.id));
                         },
                       })}
                       className="text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"

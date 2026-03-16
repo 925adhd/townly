@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import { Provider, Category, Town } from '../types';
 import CustomSelect from '../components/CustomSelect';
-import { submitReport } from '../lib/api';
+import { submitReport, fetchProviders, prefetchProviderDetail } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch, IconBriefcase, IconKey, IconBuildingStore, IconShoppingBag, IconSchool, IconBuildingBank, IconCalendarEvent, IconTrees } from '@tabler/icons-react';
 
@@ -49,7 +49,6 @@ function providerImage(p: Provider): string | null {
 }
 
 interface DirectoryProps {
-  providers: Provider[];
   user?: { id: string; name: string; role?: string } | null;
 }
 
@@ -166,7 +165,13 @@ function hireAgainLabel(category: string): string {
   return 'would hire again';
 }
 
-const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
+const Directory: React.FC<DirectoryProps> = ({ user }) => {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
+  useEffect(() => {
+    fetchProviders().then(setProviders).catch(console.error).finally(() => setLoadingProviders(false));
+  }, []);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
@@ -422,6 +427,7 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
               <Link
                 to={`/provider/${p.id}`}
                 onClick={handleProviderClick}
+                onMouseEnter={() => prefetchProviderDetail(p.id)}
                 className={`group p-4 border shadow-sm [@media(hover:hover)]:hover:shadow-md transition-all flex flex-row items-center gap-4 ${reportingId === p.id || (p.listingTier === 'featured' && (p.phone || p.website)) ? 'rounded-t-2xl' : 'rounded-2xl'} ${p.listingTier === 'featured' ? 'bg-amber-50 border-amber-300 [@media(hover:hover)]:hover:border-amber-400 border-l-4' : 'bg-white border-slate-100 [@media(hover:hover)]:hover:border-blue-200'}`}
               >
                 <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
@@ -547,13 +553,17 @@ const Directory: React.FC<DirectoryProps> = ({ providers, user }) => {
             </div>
           );
         })}
-        {filteredProviders.length === 0 && (
+        {loadingProviders ? (
+          <div className="col-span-full flex items-center justify-center py-20">
+            <i className="fas fa-spinner fa-spin text-3xl text-orange-500"></i>
+          </div>
+        ) : filteredProviders.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
             <div className="text-4xl mb-4 text-slate-200"><i className="fas fa-magnifying-glass"></i></div>
             <p className="text-slate-500 mb-4">No businesses found in this category yet.</p>
             <Link to="/ask" className="text-blue-600 font-bold">Ask the community for a recommendation</Link>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Transparency footer */}

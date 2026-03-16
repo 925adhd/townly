@@ -2,21 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
-import { Provider, LostFoundPost, CommunityAlert, SpotlightBooking } from '../types';
-import { fetchCurrentWeekSubmissions } from '../lib/api';
+import { LostFoundPost, CommunityAlert, SpotlightBooking } from '../types';
+import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
 
 interface HomeProps {
-  providers: Provider[];
   lostFound: LostFoundPost[];
   communityAlerts: CommunityAlert[];
   nwsAlerts: { id: string; event: string; headline: string; severity: string; senderName: string; expires: string | null }[];
 }
 
 
-const PRELOAD_IMAGES = ['/images/lakebackground.webp', '/images/townly.webp'];
 
 const ALERT_ICON_COLORS: Record<string, string> = {
   'fa-triangle-exclamation': 'text-amber-500',
@@ -29,7 +27,7 @@ const ALERT_ICON_COLORS: Record<string, string> = {
   'fa-house-flood-water':    'text-teal-500',
 };
 
-const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsAlerts }) => {
+const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) => {
   const [alertIndex, setAlertIndex] = useState(0);
   const [alertVisible, setAlertVisible] = useState(true);
   const [search, setSearch] = useState('');
@@ -38,15 +36,8 @@ const Home: React.FC<HomeProps> = ({ providers, lostFound, communityAlerts, nwsA
   const navigate = useNavigate();
 
   useEffect(() => {
-    let loaded = 0;
-    PRELOAD_IMAGES.forEach((src) => {
-      const img = new Image();
-      img.onload = img.onerror = () => {
-        loaded++;
-        if (loaded === PRELOAD_IMAGES.length) setImagesReady(true);
-      };
-      img.src = src;
-    });
+    prefetchHomeImages();
+    onHomeImagesReady(() => setImagesReady(true));
   }, []);
 
   useEffect(() => {

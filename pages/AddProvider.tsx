@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Provider, Category, Town } from '../types';
+import { Category, Town } from '../types';
 import { addProvider } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
@@ -9,7 +9,6 @@ import { getCurrentTenant } from '../tenants';
 const tenant = getCurrentTenant();
 
 interface AddProviderProps {
-  setProviders: React.Dispatch<React.SetStateAction<Provider[]>>;
   user: { id: string, name: string } | null;
 }
 
@@ -23,7 +22,7 @@ function formatPhone(raw: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
+const AddProvider: React.FC<AddProviderProps> = ({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [name, setName] = useState('');
@@ -60,7 +59,6 @@ const AddProvider: React.FC<AddProviderProps> = ({ setProviders, user }) => {
     setLoading(true);
     try {
       const newProvider = await addProvider({ name, category: cat, subcategory: sub, phone, address, town }, user.id);
-      setProviders(prev => [newProvider, ...prev]);
       navigate(`/provider/${newProvider.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to add business. Please try again.');
