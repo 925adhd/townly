@@ -166,6 +166,7 @@ const App: React.FC = () => {
         <header className="bg-white border-b border-slate-200 h-20">
           <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
             <span className="md:hidden absolute left-1/2 -translate-x-1/2 font-bold text-slate-900 text-base pointer-events-none">{tenant.name}</span>
+            <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
                 <img
@@ -191,6 +192,13 @@ const App: React.FC = () => {
                 <span className="font-talk text-slate-900 text-lg tracking-wider">PORCH</span>
               </div>
             </Link>
+            {user?.role === 'admin' && (
+              <Link to="/admin" className="md:hidden flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
+                <i className="fas fa-shield-halved text-lg"></i>
+                <span className="text-[10px] mt-1 font-medium">Admin</span>
+              </Link>
+            )}
+            </div>
 
             <nav className="hidden md:flex items-center space-x-6">
               <Link to="/events" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
@@ -219,12 +227,6 @@ const App: React.FC = () => {
                     <i className="fas fa-user-circle text-lg"></i>
                     <span className="text-[10px] mt-1 font-medium">Account</span>
                   </Link>
-                  {user.role === 'admin' && (
-                    <Link to="/admin" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
-                      <i className="fas fa-shield-halved text-lg"></i>
-                      <span className="text-[10px] mt-1 font-medium">Admin</span>
-                    </Link>
-                  )}
                   <button onClick={handleLogout} className="flex flex-col items-center text-slate-500 hover:text-orange-600 transition-colors">
                     <i className="fas fa-right-from-bracket text-lg"></i>
                     <span className="text-[10px] mt-1 font-medium">Logout</span>
