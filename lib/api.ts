@@ -544,7 +544,12 @@ export async function addLostFoundPost(
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_LOST_FOUND')) {
+      throw new Error('You\'ve posted too many listings today. Please try again tomorrow.');
+    }
+    throw error;
+  }
   return mapLostFound(data);
 }
 
@@ -653,7 +658,12 @@ export async function addRequest(
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_REQUESTS')) {
+      throw new Error('You\'ve posted too many questions today. Please try again tomorrow.');
+    }
+    throw error;
+  }
   return mapRequest(data);
 }
 
@@ -783,7 +793,12 @@ export async function addResponse(
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.message.includes('RATE_LIMIT_RESPONSES')) {
+      throw new Error('You\'ve posted too many responses today. Please try again tomorrow.');
+    }
+    throw error;
+  }
   return mapResponse(data);
 }
 
@@ -1884,6 +1899,9 @@ export async function submitSpotlightBooking(
     }
     if (error.message.includes('FEATURED_WEEK_FULL')) {
       throw new Error('That week is fully booked for featured posts.');
+    }
+    if (error.message.includes('RATE_LIMIT_PAID_SUBMISSIONS')) {
+      throw new Error('Too many bookings submitted today. Please try again tomorrow or contact support@townly.us.');
     }
     throw new Error('Failed to save booking. Please contact support@townly.us with your receipt.');
   }
