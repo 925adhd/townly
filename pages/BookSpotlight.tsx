@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, getWeekStart, formatWeekRange, fetchMyBookings, updateMyBooking, fetchMyClaimedListing } from '../lib/api';
+import { fetchBookedWeeks, uploadSpotlightImage, createCheckoutSession, submitSpotlightBooking, getWeekStart, formatWeekRange, fetchMyBookings, updateMyBooking, fetchMyClaimedListing } from '../lib/api';
 import type { SpotlightBooking } from '../types';
 import { getCurrentTenant } from '../tenants';
 
@@ -275,24 +275,27 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         ]);
       }
 
-      // Save booking data so BookingSuccess can submit it after payment
-      sessionStorage.setItem('townly_pending_booking', JSON.stringify({
-        type: bookingType,
-        title, desc, weekStart,
-        eventDate, eventTime, location, town,
-        contactName: user.name,
-        contactEmail: user.email ?? '',
-        imageUrl: bannerUrl,
-        thumbnailUrl,
-        flyerUrl,
-        selectedTags,
-        teaser: bookingType === 'spotlight' ? teaser : undefined,
-      }));
-
       const origin = window.location.origin;
       const successUrl = `${origin}/book/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${origin}/book/${bookingType}`;
-      const { url } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
+
+      // Create Stripe session first so we have the sessionId to store with the booking
+      const { url, sessionId } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
+
+      // Save booking to DB as 'pending' — webhook will flip to 'paid' after payment
+      await submitSpotlightBooking(
+        bookingType, title, desc, weekStart,
+        eventDate, eventTime, location, town,
+        user.name, user.email ?? '', '',
+        bannerUrl, thumbnailUrl, flyerUrl,
+        selectedTags,
+        bookingType === 'spotlight' ? teaser : undefined,
+        sessionId,
+        'pending',
+      );
+
+      // Keep only the type in sessionStorage so BookingSuccess knows what to display
+      sessionStorage.setItem('townly_pending_booking', JSON.stringify({ type: bookingType }));
       localStorage.removeItem(DRAFT_KEY);
       window.location.href = url;
     } catch (err: any) {

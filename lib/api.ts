@@ -1849,6 +1849,7 @@ export async function submitSpotlightBooking(
   tags?: string[],
   teaser?: string,
   stripeSessionId?: string,
+  paymentStatus: 'pending' | 'paid' | 'unpaid' = 'paid',
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
@@ -1878,7 +1879,7 @@ export async function submitSpotlightBooking(
     submitted_by: session.user.id,
     submitted_by_name: session.user.user_metadata?.full_name || session.user.email || 'Unknown',
     status: 'pending_review',
-    payment_status: stripeSessionId ? 'paid' : 'unpaid',
+    payment_status: paymentStatus,
     ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
   };
 
@@ -1906,6 +1907,18 @@ export async function submitSpotlightBooking(
     throw new Error('Failed to save booking. Please contact support@townly.us with your receipt.');
   }
   return mapSpotlightBooking(data);
+}
+
+/** Poll paid_submissions until the webhook flips payment_status to 'paid'.
+ *  Returns the booking once confirmed, or null if not yet paid. */
+export async function pollForBooking(sessionId: string): Promise<SpotlightBooking | null> {
+  const { data } = await supabase
+    .from('paid_submissions')
+    .select('*')
+    .eq('stripe_session_id', sessionId)
+    .eq('payment_status', 'paid')
+    .maybeSingle();
+  return data ? mapSpotlightBooking(data) : null;
 }
 
 /** Fetch approved submissions for the current week (public — used to render Events page). */
