@@ -279,7 +279,7 @@ const App: React.FC = () => {
               <span className="text-[10px] mt-1 font-medium">Home</span>
             </Link>
             <Link to="/directory" state={{ scrollTop: true }} className="flex flex-col items-center text-slate-400 hover:text-orange-600">
-              <i className="fas fa-search text-lg"></i>
+              <i className="fas fa-store text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Businesses</span>
             </Link>
             <Link to="/events" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
