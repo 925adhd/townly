@@ -251,7 +251,8 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
     if (!allDay && !noSetTime && !startHour) missing.push('Event time (or check "All day" / "No set time")');
     if (!noTown && !town) missing.push('Town (or check "Online or no specific location")');
     if (!noTown && !location.trim()) missing.push('Location / Venue (or check "Online or no specific location")');
-    if (!bannerFile && !bannerPreview) missing.push(bookingType === 'spotlight' ? 'Banner image' : 'Image');
+    if (bookingType === 'spotlight' && !bannerFile && !bannerPreview) missing.push('Banner image');
+    if (bookingType === 'featured' && !flyerFile && !flyerPreview) missing.push('Image');
     if (!tos) missing.push('Agree to the content policy (checkbox at the bottom)');
 
     if (missing.length > 0) {
