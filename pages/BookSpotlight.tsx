@@ -291,7 +291,7 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
         selectedTags,
         bookingType === 'spotlight' ? teaser : undefined,
         sessionId,
-        'pending',
+        'unpaid',
       );
 
       // Keep only the type in sessionStorage so BookingSuccess knows what to display
