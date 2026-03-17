@@ -1654,14 +1654,22 @@ export async function fetchListingStats(providerId: string): Promise<ListingStat
   // Only the claiming owner may read analytics for their listing.
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
-  const { data: provider } = await supabase
-    .from('providers')
-    .select('claimed_by')
-    .eq('id', providerId)
-    .eq('tenant_id', getCurrentTenant().id)
-    .single();
-  if (!provider || provider.claimed_by !== session.user.id) {
-    throw new Error('You do not own this listing.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'moderator';
+  if (!isAdmin) {
+    const { data: provider } = await supabase
+      .from('providers')
+      .select('claimed_by')
+      .eq('id', providerId)
+      .eq('tenant_id', getCurrentTenant().id)
+      .single();
+    if (!provider || provider.claimed_by !== session.user.id) {
+      throw new Error('You do not own this listing.');
+    }
   }
 
   const now = new Date();
@@ -2419,4 +2427,35 @@ export async function fetchActivityFeed(limit = 100): Promise<ActivityItem[]> {
 
   items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   return items.slice(0, limit);
+}
+
+// ── Owner Updates ─────────────────────────────────────────────────────────────
+
+export async function fetchOwnerUpdate(providerId: string): Promise<import('../types').OwnerUpdate | null> {
+  const { data, error } = await supabase
+    .from('owner_updates')
+    .select('id, provider_id, content, updated_at')
+    .eq('provider_id', providerId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { id: data.id, providerId: data.provider_id, content: data.content, updatedAt: data.updated_at };
+}
+
+export async function upsertOwnerUpdate(providerId: string, content: string): Promise<void> {
+  const { error } = await supabase
+    .from('owner_updates')
+    .upsert(
+      { provider_id: providerId, content: content.trim(), tenant_id: getCurrentTenant().id, updated_at: new Date().toISOString() },
+      { onConflict: 'provider_id' }
+    );
+  if (error) throw error;
+}
+
+export async function deleteOwnerUpdate(providerId: string): Promise<void> {
+  const { error } = await supabase
+    .from('owner_updates')
+    .delete()
+    .eq('provider_id', providerId);
+  if (error) throw error;
 }

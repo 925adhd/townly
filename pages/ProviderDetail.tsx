@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Provider, Review, ReviewReply, Category, Town } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail } from '../lib/api';
+import { Provider, Review, ReviewReply, Category, Town, OwnerUpdate } from '../types';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate, upsertOwnerUpdate, deleteOwnerUpdate } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
@@ -438,9 +438,11 @@ interface OwnerDashboardProps {
   onSaved: (updated: Provider) => void;
   onRequestRemoval: () => void;
   onPreview: () => void;
+  ownerUpdate: OwnerUpdate | null;
+  onUpdateChange: (u: OwnerUpdate | null) => void;
 }
 
-const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSaved, onRequestRemoval, onPreview }) => {
+const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSaved, onRequestRemoval, onPreview, ownerUpdate, onUpdateChange }) => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -452,7 +454,16 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ provider, userId, onSav
 const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
   const [earlyAccessLoading, setEarlyAccessLoading] = useState(false);
   const [earlyAccessError, setEarlyAccessError] = useState('');
+
+  const [updateDraft, setUpdateDraft] = useState(ownerUpdate?.content ?? '');
+  const [updateSaving, setUpdateSaving] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const [updateSuccess, setUpdateSuccess] = useState('');
   const [earlyAccessEmail, setEarlyAccessEmail] = useState('');
+
+  useEffect(() => {
+    setUpdateDraft(ownerUpdate?.content ?? '');
+  }, [ownerUpdate]);
 
   useEffect(() => {
     fetchFeaturedCount(provider.category, provider.town).then(count => setFeaturedSlots(count));
@@ -609,6 +620,67 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
           ) : null}
         </div>
 
+        {/* Pinned Update */}
+        <div className="pt-4 border-t border-emerald-200 space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+            <i className="fas fa-thumbtack text-blue-400 text-[10px]"></i>Pinned Update
+          </p>
+          <p className="text-[11px] text-slate-400 leading-relaxed">A short notice shown at the top of your listing — closures, new hours, announcements. Max 280 characters.</p>
+          <textarea
+            value={updateDraft}
+            onChange={e => setUpdateDraft(e.target.value.slice(0, 280))}
+            rows={2}
+            placeholder="e.g. Closed Dec 25. Reopening Dec 26 at 8am."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className={`text-[11px] ${updateDraft.length >= 260 ? 'text-red-400' : 'text-slate-300'}`}>{updateDraft.length}/280</span>
+            <div className="flex gap-2">
+              {ownerUpdate && (
+                <button
+                  type="button"
+                  disabled={updateSaving}
+                  onClick={async () => {
+                    setUpdateSaving(true);
+                    try {
+                      await deleteOwnerUpdate(provider.id);
+                      onUpdateChange(null);
+                      setUpdateDraft('');
+                      setUpdateSuccess('Update removed.');
+                      setTimeout(() => setUpdateSuccess(''), 3000);
+                    } catch { setUpdateError('Failed to remove.'); }
+                    finally { setUpdateSaving(false); }
+                  }}
+                  className="text-xs text-red-400 hover:text-red-600 font-semibold px-3 py-1.5 rounded-lg border border-red-100 hover:border-red-200 transition-colors disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={updateSaving || !updateDraft.trim()}
+                onClick={async () => {
+                  setUpdateSaving(true);
+                  setUpdateError('');
+                  try {
+                    await upsertOwnerUpdate(provider.id, updateDraft);
+                    const fresh = await fetchOwnerUpdate(provider.id);
+                    onUpdateChange(fresh);
+                    setUpdateSuccess('Update posted!');
+                    setTimeout(() => setUpdateSuccess(''), 3000);
+                  } catch { setUpdateError('Failed to save update.'); }
+                  finally { setUpdateSaving(false); }
+                }}
+                className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {updateSaving ? 'Saving…' : ownerUpdate ? 'Update' : 'Post'}
+              </button>
+            </div>
+          </div>
+          {updateSuccess && <p className="text-xs text-emerald-600 font-semibold">{updateSuccess}</p>}
+          {updateError && <p className="text-xs text-red-500">{updateError}</p>}
+        </div>
+
         <form onSubmit={handleSave} className="space-y-4 border-t border-emerald-200 pt-4">
           {/* Photo upload */}
           <div>
@@ -651,7 +723,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
               />
             </div>
             <div className="relative">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Address <span className="normal-case font-normal text-slate-400">· street only, no town</span></label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Address</label>
               <div className="relative">
                 <input
                   type="text"
@@ -1049,6 +1121,12 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
   const [togglingClaim, setTogglingClaim] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [ownerUpdate, setOwnerUpdate] = useState<OwnerUpdate | null>(null);
+
+  useEffect(() => {
+    if (!provider?.id) return;
+    fetchOwnerUpdate(provider.id).then(u => setOwnerUpdate(u)).catch(() => {});
+  }, [provider?.id]);
   const [showGrantModal, setShowGrantModal] = useState(false);
   const [grantEmail, setGrantEmail] = useState('');
   const [grantError, setGrantError] = useState('');
@@ -1241,6 +1319,18 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       )}
 
       {/* Header Info */}
+      {/* Owner Update banner — top of page */}
+      {ownerUpdate && (
+        <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
+          <i className="fas fa-thumbtack text-blue-400 text-xs mt-0.5 flex-shrink-0"></i>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-blue-500 uppercase tracking-wide mb-0.5">Owner Update</p>
+            <p className="text-sm text-slate-700 leading-relaxed">{ownerUpdate.content}</p>
+            <p className="text-[11px] text-slate-400 mt-1">{new Date(ownerUpdate.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex flex-row gap-4">
           {/* Photo */}
@@ -1447,6 +1537,8 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           onSaved={updated => setProvider(updated)}
           onRequestRemoval={() => setShowUpdateModal(true)}
           onPreview={() => setShowPreviewModal(true)}
+          ownerUpdate={ownerUpdate}
+          onUpdateChange={(u: OwnerUpdate | null) => setOwnerUpdate(u)}
         />
       )}
 
@@ -1487,7 +1579,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Address <span className="normal-case font-normal text-slate-400">· street only, no town</span></label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Address</label>
               <input
                 type="text"
                 placeholder="123 Main St"

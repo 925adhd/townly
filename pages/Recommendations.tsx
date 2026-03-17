@@ -27,6 +27,8 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
 
   const [notice, setNotice] = useState('');
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -191,6 +193,24 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         </div>
       )}
 
+      {!showForm && (
+        <div className="relative">
+          <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+          <input
+            type="text"
+            placeholder="Search questions..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+              <i className="fas fa-xmark text-sm"></i>
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="space-y-4">
         {requests.length === 0 && (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
@@ -199,7 +219,11 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
             <div className="mt-1">Be the first to ask the community →</div>
           </div>
         )}
-        {requests.map(req => {
+        {requests.filter(req => {
+          if (!searchQuery.trim()) return true;
+          const q = searchQuery.toLowerCase();
+          return req.serviceNeeded.toLowerCase().includes(q) || req.description?.toLowerCase().includes(q);
+        }).map(req => {
           const reqResponses = [...(responses[req.id] || [])].sort((a, b) => b.voteCount - a.voteCount);
           const topPick = reqResponses[0] ?? null;
           const detailTo = req.slug ? `/ask/${req.slug}` : null;

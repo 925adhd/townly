@@ -178,6 +178,13 @@ export interface ContentReport {
   createdAt: string;
 }
 
+export interface OwnerUpdate {
+  id: string;
+  providerId: string;
+  content: string;
+  updatedAt: string;
+}
+
 export interface EarlyAccessRequest {
   id: string;
   providerId: string;
