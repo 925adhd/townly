@@ -1319,18 +1319,6 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       )}
 
       {/* Header Info */}
-      {/* Owner Update banner — top of page */}
-      {ownerUpdate && (
-        <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
-          <i className="fas fa-thumbtack text-blue-400 text-xs mt-0.5 flex-shrink-0"></i>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold text-blue-500 uppercase tracking-wide mb-0.5">Owner Update</p>
-            <p className="text-sm text-slate-700 leading-relaxed">{ownerUpdate.content}</p>
-            <p className="text-[11px] text-slate-400 mt-1">{new Date(ownerUpdate.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-          </div>
-        </div>
-      )}
-
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex flex-row gap-4">
           {/* Photo */}
@@ -1404,6 +1392,15 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             const lines = provider.hours.split('\n').filter(Boolean);
             const todayLine = lines.find(l => l.toLowerCase().startsWith(todayName.toLowerCase()));
             const todayHours = todayLine ? todayLine.replace(/^[^:]+:\s*/,'') : null;
+            // Single-line or short hours — just show them directly, no expand needed
+            if (lines.length <= 1) {
+              return (
+                <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <i className="fas fa-clock text-slate-400 text-[11px] flex-shrink-0"></i>
+                  <span>{provider.hours}</span>
+                </div>
+              );
+            }
             return (
               <div className="text-xs text-slate-500">
                 <div className="flex items-center gap-1.5">
@@ -1461,34 +1458,48 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
         </div>
       </div>
 
+      {/* Owner Update — below business card */}
+      {ownerUpdate && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5">
+          <p className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center gap-1.5">
+            <i className="fas fa-thumbtack text-slate-400 text-[10px]"></i>Latest Update
+          </p>
+          <p className="text-sm text-slate-700 leading-relaxed">{ownerUpdate.content}</p>
+          <p className="text-[11px] text-slate-400 mt-2">{new Date(ownerUpdate.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+        </div>
+      )}
+
       {/* Claim CTA — unclaimed listings only */}
       {provider.claimStatus !== 'claimed' && !claimSubmitted && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-          <p className="font-bold text-slate-900 text-base">{provider.category === 'Churches' ? 'Do you represent this church?' : 'Own this business?'}</p>
-          {provider.category === 'Churches' ? (
-            <p className="text-slate-500 text-sm mt-2 leading-relaxed">Claim your listing to keep your info up to date and respond to reviews.</p>
-          ) : (
-            <>
-              <p className="text-slate-500 text-sm mt-2 leading-relaxed">Claim your listing to manage hours, photos, and contact info. Verified businesses can unlock visibility upgrades like top placement in their category.</p>
-              <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
-                <li className="flex items-center gap-2"><i className="fas fa-check text-blue-500 text-[11px]"></i>Update hours, photos, and contact info</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-blue-500 text-[11px]"></i>Respond to customer reviews</li>
-                <li className="flex items-center gap-2"><i className="fas fa-check text-blue-500 text-[11px]"></i>Unlock visibility upgrades like top placement in your category</li>
-              </ul>
-            </>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4">
+          <p className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+            <i className="fas fa-shield-halved text-slate-400 text-xs"></i>
+            {provider.category === 'Churches' ? 'Do you represent this church?' : 'Own this business?'}
+          </p>
+          <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">
+            {provider.category === 'Churches'
+              ? 'Claim your listing to keep info up to date and respond to reviews.'
+              : 'Claim your listing to update hours, photos, and contact information.'}
+          </p>
+          {provider.category !== 'Churches' && (
+            <ul className="mt-2.5 space-y-1 text-xs text-slate-600">
+              <li className="flex items-center gap-2"><i className="fas fa-check text-emerald-500 text-[10px]"></i>Update hours and photos</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-emerald-500 text-[10px]"></i>Respond to customer reviews</li>
+              <li className="flex items-center gap-2"><i className="fas fa-check text-emerald-500 text-[10px]"></i>Unlock visibility upgrades</li>
+            </ul>
           )}
-          <div className="mt-4">
+          <div className="mt-3">
             {user ? (
               <button
                 onClick={() => setShowClaimModal(true)}
-                className="w-full bg-blue-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-md"
+                className="w-full bg-blue-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-sm"
               >
                 {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
               </button>
             ) : (
               <>
-                <Link to="/login?signup=true" state={{ from: location.pathname }} className="block w-full text-center bg-blue-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-md">
-                  Claim This Business
+                <Link to="/login?signup=true" state={{ from: location.pathname }} className="block w-full text-center bg-blue-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-sm">
+                  {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
                 </Link>
                 <p className="mt-2 text-center text-xs text-slate-400">
                   Already have an account?{' '}
@@ -1497,9 +1508,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               </>
             )}
           </div>
-          {provider.category !== 'Churches' && (
-            <p className="mt-3 text-xs text-slate-400">Free to claim. Visibility upgrades are optional.</p>
-          )}
+          <p className="mt-2 text-[11px] text-slate-400">Free to claim. Visibility upgrades are optional.</p>
         </div>
       )}
 
