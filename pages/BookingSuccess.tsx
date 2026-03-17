@@ -1,13 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { pollForBooking } from '../lib/api';
+import { verifyStripeSession, submitSpotlightBooking } from '../lib/api';
 
 const STORAGE_KEY = 'townly_pending_booking';
-const POLL_INTERVAL_MS = 1500;
-const POLL_MAX_ATTEMPTS = 20; // ~30 seconds
 
-type Stage = 'polling' | 'done' | 'error';
+type Stage = 'verifying' | 'done' | 'error';
 
 interface BookingSuccessProps {
   user: { id: string; name: string; email?: string } | null;
@@ -16,7 +14,7 @@ interface BookingSuccessProps {
 
 const BookingSuccess: React.FC<BookingSuccessProps> = ({ user, onBookingConfirmed }) => {
   const location = useLocation();
-  const [stage, setStage] = useState<Stage>('polling');
+  const [stage, setStage] = useState<Stage>('verifying');
   const [errorMsg, setErrorMsg] = useState('');
   const [bookingType, setBookingType] = useState<'spotlight' | 'featured'>('spotlight');
 
@@ -31,47 +29,67 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ user, onBookingConfirme
       return;
     }
 
-    // Read booking type for display — only this is needed from sessionStorage now
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setBookingType(parsed.type ?? 'spotlight');
-      }
-    } catch { /* ignore */ }
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      setErrorMsg('Booking data not found. If you completed payment, please contact support@townly.us with your Stripe receipt.');
+      setStage('error');
+      return;
+    }
 
-    let attempts = 0;
-    const interval = setInterval(async () => {
-      attempts++;
+    let booking: any;
+    try {
+      booking = JSON.parse(raw);
+      setBookingType(booking.type ?? 'spotlight');
+    } catch {
+      setErrorMsg('Booking data was corrupted. Please contact support@townly.us with your Stripe receipt.');
+      setStage('error');
+      return;
+    }
+
+    (async () => {
       try {
-        const booking = await pollForBooking(sessionId);
-        if (booking) {
-          clearInterval(interval);
+        const { paid } = await verifyStripeSession(sessionId);
+        if (!paid) {
+          setErrorMsg('Payment was not completed. Please try again or contact support.');
+          setStage('error');
           sessionStorage.removeItem(STORAGE_KEY);
-          localStorage.setItem('townly_has_bookings', '1');
-          onBookingConfirmed?.();
-          setStage('done');
           return;
         }
-      } catch { /* swallow — keep polling */ }
 
-      if (attempts >= POLL_MAX_ATTEMPTS) {
-        clearInterval(interval);
-        // Clear pending booking data — no longer needed and shouldn't linger on shared devices.
-        sessionStorage.removeItem(STORAGE_KEY);
-        setErrorMsg(
-          'Payment received but confirmation is taking longer than expected. ' +
-          'Your booking has been saved — check your email for a Stripe receipt, ' +
-          'then email us at contact@townly.us to confirm your slot.'
+        await submitSpotlightBooking(
+          booking.type,
+          booking.title,
+          booking.desc,
+          booking.weekStart,
+          booking.eventDate ?? '',
+          booking.eventTime ?? '',
+          booking.location ?? '',
+          booking.town ?? '',
+          booking.contactName ?? '',
+          booking.contactEmail ?? '',
+          '',
+          booking.bannerUrl ?? '',
+          booking.thumbnailUrl,
+          booking.flyerUrl,
+          booking.tags,
+          booking.teaser,
+          sessionId,
+          'paid',
         );
+
+        sessionStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem('townly_has_bookings', '1');
+        onBookingConfirmed?.();
+        setStage('done');
+      } catch (err: any) {
+        sessionStorage.removeItem(STORAGE_KEY);
+        setErrorMsg(err.message || 'Something went wrong confirming your booking. Please contact support@townly.us with your Stripe receipt.');
         setStage('error');
       }
-    }, POLL_INTERVAL_MS);
-
-    return () => clearInterval(interval);
+    })();
   }, []);
 
-  if (stage === 'polling') {
+  if (stage === 'verifying') {
     return (
       <div className="max-w-lg mx-auto pt-16 text-center space-y-4 px-4">
         <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto">

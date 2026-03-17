@@ -279,23 +279,17 @@ const BookSpotlight: React.FC<BookSpotlightProps> = ({ user }) => {
       const successUrl = `${origin}/book/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${origin}/book/${bookingType}`;
 
-      // Create Stripe session first so we have the sessionId to store with the booking
-      const { url, sessionId } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
+      const { url } = await createCheckoutSession(bookingType, successUrl, cancelUrl);
 
-      // Save booking to DB as 'pending' — webhook will flip to 'paid' after payment
-      await submitSpotlightBooking(
-        bookingType, title, desc, weekStart,
-        eventDate, eventTime, location, town,
-        user.name, user.email ?? '', '',
+      // Store full booking data so BookingSuccess can save it after payment is verified
+      sessionStorage.setItem('townly_pending_booking', JSON.stringify({
+        type: bookingType,
+        title, desc, weekStart, eventDate, eventTime, location, town,
+        contactName: user.name, contactEmail: user.email ?? '',
         bannerUrl, thumbnailUrl, flyerUrl,
-        selectedTags,
-        bookingType === 'spotlight' ? teaser : undefined,
-        sessionId,
-        'unpaid',
-      );
-
-      // Keep only the type in sessionStorage so BookingSuccess knows what to display
-      sessionStorage.setItem('townly_pending_booking', JSON.stringify({ type: bookingType }));
+        tags: selectedTags,
+        teaser: bookingType === 'spotlight' ? teaser : undefined,
+      }));
       localStorage.removeItem(DRAFT_KEY);
       window.location.href = url;
     } catch (err: any) {
