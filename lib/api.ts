@@ -836,6 +836,7 @@ function mapResponse(row: any): RecommendationResponse {
     recommendation: row.recommendation,
     voteCount: row.vote_count || 0,
     createdAt: row.created_at,
+    recommendedProviderId: row.recommended_provider_id ?? null,
   };
 }
 
@@ -853,7 +854,8 @@ export async function addResponse(
   requestId: string,
   recommendation: string,
   userId: string,
-  userName: string
+  userName: string,
+  recommendedProviderId?: string | null
 ): Promise<RecommendationResponse> {
   const sanitizedRecommendation = sanitize(recommendation, 1000);
   if (!sanitizedRecommendation) throw new Error('Recommendation text is required.');
@@ -865,6 +867,7 @@ export async function addResponse(
       user_name: sanitize(userName, 100),
       recommendation: sanitizedRecommendation,
       tenant_id: getCurrentTenant().id,
+      ...(recommendedProviderId ? { recommended_provider_id: recommendedProviderId } : {}),
     })
     .select()
     .single();

@@ -110,6 +110,7 @@ export interface RecommendationResponse {
   recommendation: string;
   voteCount: number;
   createdAt: string;
+  recommendedProviderId?: string | null;
 }
 
 export type CommunityPostType = 'event' | 'announcement' | 'yard_sale' | 'free_item' | 'prayer_request' | 'other';

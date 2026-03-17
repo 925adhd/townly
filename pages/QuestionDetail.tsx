@@ -84,6 +84,9 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
   const [replyLoading, setReplyLoading] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyAnonymous, setReplyAnonymous] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [bizSearch, setBizSearch] = useState('');
+  const [showBizResults, setShowBizResults] = useState(false);
   const [editingMyResponse, setEditingMyResponse] = useState(false);
   const [editText, setEditText] = useState('');
   const [editLoading, setEditLoading] = useState(false);
@@ -168,10 +171,12 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
     setReplyError('');
     setReplyLoading(true);
     try {
-      const resp = await addResponse(request.id, replyText, user.id, replyAnonymous ? 'Anonymous' : user.name);
+      const resp = await addResponse(request.id, replyText, user.id, replyAnonymous ? 'Anonymous' : user.name, selectedProvider?.id);
       setResponses(prev => [...prev, resp].sort((a, b) => b.voteCount - a.voteCount));
       setRequest(prev => prev ? { ...prev, responseCount: prev.responseCount + 1 } : prev);
       setReplyText('');
+      setSelectedProvider(null);
+      setBizSearch('');
       setShowReplyForm(false);
     } catch (err: any) {
       setReplyError(err.message || 'Failed to submit.');
@@ -349,7 +354,9 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
           const isAnswered = request.status === 'resolved';
           const isAccepted = isAnswered && r.id === request.acceptedResponseId;
           const isTopPick = !isAnswered && idx === 0 && r.voteCount > 0;
-          const mentionedBiz = findMentionedProvider(r.recommendation, providers);
+          const mentionedBiz = (r.recommendedProviderId
+            ? providers.find(p => p.id === r.recommendedProviderId) ?? null
+            : null) ?? findMentionedProvider(r.recommendation, providers);
 
           return (
             <div key={r.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${
@@ -510,6 +517,65 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
                   value={replyText}
                   onChange={e => setReplyText(e.target.value)}
                 />
+
+                {/* Business picker */}
+                <div className="relative">
+                  {selectedProvider ? (
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+                      <i className="fas fa-store text-slate-400 text-xs flex-shrink-0"></i>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">{selectedProvider.name}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{selectedProvider.category} · {selectedProvider.town}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedProvider(null); setBizSearch(''); }}
+                        className="text-slate-300 hover:text-slate-500 flex-shrink-0 text-sm leading-none"
+                      >
+                        <i className="fas fa-xmark"></i>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <i className="fas fa-store absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                      <input
+                        type="text"
+                        placeholder="Tag a business (optional)"
+                        className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-400 outline-none"
+                        value={bizSearch}
+                        onChange={e => { setBizSearch(e.target.value); setShowBizResults(true); }}
+                        onFocus={() => setShowBizResults(true)}
+                        onBlur={() => setTimeout(() => setShowBizResults(false), 150)}
+                      />
+                      {showBizResults && bizSearch.trim().length > 0 && (() => {
+                        const q = bizSearch.toLowerCase();
+                        const results = providers
+                          .filter(p => p.status === 'approved' && (p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)))
+                          .slice(0, 5);
+                        if (results.length === 0) return null;
+                        return (
+                          <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                            {results.map(p => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onMouseDown={() => { setSelectedProvider(p); setBizSearch(''); setShowBizResults(false); }}
+                                className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0 flex items-center gap-2"
+                              >
+                                <i className="fas fa-store text-slate-300 text-xs flex-shrink-0"></i>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                                  <p className="text-[11px] text-slate-400 truncate">{p.category} · {p.town}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
                 <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
                   <input
                     type="checkbox"
