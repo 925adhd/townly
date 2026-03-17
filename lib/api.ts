@@ -2034,7 +2034,7 @@ export async function submitSpotlightBooking(
     if (error.message.includes('RATE_LIMIT_PAID_SUBMISSIONS')) {
       throw new Error('Too many bookings submitted today. Please try again tomorrow or contact support@townly.us.');
     }
-    throw new Error('Failed to save booking. Please contact support@townly.us with your receipt.');
+    throw new Error(`Failed to save booking: ${error.message}`);
   }
   return mapSpotlightBooking(data);
 }
