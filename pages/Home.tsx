@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
 import { LostFoundPost, CommunityAlert, SpotlightBooking } from '../types';
-import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady } from '../lib/api';
+import { fetchCurrentWeekSubmissions, prefetchHomeImages } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -31,13 +31,11 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
   const [alertIndex, setAlertIndex] = useState(0);
   const [alertVisible, setAlertVisible] = useState(true);
   const [search, setSearch] = useState('');
-  const [imagesReady, setImagesReady] = useState(false);
   const [currentSpotlight, setCurrentSpotlight] = useState<SpotlightBooking | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     prefetchHomeImages();
-    onHomeImagesReady(() => setImagesReady(true));
   }, []);
 
   useEffect(() => {
@@ -100,14 +98,6 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const latestLF = sortedPosts[0];
-
-  if (!imagesReady) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <i className="fas fa-spinner fa-spin text-3xl text-orange-500"></i>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
