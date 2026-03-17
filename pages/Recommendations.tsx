@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { RecommendationRequest, RecommendationResponse, Town } from '../types';
-import { addRequest, deleteRequest, fetchAllRecommendationResponses, submitReport } from '../lib/api';
+import { RecommendationRequest, RecommendationResponse, Provider, Town } from '../types';
+import { addRequest, deleteRequest, fetchAllRecommendationResponses, fetchProviders, submitReport } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
 
@@ -24,6 +24,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
   const [formLoading, setFormLoading] = useState(false);
 
   const [responses, setResponses] = useState<Record<string, RecommendationResponse[]>>({});
+  const [providers, setProviders] = useState<Provider[]>([]);
 
   const [notice, setNotice] = useState('');
 
@@ -55,6 +56,10 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
 
   const towns: Town[] = tenant.towns;
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
+
+  useEffect(() => {
+    fetchProviders().then(setProviders).catch(console.error);
+  }, []);
 
   useEffect(() => {
     fetchAllRecommendationResponses().then(all => {
@@ -264,12 +269,27 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
                 <p className="text-slate-500 text-sm line-clamp-2 break-words">{req.description}</p>
 
                 {/* Top pick preview */}
-                {topPick && (
-                  <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
-                    <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 mt-0.5">Top Pick</span>
-                    <p className="text-slate-700 text-xs line-clamp-2 flex-1">{topPick.recommendation}</p>
-                  </div>
-                )}
+                {topPick && (() => {
+                  const taggedBiz = topPick.recommendedProviderId
+                    ? providers.find((p: Provider) => p.id === topPick.recommendedProviderId) ?? null
+                    : null;
+                  return (
+                    <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 mt-0.5">Top Pick</span>
+                      <div className="flex-1 min-w-0">
+                        {taggedBiz && (
+                          <p className="text-xs font-bold text-slate-800 truncate mb-0.5">
+                            <i className="fas fa-store text-slate-400 text-[10px] mr-1"></i>
+                            {taggedBiz.name}
+                          </p>
+                        )}
+                        {topPick.recommendation && (
+                          <p className="text-slate-700 text-xs line-clamp-2">{topPick.recommendation}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Footer */}

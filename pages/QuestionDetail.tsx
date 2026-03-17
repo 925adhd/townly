@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { RecommendationRequest, RecommendationResponse, Provider } from '../types';
 import {
@@ -92,7 +92,6 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
-  const [copied, setCopied] = useState(false);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -131,18 +130,16 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
     return () => { document.title = tenant.displayName; };
   }, [request]);
 
+
   // ── Share ──────────────────────────────────────────────────────────────────
-  const handleShare = useCallback(async () => {
+  const handleShare = async () => {
     const url = `${window.location.origin}/ask/${slug}`;
     if (navigator.share) {
       try { await navigator.share({ title: request?.serviceNeeded ?? 'Ask the Community', url }); } catch { /* dismissed */ }
     } else {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      });
+      try { await navigator.clipboard.writeText(url); setNotice('Link copied!'); setTimeout(() => setNotice(''), 2500); } catch { /* silent */ }
     }
-  }, [slug, request?.serviceNeeded]);
+  };
 
   // ── Vote ───────────────────────────────────────────────────────────────────
   const handleVote = async (responseId: string) => {
@@ -255,17 +252,6 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
     );
   }
 
-  // ── Share button ───────────────────────────────────────────────────────────
-  const ShareButton = () => (
-    <button
-      onClick={handleShare}
-      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:border-blue-300 hover:text-blue-600 transition-all shadow-sm flex-shrink-0"
-    >
-      <i className={`fas ${copied ? 'fa-check text-emerald-500' : 'fa-share-nodes'}`}></i>
-      <span className="hidden sm:inline">{copied ? 'Link copied!' : 'Share'}</span>
-    </button>
-  );
-
   return (
     // pb-24 ensures content clears the mobile nav bar (h-16 = 64px)
     <div className="max-w-3xl mx-auto space-y-6 pb-24">
@@ -299,7 +285,13 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
                 </button>
               )}
             </div>
-            <ShareButton />
+            <button
+              onClick={handleShare}
+              className="text-slate-300 hover:text-blue-400 transition-colors p-1 flex-shrink-0"
+              title="Share this question"
+            >
+              <i className="fas fa-share-from-square text-sm"></i>
+            </button>
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900 mb-3 break-words">{request.serviceNeeded}</h1>
@@ -433,16 +425,17 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
                         : <i className="fas fa-store text-slate-400 text-xs"></i>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate">{mentionedBiz.name}</p>
+                      <p className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors break-words">{mentionedBiz.name}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{mentionedBiz.category}{mentionedBiz.town ? ` · ${mentionedBiz.town}` : ''}</p>
                       {mentionedBiz.reviewCount > 0 && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 mt-0.5">
                           <i className="fas fa-star text-amber-400 text-[9px]"></i>
                           <span className="text-[11px] font-semibold text-slate-600">{mentionedBiz.averageRating.toFixed(1)}</span>
                           <span className="text-[11px] text-slate-400">({mentionedBiz.reviewCount})</span>
                         </div>
                       )}
                     </div>
-                    <span className="text-xs font-bold text-blue-600 flex-shrink-0 group-hover:underline">View Business</span>
+                    <i className="fas fa-chevron-right text-slate-300 group-hover:text-blue-400 transition-colors flex-shrink-0 text-xs"></i>
                   </Link>
                 )}
               </div>
@@ -650,11 +643,6 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
         </div>
       )}
 
-      {/* Bottom share CTA — sits above mobile nav due to pb-24 on wrapper */}
-      <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6 text-center">
-        <p className="text-slate-700 font-semibold mb-3">Know someone who can help? Share this question.</p>
-        <ShareButton />
-      </div>
     </div>
   );
 };
