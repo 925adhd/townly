@@ -44,7 +44,7 @@ function findRelatedProviders(serviceNeeded: string, providers: Provider[]): Pro
     .filter(p => p.status === 'approved')
     .map(p => {
       const text = `${p.name} ${p.category} ${p.subcategory ?? ''} ${p.description ?? ''}`.toLowerCase();
-      const score = keywords.filter(k => text.includes(k)).length;
+      const score = keywords.filter(k => new RegExp(`\\b${k}\\b`).test(text)).length;
       return { provider: p, score };
     })
     .filter(({ score }) => score > 0)
