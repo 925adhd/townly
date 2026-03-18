@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { RecommendationRequest, RecommendationResponse, Provider } from '../types';
 import {
   fetchRequestBySlug,
@@ -74,6 +74,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
     fetchProviders().then(setProviders).catch(console.error);
   }, []);
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
 
   const [request, setRequest] = useState<RecommendationRequest | null>(null);
   const [responses, setResponses] = useState<RecommendationResponse[]>([]);
@@ -601,6 +602,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
         ) : (
           <Link
             to="/login?signup=true"
+            state={{ from: location.pathname }}
             className="block text-center w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-semibold hover:border-blue-300 hover:text-blue-600 transition-all"
           >
             Log in to help answer this question

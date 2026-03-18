@@ -7,6 +7,13 @@ function ScrollToTop() {
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 }
+
+/** Login link that remembers the current page so Auth.tsx can redirect back after login. */
+function LoginLink({ className, children }: { className: string; children: React.ReactNode }) {
+  const location = useLocation();
+  const from = location.pathname === '/login' ? '/' : location.pathname + location.search;
+  return <Link to="/login" state={{ from }} className={className}>{children}</Link>;
+}
 import { getCurrentTenant } from './tenants';
 import Home from './pages/Home';
 import Directory from './pages/Directory';
@@ -24,6 +31,7 @@ import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
 import MyBookings from './pages/MyBookings';
 import Profile from './pages/Profile';
+import Search from './pages/Search';
 import { supabase } from './lib/supabase';
 import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions } from './lib/api';
 
@@ -222,7 +230,7 @@ const App: React.FC = () => {
                   <button onClick={handleLogout} className="text-sm font-semibold text-orange-600">Logout</button>
                 </div>
               ) : (
-                <Link to="/login" className="bg-slate-900 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors shadow-sm">Login</Link>
+                <LoginLink className="bg-slate-900 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-orange-600 transition-colors shadow-sm">Login</LoginLink>
               )}
             </nav>
 
@@ -239,10 +247,10 @@ const App: React.FC = () => {
                   </button>
                 </>
               ) : (
-                <Link to="/login" className="flex flex-col items-center text-orange-600 hover:text-orange-700 transition-colors">
+                <LoginLink className="flex flex-col items-center text-orange-600 hover:text-orange-700 transition-colors">
                   <i className="fas fa-user text-lg"></i>
                   <span className="text-[10px] mt-1 font-medium">Login</span>
-                </Link>
+                </LoginLink>
               )}
             </div>
           </div>
@@ -258,6 +266,7 @@ const App: React.FC = () => {
           ) : (
             <Routes>
               <Route path="/" element={<Home lostFound={lostFound} communityAlerts={communityAlerts} nwsAlerts={nwsAlerts} />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/directory" element={<Directory user={user} />} />
               <Route path="/provider/:id" element={<ProviderDetail user={user} />} />
               <Route path="/lost-found" element={<LostFound posts={lostFound} setPosts={setLostFound} user={user} />} />

@@ -143,12 +143,13 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
     return all.length > 0 ? all : null;
   }, [search, providers, questions, lostFound, events]);
 
-  const showDropdown = searchFocused && search.trim().length >= 2;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const showDropdown = !isMobile && searchFocused && search.trim().length >= 2;
 
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setSearchFocused(false);
-    navigate(`/directory?q=${encodeURIComponent(search)}`);
+    navigate(`/search?q=${encodeURIComponent(search)}`);
   }, [search, navigate]);
 
   const sortedPosts = [...lostFound].sort(
@@ -277,7 +278,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                       })}
                       <div className="border-t border-slate-100 px-3 py-2.5">
                         <button onClick={handleSearch} className="text-xs font-semibold text-orange-600 hover:text-orange-700 w-full text-left">
-                          Search all businesses for "{search}" <i className="fas fa-arrow-right text-[10px] ml-1"></i>
+                          See all results for "{search}" <i className="fas fa-arrow-right text-[10px] ml-1"></i>
                         </button>
                       </div>
                     </>
@@ -285,7 +286,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                     <div className="px-4 py-6 text-center">
                       <p className="text-sm text-slate-400">No results for "{search}"</p>
                       <button onClick={handleSearch} className="text-xs font-semibold text-orange-600 hover:text-orange-700 mt-2 inline-block">
-                        Search businesses <i className="fas fa-arrow-right text-[10px] ml-1"></i>
+                        See all results <i className="fas fa-arrow-right text-[10px] ml-1"></i>
                       </button>
                     </div>
                   )}
