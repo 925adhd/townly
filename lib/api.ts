@@ -941,6 +941,14 @@ export async function signIn(email: string, password: string) {
   return data.user;
 }
 
+export async function signInWithProvider(provider: 'google' | 'facebook', redirectTo?: string) {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: redirectTo || window.location.origin },
+  });
+  if (error) throw error;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
