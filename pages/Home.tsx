@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
-import { LostFoundPost, CommunityAlert, SpotlightBooking } from '../types';
-import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady } from '../lib/api';
+import { LostFoundPost, CommunityAlert, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
+import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -91,10 +91,65 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
     { name: 'Churches', label: 'Churches', icon: IconBuildingChurch, color: 'bg-violet-100 text-violet-600' },
   ];
 
-  const handleSearch = (e: React.FormEvent) => {
+  // Unified search data
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [questions, setQuestions] = useState<RecommendationRequest[]>([]);
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchProviders().then(setProviders).catch(() => {});
+    fetchRequests().then(setQuestions).catch(() => {});
+    fetchApprovedCommunityEvents().then(setEvents).catch(() => {});
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchFocused(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q.length < 2) return null;
+    const words = q.split(/\s+/);
+    const match = (text: string) => { const t = text.toLowerCase(); return words.every(w => t.includes(w)); };
+
+    const biz = providers
+      .filter(p => p.status === 'approved' && match([p.name, p.subcategory || '', p.category, p.description || '', p.town, ...(p.tags || [])].join(' ')))
+      .slice(0, 5)
+      .map(p => ({ id: p.id, title: p.name, subtitle: `${p.subcategory || p.category} · ${p.town}`, link: `/provider/${p.id}`, kind: 'Business' as const }));
+
+    const qs = questions
+      .filter(r => match([r.serviceNeeded, r.description || '', r.town].join(' ')))
+      .slice(0, 4)
+      .map(r => ({ id: r.id, title: r.serviceNeeded, subtitle: `${r.town} · ${r.status === 'open' ? 'Open' : 'Answered'}`, link: r.slug ? `/ask/${r.slug}` : '/ask', kind: 'Question' as const }));
+
+    const lf = lostFound
+      .filter(p => match([p.title, p.description || '', p.town].join(' ')))
+      .slice(0, 4)
+      .map(p => ({ id: p.id, title: p.title, subtitle: `${p.town} · ${p.type.startsWith('lost') ? 'Lost' : 'Found'}`, link: '/lost-found', kind: 'Lost & Found' as const }));
+
+    const ev = events
+      .filter(e => match([e.title, e.description || '', e.location || '', e.town].join(' ')))
+      .slice(0, 4)
+      .map(e => ({ id: e.id, title: e.title, subtitle: `${e.town} · ${e.eventDate ? new Date(e.eventDate).toLocaleDateString() : ''}`, link: '/events', kind: 'Event' as const }));
+
+    const all = [...biz, ...qs, ...lf, ...ev];
+    return all.length > 0 ? all : null;
+  }, [search, providers, questions, lostFound, events]);
+
+  const showDropdown = searchFocused && search.trim().length >= 2;
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    setSearchFocused(false);
     navigate(`/directory?q=${encodeURIComponent(search)}`);
-  };
+  }, [search, navigate]);
 
   const sortedPosts = [...lostFound].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -114,14 +169,18 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
 
       {/* Hero Section */}
       <section
-        className="text-center relative overflow-hidden rounded-3xl text-white px-4 py-8 md:px-16 md:py-16"
-        style={{ backgroundImage: "url('/images/lakebackground.webp')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
+        className="text-center relative overflow-visible rounded-3xl text-white px-4 py-8 md:px-16 md:py-16"
       >
-        {/* Dark overlay */}
+        {/* Background image + dark overlay — clipped to rounded shape */}
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to right, rgba(10, 25, 50, 0.85), rgba(10, 25, 50, 0.60))' }}
-        />
+          className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none"
+          style={{ backgroundImage: "url('/images/lakebackground.webp')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(to right, rgba(10, 25, 50, 0.85), rgba(10, 25, 50, 0.60))' }}
+          />
+        </div>
 
         {/* Content — mobile: stacked (logo top, content below) | desktop: centered column */}
         <div className="relative z-10 flex flex-col items-center mx-auto w-full md:max-w-7xl">
@@ -157,30 +216,82 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             </div>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="w-full relative mt-3 md:mt-0 md:max-w-2xl">
-              <input
-                type="text"
-                name="search"
-                autoComplete="off"
-                placeholder="Search Grayson County..."
-                className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <input
-                type="text"
-                name="search"
-                autoComplete="off"
-                placeholder="Search Grayson County..."
-                className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-sm"></i>
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
-                Search
-              </button>
-            </form>
+            <div ref={searchRef} className="w-full relative mt-3 md:mt-0 md:max-w-2xl">
+              <form onSubmit={handleSearch}>
+                <input
+                  type="text"
+                  name="search"
+                  autoComplete="off"
+                  placeholder="Search Grayson County..."
+                  className="md:hidden w-full h-11 pl-10 pr-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                />
+                <input
+                  type="text"
+                  name="search"
+                  autoComplete="off"
+                  placeholder="Search businesses, events, questions..."
+                  className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                />
+                <i className="fas fa-search absolute left-3 top-[22px] -translate-y-1/2 text-white/50 text-sm"></i>
+                <button type="submit" className="absolute right-2 top-[22px] -translate-y-1/2 bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-lg hover:bg-orange-500 transition-colors">
+                  Search
+                </button>
+              </form>
+
+              {/* Live search dropdown */}
+              {showDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 max-h-[70vh] overflow-y-auto">
+                  {searchResults ? (
+                    <>
+                      {searchResults.map((r, i) => {
+                        const kindIcon = r.kind === 'Business' ? 'fa-store' : r.kind === 'Question' ? 'fa-comments' : r.kind === 'Event' ? 'fa-calendar-alt' : 'fa-paw';
+                        const kindColor = r.kind === 'Business' ? 'text-blue-500' : r.kind === 'Question' ? 'text-violet-500' : r.kind === 'Event' ? 'text-orange-500' : 'text-amber-600';
+                        const prevKind = i > 0 ? searchResults[i - 1].kind : null;
+                        return (
+                          <React.Fragment key={`${r.kind}-${r.id}`}>
+                            {r.kind !== prevKind && (
+                              <div className="px-3 pt-2.5 pb-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{r.kind === 'Business' ? 'Businesses' : r.kind === 'Question' ? 'Questions' : r.kind === 'Event' ? 'Events' : 'Lost & Found'}</span>
+                              </div>
+                            )}
+                            <Link
+                              to={r.link}
+                              onClick={() => { setSearchFocused(false); setSearch(''); }}
+                              className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                            >
+                              <i className={`fas ${kindIcon} text-sm ${kindColor} w-5 text-center flex-shrink-0`}></i>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-slate-900 truncate">{r.title}</p>
+                                <p className="text-xs text-slate-400 truncate">{r.subtitle}</p>
+                              </div>
+                              <i className="fas fa-chevron-right text-slate-300 text-[10px] flex-shrink-0"></i>
+                            </Link>
+                          </React.Fragment>
+                        );
+                      })}
+                      <div className="border-t border-slate-100 px-3 py-2.5">
+                        <button onClick={handleSearch} className="text-xs font-semibold text-orange-600 hover:text-orange-700 w-full text-left">
+                          Search all businesses for "{search}" <i className="fas fa-arrow-right text-[10px] ml-1"></i>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm text-slate-400">No results for "{search}"</p>
+                      <button onClick={handleSearch} className="text-xs font-semibold text-orange-600 hover:text-orange-700 mt-2 inline-block">
+                        Search businesses <i className="fas fa-arrow-right text-[10px] ml-1"></i>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
