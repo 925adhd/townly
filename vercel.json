@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/ask/:slug", "destination": "/ask/index.html" },
+    { "source": "/ask/:slug", "destination": "/api/og-ask?slug=:slug" },
     { "source": "/((?!_vercel|images|assets|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
