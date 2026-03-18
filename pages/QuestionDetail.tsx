@@ -611,7 +611,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
       {/* Related businesses */}
       {relatedProviders.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-800">Local Businesses That May Help</h2>
+          <h2 className="text-lg font-bold text-slate-800">{responses.length > 0 ? 'Other Local' : 'Local'} Businesses That May Help</h2>
           <div className="grid gap-3">
             {relatedProviders.map(p => (
               <Link
