@@ -9,6 +9,9 @@ import {
 } from '../lib/api';
 import type { CommunityEvent, SpotlightBooking, Provider, LostFoundPost, RecommendationRequest } from '../types';
 import Avatar from '../components/avatar/Avatar';
+import { getCurrentTenant } from '../tenants';
+
+const tenant = getCurrentTenant();
 
 interface Props {
   user: { id: string; name: string; email?: string; role?: string } | null;
@@ -20,6 +23,11 @@ function statusBadge(status: SpotlightBooking['status']) {
   if (status === 'rejected') return { label: 'Rejected', cls: 'bg-red-100 text-red-600' };
   return { label: 'Pending', cls: 'bg-amber-100 text-amber-700' };
 }
+
+type ActivityItem =
+  | { kind: 'post'; id: string; title: string; date: string; town: string; status?: string; postType?: string }
+  | { kind: 'lost_found'; id: string; title: string; date: string; town: string; lfType: string }
+  | { kind: 'question'; id: string; title: string; date: string; town: string; status: string; slug?: string };
 
 const Profile: React.FC<Props> = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -56,7 +64,7 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
   if (!user) {
     return (
       <div className="max-w-lg mx-auto pt-16 text-center space-y-4 px-4">
-        <p className="text-slate-500 text-sm">You must be logged in to view your account.</p>
+        <p className="text-slate-500 text-sm">You must be logged in to view your profile.</p>
         <Link to="/login" className="inline-block bg-slate-900 text-white font-bold px-6 py-3 rounded-xl text-sm">Sign In</Link>
       </div>
     );
@@ -112,24 +120,50 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
     }
   }
 
-  return (
-    <div className="max-w-6xl mx-auto pb-10 px-4">
+  // Build unified activity feed sorted by date
+  const activity: ActivityItem[] = [
+    ...posts.map(p => ({ kind: 'post' as const, id: p.id, title: p.title, date: p.createdAt, town: p.town, status: p.status, postType: p.postType })),
+    ...lostFound.map(p => ({ kind: 'lost_found' as const, id: p.id, title: p.title, date: p.createdAt, town: p.town, lfType: p.type.startsWith('lost') ? 'Lost' : 'Found' })),
+    ...requests.map(r => ({ kind: 'question' as const, id: r.id, title: r.serviceNeeded, date: r.createdAt, town: r.town, status: r.status, slug: r.slug })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      {/* Header */}
-      <div className="pt-2 flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Avatar user={user} size="lg" />
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
-            {user.email && <p className="text-slate-400 text-sm mt-0.5">{user.email}</p>}
+  const totalActivity = posts.length + lostFound.length + requests.length;
+
+  return (
+    <div className="max-w-[44rem] mx-auto pb-24 px-4 space-y-4">
+
+      {/* ── Profile Header ──────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar user={user} size="lg" />
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">{user.name}</h1>
+              {user.email && <p className="text-slate-400 text-xs mt-0.5">{user.email}</p>}
+              <p className="text-slate-400 text-xs mt-1">
+                <i className="fas fa-map-marker-alt mr-1"></i>Community member in {tenant.name}
+              </p>
+            </div>
           </div>
         </div>
-        <button
-          onClick={() => { onLogout(); navigate('/'); }}
-          className="text-sm font-semibold text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-400 px-4 py-2 rounded-xl transition-colors"
-        >
-          Log Out
-        </button>
+
+        {/* Stats row */}
+        {!loading && totalActivity > 0 && (
+          <div className="flex gap-6 mt-4 pt-3 border-t border-slate-100">
+            <div className="text-center">
+              <p className="text-xl font-bold text-slate-800">{requests.length}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Questions</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-slate-800">{posts.length}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Posts</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-slate-800">{lostFound.length}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Lost & Found</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading && (
@@ -139,39 +173,167 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
       )}
 
       {!loading && (
-        <div className="space-y-8">
+        <>
+          {/* ── Jump Back In ──────────────────────────────────────────── */}
+          <div>
+            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Jump back in</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Link to="/ask" className="flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">
+                <i className="fas fa-comments text-sm"></i> Ask a Question
+              </Link>
+              <Link to="/events" className="flex items-center justify-center gap-2.5 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">
+                <i className="fas fa-bullhorn text-sm"></i> Post to Community
+              </Link>
+              <Link to="/lost-found/new" className="flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">
+                <i className="fas fa-paw text-sm"></i> Lost & Found
+              </Link>
+            </div>
+          </div>
 
-          {/* Account Settings bar */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Account Settings</h2>
+          {/* ── Your Business ─────────────────────────────────────────── */}
+          {claimed && (
+            <div>
+              <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Your Business</h2>
+              <Link to={`/provider/${claimed.id}`} className="flex items-center gap-4 bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-200 hover:shadow-sm active:scale-[0.98] transition-all">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  {claimed.image
+                    ? <img src={claimed.image} alt={claimed.name} className="w-12 h-12 object-cover rounded-xl" />
+                    : <i className="fas fa-store text-slate-400 text-lg"></i>}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900 text-sm leading-tight">{claimed.name}</p>
+                  <p className="text-slate-400 text-xs mt-0.5">{claimed.category}{claimed.town ? ` · ${claimed.town}` : ''}</p>
+                </div>
+                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto flex-shrink-0"></i>
+              </Link>
+            </div>
+          )}
+
+          {/* ── Your Activity ─────────────────────────────────────────── */}
+          <div>
+            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Your Activity</h2>
+            {activity.length === 0 ? (
+              <div className="bg-white border border-slate-200 rounded-xl p-8 text-center space-y-3">
+                <i className="fas fa-hand-wave text-3xl text-slate-200 block"></i>
+                <p className="text-slate-600 text-sm font-medium">You haven't shared anything yet.</p>
+                <p className="text-slate-400 text-xs leading-relaxed">Start by asking a question or posting to your community.</p>
+                <Link to="/ask" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all mt-2">
+                  <i className="fas fa-comments text-xs"></i> Ask a Question
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activity.map(item => {
+                  const kindLabel = item.kind === 'question' ? 'Question' : item.kind === 'lost_found' ? 'Lost & Found' : 'Post';
+                  const kindColor = item.kind === 'question' ? 'bg-blue-100 text-blue-600' : item.kind === 'lost_found' ? 'bg-amber-100 text-amber-700' : 'bg-orange-100 text-orange-600';
+                  const linkTo = item.kind === 'question' && item.slug ? `/ask/${item.slug}` : undefined;
+
+                  const card = (
+                    <div className={`bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all ${linkTo ? 'hover:bg-slate-50 hover:border-slate-300 hover:shadow active:scale-[0.98] cursor-pointer' : ''}`}>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 ${kindColor}`}>{kindLabel}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 leading-tight truncate">{item.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {new Date(item.date).toLocaleDateString()} · {item.town}
+                          {item.kind === 'question' && (
+                            <span className={`ml-1.5 ${item.status === 'open' ? 'text-blue-400' : 'text-emerald-500'}`}>
+                              · {item.status === 'open' ? 'Open' : 'Answered'}
+                            </span>
+                          )}
+                          {item.kind === 'lost_found' && (
+                            <span className={`ml-1.5 font-medium ${item.lfType === 'Lost' ? 'text-red-400' : 'text-emerald-500'}`}>
+                              · {item.lfType}
+                            </span>
+                          )}
+                          {item.kind === 'post' && item.status === 'pending' && (
+                            <span className="ml-1.5 text-amber-500 font-medium">· Pending review</span>
+                          )}
+                        </p>
+                      </div>
+                      {linkTo && <i className="fas fa-chevron-right text-slate-300 text-[10px] flex-shrink-0 mr-1"></i>}
+                      <button
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (item.kind === 'post') handleDeletePost(item.id);
+                          else if (item.kind === 'lost_found') handleDeleteLostFound(item.id);
+                          else handleDeleteRequest(item.id);
+                        }}
+                        className="text-slate-300 hover:text-red-400 active:text-red-500 transition-colors flex-shrink-0 p-1.5 -mr-1"
+                        title="Delete"
+                      >
+                        <i className="fas fa-trash text-xs"></i>
+                      </button>
+                    </div>
+                  );
+
+                  return linkTo ? (
+                    <Link key={`${item.kind}-${item.id}`} to={linkTo} className="block rounded-xl">
+                      {card}
+                    </Link>
+                  ) : (
+                    <div key={`${item.kind}-${item.id}`}>{card}</div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Bookings (only if they have any) ──────────────────────── */}
+          {bookings.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Your Bookings</h2>
+                <Link to="/my-bookings" className="text-xs font-semibold text-orange-500 hover:underline">
+                  Manage <i className="fas fa-arrow-right text-[10px] ml-0.5"></i>
+                </Link>
+              </div>
+              <div className="space-y-2">
+                {bookings.slice(0, 4).map(b => {
+                  const badge = statusBadge(b.status);
+                  return (
+                    <div key={b.id} className="bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-3 flex items-center gap-3">
+                      {b.imageUrl && <img src={b.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{b.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{b.type === 'spotlight' ? 'Spotlight' : 'Featured'}</p>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${badge.cls}`}>{badge.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {bookings.length > 4 && (
+                <Link to="/my-bookings" className="block text-center text-xs font-semibold text-slate-400 hover:text-orange-500 py-2 mt-1">
+                  View all {bookings.length} bookings
+                </Link>
+              )}
+            </div>
+          )}
+
+          {/* ── Account Settings ──────────────────────────────────────── */}
+          <div className="pt-4 border-t border-slate-100">
+            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Account Settings</h2>
             {settingsMsg && (
               <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3 py-2.5 rounded-xl mb-3">{settingsMsg}</div>
             )}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={() => { setActiveSettings(activeSettings === 'email' ? null : 'email'); setSettingsError(''); setSettingsMsg(''); }}
-                  className={`text-sm font-medium px-4 py-2 rounded-xl border transition-colors ${activeSettings === 'email' ? 'bg-slate-100 border-slate-300 text-slate-900' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  Change Email <i className={`fas fa-chevron-${activeSettings === 'email' ? 'up' : 'down'} text-slate-300 text-xs ml-1`}></i>
-                </button>
-                <button
-                  onClick={() => { setActiveSettings(activeSettings === 'password' ? null : 'password'); setSettingsError(''); setSettingsMsg(''); }}
-                  className={`text-sm font-medium px-4 py-2 rounded-xl border transition-colors ${activeSettings === 'password' ? 'bg-slate-100 border-slate-300 text-slate-900' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  Change Password <i className={`fas fa-chevron-${activeSettings === 'password' ? 'up' : 'down'} text-slate-300 text-xs ml-1`}></i>
-                </button>
-              </div>
+            <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-sm font-medium px-4 py-2 rounded-xl border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
+                onClick={() => { setActiveSettings(activeSettings === 'email' ? null : 'email'); setSettingsError(''); setSettingsMsg(''); }}
+                className={`text-xs font-medium px-4 py-2.5 rounded-xl border transition-colors ${activeSettings === 'email' ? 'bg-slate-100 border-slate-300 text-slate-900' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
               >
-                Delete Account
+                Change Email <i className={`fas fa-chevron-${activeSettings === 'email' ? 'up' : 'down'} text-slate-300 text-[10px] ml-1`}></i>
+              </button>
+              <button
+                onClick={() => { setActiveSettings(activeSettings === 'password' ? null : 'password'); setSettingsError(''); setSettingsMsg(''); }}
+                className={`text-xs font-medium px-4 py-2.5 rounded-xl border transition-colors ${activeSettings === 'password' ? 'bg-slate-100 border-slate-300 text-slate-900' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+              >
+                Change Password <i className={`fas fa-chevron-${activeSettings === 'password' ? 'up' : 'down'} text-slate-300 text-[10px] ml-1`}></i>
               </button>
             </div>
 
             {activeSettings === 'email' && (
-              <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+              <div className="mt-4 space-y-3">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-2.5 items-start">
                   <i className="fas fa-triangle-exclamation text-amber-500 text-sm mt-0.5 flex-shrink-0"></i>
                   <p className="text-sm text-amber-800 leading-snug">
@@ -192,7 +354,7 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
               </div>
             )}
             {activeSettings === 'password' && (
-              <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3 items-end">
+              <div className="mt-4 flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[200px]">
                   <input type="password" placeholder="New password (min 8 characters)" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-400" />
                 </div>
@@ -204,160 +366,18 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Claimed Listing */}
-          {claimed && (
-            <section className="w-full">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Business</h2>
-              <Link to={`/provider/${claimed.id}`} className="flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-200 hover:shadow-sm transition-all">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-store text-slate-400 text-lg"></i>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-900 text-sm leading-tight">{claimed.name}</p>
-                  <p className="text-slate-400 text-xs mt-0.5">{claimed.category}{claimed.town ? ` · ${claimed.town}` : ''}</p>
-                </div>
-                <i className="fas fa-arrow-right text-slate-300 text-xs ml-auto flex-shrink-0"></i>
-              </Link>
-            </section>
-          )}
-
-          {/* Bookings — full width */}
-          <section className="w-full">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Your Bookings</h2>
-              <div className="flex items-center gap-2">
-                <Link to="/book/spotlight" className="text-xs font-bold bg-amber-500 hover:bg-amber-400 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors">
-                  <i className="fas fa-star text-[10px]"></i> Spotlight
-                </Link>
-                <Link to="/book/featured" className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors">
-                  <i className="fas fa-bullhorn text-[10px]"></i> Featured
-                </Link>
-                {bookings.length > 0 && (
-                  <Link to="/my-bookings" className="text-xs font-semibold text-orange-500 hover:underline">
-                    Manage <i className="fas fa-arrow-right text-[10px] ml-0.5"></i>
-                  </Link>
-                )}
-              </div>
+            {/* Delete Account — separated */}
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-[11px] font-medium text-red-400 hover:text-red-600 transition-colors"
+              >
+                <i className="fas fa-trash-can mr-1 text-[10px]"></i>Delete Account
+              </button>
             </div>
-            {bookings.length === 0 ? (
-              <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center">
-                <p className="text-slate-400 text-sm">No paid bookings yet.</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-2">
-                {bookings.slice(0, 4).map(b => {
-                  const badge = statusBadge(b.status);
-                  return (
-                    <div key={b.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-center gap-3">
-                      {b.imageUrl && <img src={b.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{b.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{b.type === 'spotlight' ? '⭐ Spotlight' : '📢 Featured'}</p>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${badge.cls}`}>{badge.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {bookings.length > 4 && (
-              <Link to="/my-bookings" className="block text-center text-xs font-semibold text-slate-400 hover:text-orange-500 py-2">
-                View all {bookings.length} bookings
-              </Link>
-            )}
-          </section>
-
-          {/* 2x2 grid for activity sections */}
-          <div className="grid md:grid-cols-2 gap-6">
-
-            {/* Posts */}
-            <section className="w-full">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Posts</h2>
-              {posts.length === 0 ? (
-                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
-                  <p className="text-slate-400 text-sm">You haven't posted anything yet.</p>
-                  <Link to="/events" className="text-xs font-bold text-orange-500 hover:underline">Post on the Community Board →</Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {posts.map(post => (
-                    <div key={post.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 leading-tight">{post.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {new Date(post.createdAt).toLocaleDateString()} · {post.town}
-                          {post.status === 'pending' && <span className="ml-2 text-amber-500 font-medium">Pending review</span>}
-                        </p>
-                      </div>
-                      <button onClick={() => handleDeletePost(post.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-                        <i className="fas fa-trash text-xs"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Lost & Found */}
-            <section className="w-full">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Lost & Found</h2>
-              {lostFound.length === 0 ? (
-                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
-                  <p className="text-slate-400 text-sm">No lost & found posts yet.</p>
-                  <Link to="/lost-found/new" className="text-xs font-bold text-orange-500 hover:underline">Post to Lost & Found →</Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {lostFound.map(post => (
-                    <div key={post.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 leading-tight">{post.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          <span className={`font-medium ${post.type === 'lost' ? 'text-red-400' : 'text-emerald-500'}`}>{post.type === 'lost' ? 'Lost' : 'Found'}</span>
-                          {' · '}{new Date(post.createdAt).toLocaleDateString()} · {post.town}
-                        </p>
-                      </div>
-                      <button onClick={() => handleDeleteLostFound(post.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-                        <i className="fas fa-trash text-xs"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Questions */}
-            <section className="w-full">
-              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Your Questions</h2>
-              {requests.length === 0 ? (
-                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center space-y-1.5">
-                  <p className="text-slate-400 text-sm">No questions asked yet.</p>
-                  <Link to="/ask" className="text-xs font-bold text-orange-500 hover:underline">Ask the Community →</Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {requests.map(req => (
-                    <div key={req.id} className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 leading-tight">{req.serviceNeeded}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {new Date(req.createdAt).toLocaleDateString()} · {req.town}
-                          {' · '}<span className={req.status === 'open' ? 'text-blue-400' : 'text-emerald-500'}>{req.status === 'open' ? 'Open' : 'Answered'}</span>
-                        </p>
-                      </div>
-                      <button onClick={() => handleDeleteRequest(req.id)} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-                        <i className="fas fa-trash text-xs"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
           </div>
-        </div>
+        </>
       )}
 
       {/* Delete Account Modal */}
