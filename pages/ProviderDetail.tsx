@@ -1129,6 +1129,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     fetchOwnerUpdate(provider.id).then(u => setOwnerUpdate(u)).catch(() => {});
   }, [provider?.id]);
   const [showGrantModal, setShowGrantModal] = useState(false);
+  const [showPhotoLightbox, setShowPhotoLightbox] = useState(false);
   const [grantEmail, setGrantEmail] = useState('');
   const [grantError, setGrantError] = useState('');
   const [grantLoading, setGrantLoading] = useState(false);
@@ -1323,7 +1324,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex flex-row gap-4">
           {/* Photo */}
-          <div className="w-24 h-24 md:w-28 md:h-28 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100">
+          <div
+            className={`w-24 h-24 md:w-28 md:h-28 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100${img ? ' cursor-pointer' : ''}`}
+            onClick={() => { if (img) setShowPhotoLightbox(true); }}
+          >
             {img
               ? <img src={img} loading="lazy" className="w-full h-full object-cover" alt="" />
               : <i className={`fas ${icon} text-3xl md:text-4xl ${iconColor}`}></i>
@@ -2197,6 +2201,15 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Photo Lightbox */}
+      {showPhotoLightbox && img && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowPhotoLightbox(false)}>
+          <button className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl transition-colors" onClick={() => setShowPhotoLightbox(false)}>
+            <i className="fas fa-xmark"></i>
+          </button>
+          <img src={img} alt={provider.name} className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={(e: React.MouseEvent) => e.stopPropagation()} />
         </div>
       )}
     </div>
