@@ -491,10 +491,17 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
         </div>
       </section>
 
-    {/* Contact / bug report */}
-    <p className="text-center text-xs text-slate-400 pb-1 pt-8">
-      Found a bug or have feedback? Email <a href="mailto:contact@townly.us" className="text-orange-500 hover:underline font-medium">contact@townly.us</a>
-    </p>
+    {/* Footer */}
+    <div className="text-center text-xs text-slate-400 pb-1 pt-8 space-y-1">
+      <p>
+        Found a bug or have feedback? Email <a href="mailto:contact@townly.us" className="text-orange-500 hover:underline font-medium">contact@townly.us</a>
+      </p>
+      <p>
+        <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+        <span className="mx-1.5">·</span>
+        <Link to="/terms" className="hover:underline">Terms of Service</Link>
+      </p>
+    </div>
 
     </div>
   );
