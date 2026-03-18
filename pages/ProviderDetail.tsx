@@ -5,6 +5,7 @@ import { Provider, Review, ReviewReply, Category, Town, OwnerUpdate } from '../t
 import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate, upsertOwnerUpdate, deleteOwnerUpdate } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
+import Avatar from '../components/avatar/Avatar';
 import { getCurrentTenant } from '../tenants';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch, IconBriefcase, IconKey, IconBuildingStore, IconShoppingBag, IconSchool, IconBuildingBank, IconCalendarEvent, IconTrees } from '@tabler/icons-react';
 
@@ -1856,9 +1857,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             <div key={review.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold uppercase">
-                    {review.userName.charAt(0)}
-                  </div>
+                  <Avatar user={{ id: review.userId, name: review.userName }} size="md" />
                   <div>
                     <div className="font-bold text-slate-900 text-sm">{review.userName}</div>
                     <div className="text-slate-400 text-[10px] font-medium uppercase">{new Date(review.createdAt).toLocaleDateString()}</div>

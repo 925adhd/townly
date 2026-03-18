@@ -14,6 +14,7 @@ import {
   unresolveRequest,
   fetchProviders,
 } from '../lib/api';
+import Avatar from '../components/avatar/Avatar';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -297,8 +298,8 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
           <h1 className="text-2xl font-bold text-slate-900 mb-3 break-words">{request.serviceNeeded}</h1>
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mb-4">
-            <span className="flex items-center gap-1">
-              <i className="fas fa-user"></i>
+            <span className="flex items-center gap-1.5">
+              <Avatar user={{ id: request.userId, name: request.userName }} size="xs" />
               {request.userName}
             </span>
             <span className="flex items-center gap-1">
@@ -383,9 +384,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ user }) => {
               {/* Content */}
               <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-xs uppercase flex-shrink-0">
-                    {r.userName.charAt(0)}
-                  </div>
+                  <Avatar user={{ id: r.userId, name: r.userName }} size="sm" />
                   <span className="text-sm font-bold text-slate-800">{r.userName}</span>
                   <span className="text-slate-400 text-xs">· {new Date(r.createdAt).toLocaleDateString()}</span>
                   {isAdminOrMod && (

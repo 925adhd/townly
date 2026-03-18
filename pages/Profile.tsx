@@ -8,6 +8,7 @@ import {
   softDeleteAccount, updateEmail, updatePassword,
 } from '../lib/api';
 import type { CommunityEvent, SpotlightBooking, Provider, LostFoundPost, RecommendationRequest } from '../types';
+import Avatar from '../components/avatar/Avatar';
 
 interface Props {
   user: { id: string; name: string; email?: string; role?: string } | null;
@@ -116,9 +117,12 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
 
       {/* Header */}
       <div className="pt-2 flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
-          {user.email && <p className="text-slate-400 text-sm mt-0.5">{user.email}</p>}
+        <div className="flex items-center gap-4">
+          <Avatar user={user} size="lg" />
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
+            {user.email && <p className="text-slate-400 text-sm mt-0.5">{user.email}</p>}
+          </div>
         </div>
         <button
           onClick={() => { onLogout(); navigate('/'); }}

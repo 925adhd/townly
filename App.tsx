@@ -32,6 +32,7 @@ prefetchProviders();
 prefetchHomeImages();
 prefetchCurrentWeekSubmissions();
 import ErrorBoundary from './components/ErrorBoundary';
+import Avatar from './components/avatar/Avatar';
 import { LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
 
 const tenant = getCurrentTenant();
@@ -213,7 +214,7 @@ const App: React.FC = () => {
               {user ? (
                 <div className="flex items-center space-x-3">
                   <Link to="/profile" className="text-sm font-medium text-slate-500 hover:text-orange-600 transition-colors flex items-center gap-1.5">
-                    <i className="fas fa-user-circle text-base"></i> {user.name}
+                    <Avatar user={user} size="xs" /> {user.name}
                   </Link>
                   {user.role === 'admin' && (
                     <Link to="/admin" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">Admin</Link>
@@ -229,7 +230,7 @@ const App: React.FC = () => {
               {user ? (
                 <>
                   <Link to="/profile" className="flex flex-col items-center text-slate-400 hover:text-orange-600 transition-colors">
-                    <i className="fas fa-user-circle text-lg"></i>
+                    <Avatar user={user} size="sm" />
                     <span className="text-[10px] mt-1 font-medium">Account</span>
                   </Link>
                   <button onClick={handleLogout} className="flex flex-col items-center text-slate-500 hover:text-orange-600 transition-colors">
