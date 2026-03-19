@@ -406,46 +406,41 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <div
                 key={sub.id}
                 id={`booking-${sub.id}`}
-                className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm ${sub.flyerUrl ? 'cursor-pointer' : ''}`}
+                className={`bg-gradient-to-br from-blue-50/40 to-white border border-blue-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm ${sub.flyerUrl ? 'cursor-pointer' : ''}`}
                 onClick={() => sub.flyerUrl && setDbFlyerUrl(sub.flyerUrl!)}
               >
-                {sub.eventDate && (
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
-                      <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
-                      {formatEventDate(sub.eventDate)}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest bg-blue-600 text-white">
+                      <i className="fas fa-star text-[7px] mr-0.5"></i> Featured
                     </span>
-                    {sub.flyerUrl && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDbFlyerUrl(sub.flyerUrl!); }}
-                        className="md:hidden inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-                      >
-                        <i className="fas fa-file-image text-[10px]"></i> View Flyer
-                      </button>
+                    {sub.eventDate && (
+                      <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
+                        <i className="fas fa-calendar text-blue-400 text-[10px]"></i>
+                        {formatEventDate(sub.eventDate)}
+                      </span>
                     )}
                   </div>
-                )}
-                {sub.imageUrl && (
-                  <img src={sub.imageUrl} alt={sub.title} loading="lazy" className="w-full max-h-[160px] object-cover rounded-xl" />
-                )}
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-slate-900 text-sm leading-tight">{sub.title}</h3>
-                  {!sub.eventDate && sub.flyerUrl && (
+                  {sub.flyerUrl && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setDbFlyerUrl(sub.flyerUrl!); }}
-                      className="md:hidden inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                      className="md:hidden inline-flex items-center gap-1.5 bg-white/80 hover:bg-white text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 border border-blue-200"
                     >
                       <i className="fas fa-file-image text-[10px]"></i> View Flyer
                     </button>
                   )}
                 </div>
+                {sub.imageUrl && (
+                  <img src={sub.imageUrl} alt={sub.title} loading="lazy" className="w-full max-h-[180px] object-cover rounded-xl border border-blue-100" />
+                )}
+                <h3 className="font-bold text-slate-900 text-base leading-tight">{sub.title}</h3>
                 {sub.location && (
                   <p className="text-slate-700 text-xs font-medium flex items-center gap-1">
-                    <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {sub.location}
+                    <i className="fas fa-map-marker-alt text-blue-400 text-[10px]"></i> {sub.location}
                     {sub.town && <><span className="text-slate-300 mx-1">·</span><span className="text-slate-400">{sub.town}</span></>}
                   </p>
                 )}
-                <p className="text-slate-500 text-xs leading-relaxed whitespace-pre-wrap border-t border-slate-100 pt-2.5">{sub.description}</p>
+                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap border-t border-blue-100/60 pt-2.5">{sub.description}</p>
                 {(sub.eventTime || (sub.tags && sub.tags.length > 0)) && (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {sub.eventTime && (
@@ -604,7 +599,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                       {ev.town && <span className="text-slate-300 mx-1">·</span>}
                       <span className="text-slate-400">{ev.town}</span>
                     </p>
-                    <p className="text-slate-500 text-xs leading-relaxed break-words whitespace-pre-wrap border-t border-slate-100 pt-2">{ev.description}</p>
+                    <p className="text-slate-500 text-xs leading-relaxed break-words border-t border-slate-100 pt-2">{ev.description}</p>
                   </>
                 )}
 
