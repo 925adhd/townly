@@ -268,7 +268,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               )}
               <div className="p-7 flex flex-col gap-3">
                 {filteredSpotlight.eventDate && (
-                  <span className="text-slate-400 text-xs font-medium">{formatEventDate(filteredSpotlight.eventDate)}</span>
+                  <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
+                    <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
+                    {formatEventDate(filteredSpotlight.eventDate)}
+                  </span>
                 )}
                 <div>
                   <h3 className="font-bold text-slate-900 text-base leading-tight">{filteredSpotlight.title}</h3>
@@ -296,22 +299,24 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center gap-2 mt-1">
-                  {filteredSpotlight.flyerUrl && (
-                    <button
-                      onClick={() => setDbFlyerUrl(filteredSpotlight.flyerUrl!)}
-                      className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      <i className="fas fa-file-image text-[10px]"></i> View Flyer
-                    </button>
-                  )}
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center gap-2">
+                    {filteredSpotlight.flyerUrl && (
+                      <button
+                        onClick={() => setDbFlyerUrl(filteredSpotlight.flyerUrl!)}
+                        className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleShareBooking(filteredSpotlight.id, filteredSpotlight.title, 'spotlight'); }}
-                    className="inline-flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-slate-400 hover:text-blue-500 transition-colors"
                     title="Share this spotlight"
                   >
-                    <i className={`fas ${copiedBookingId === filteredSpotlight.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
-                    {copiedBookingId === filteredSpotlight.id && <span className="text-[10px] font-semibold text-emerald-500">Copied!</span>}
+                    <i className={`fas ${copiedBookingId === filteredSpotlight.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-lg`}></i>
+                    {copiedBookingId === filteredSpotlight.id && <span className="text-xs font-semibold text-emerald-500">Copied!</span>}
                   </button>
                 </div>
               </div>
@@ -342,20 +347,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm ${sub.flyerUrl ? 'cursor-pointer' : ''}`}
                 onClick={() => sub.flyerUrl && setDbFlyerUrl(sub.flyerUrl!)}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
-                    {sub.eventDate && <span className="text-slate-400 text-xs">{formatEventDate(sub.eventDate)}</span>}
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleShareBooking(sub.id, sub.title, 'featured'); }}
-                    className="text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1"
-                    title="Share this listing"
-                  >
-                    <i className={`fas ${copiedBookingId === sub.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
-                    {copiedBookingId === sub.id && <span className="text-[10px] font-semibold text-emerald-500">Copied!</span>}
-                  </button>
-                </div>
+                {sub.eventDate && (
+                  <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
+                    <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
+                    {formatEventDate(sub.eventDate)}
+                  </span>
+                )}
                 {sub.imageUrl && (
                   <img src={sub.imageUrl} alt={sub.title} loading="lazy" className="w-full max-h-[160px] object-cover rounded-xl" />
                 )}
@@ -382,14 +379,26 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     ))}
                   </div>
                 )}
-                {sub.flyerUrl && (
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center gap-2">
+                    {sub.flyerUrl && (
+                      <button
+                        onClick={() => setDbFlyerUrl(sub.flyerUrl!)}
+                        className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                      </button>
+                    )}
+                  </div>
                   <button
-                    onClick={() => setDbFlyerUrl(sub.flyerUrl!)}
-                    className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                    onClick={(e) => { e.stopPropagation(); handleShareBooking(sub.id, sub.title, 'featured'); }}
+                    className="inline-flex items-center gap-1.5 text-slate-400 hover:text-blue-500 transition-colors"
+                    title="Share this listing"
                   >
-                    <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                    <i className={`fas ${copiedBookingId === sub.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-lg`}></i>
+                    {copiedBookingId === sub.id && <span className="text-xs font-semibold text-emerald-500">Copied!</span>}
                   </button>
-                )}
+                </div>
               </div>
             ))
           ) : (

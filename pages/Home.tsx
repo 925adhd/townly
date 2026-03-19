@@ -527,7 +527,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
       {/* Popular Categories */}
       <section>
         <div className="flex items-center justify-between mb-2 px-1">
-          <h2 className="text-base font-bold text-slate-900">Popular Categories</h2>
+          <h2 className="text-base font-bold text-slate-900">Explore by Category</h2>
           <Link to="/directory" className="text-orange-600 font-bold text-sm hover:underline">View all</Link>
         </div>
         <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
