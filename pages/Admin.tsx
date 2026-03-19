@@ -86,6 +86,8 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
   const [alertActing, setAlertActing] = useState(false);
   const [alertError, setAlertError] = useState('');
   const alertFormRef = React.useRef<HTMLDivElement>(null);
+  const [showAlertConfirm, setShowAlertConfirm] = useState(false);
+  const [alertChecks, setAlertChecks] = useState([false, false, false]);
 
   const ALERT_ICONS = [
     { id: 'fa-triangle-exclamation', label: 'Warning',      color: 'text-amber-500' },
@@ -773,7 +775,7 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
               />
             </div>
             <button
-              onClick={handlePostAlert}
+              onClick={() => { setAlertChecks([false, false, false]); setShowAlertConfirm(true); }}
               disabled={alertActing || !alertTitle.trim() || !alertDescription.trim()}
               className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50"
             >
@@ -1251,6 +1253,76 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
           </>
         );
       })()}
+      {/* Alert Confirmation Modal */}
+      {showAlertConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setShowAlertConfirm(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl border border-slate-100 shadow-2xl p-6 sm:p-8 space-y-5 animate-in slide-in-from-bottom duration-300"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
+                <i className="fas fa-triangle-exclamation text-amber-500 text-xl"></i>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Before you post an alert</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Community Alerts are only for urgent, time-sensitive situations that affect multiple people.
+              </p>
+            </div>
+
+            {/* Checklist */}
+            <div className="space-y-3">
+              {[
+                { icon: 'fa-clock', color: 'text-blue-500', label: 'This is happening right now or today' },
+                { icon: 'fa-users', color: 'text-violet-500', label: 'This affects more than just me' },
+                { icon: 'fa-shield-halved', color: 'text-amber-500', label: 'This could cause risk or major inconvenience if ignored' },
+              ].map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => setAlertChecks(prev => { const next = [...prev]; next[i] = !next[i]; return next; })}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all active:scale-[0.98] ${
+                    alertChecks[i]
+                      ? 'bg-emerald-50 border-emerald-300'
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    alertChecks[i] ? 'bg-emerald-500 border-emerald-500 scale-110' : 'border-slate-300'
+                  }`}>
+                    {alertChecks[i] && <i className="fas fa-check text-white text-[10px]"></i>}
+                  </div>
+                  <i className={`fas ${item.icon} ${alertChecks[i] ? 'text-emerald-500' : item.color} text-sm flex-shrink-0 transition-colors`}></i>
+                  <span className={`text-sm font-medium ${alertChecks[i] ? 'text-emerald-700' : 'text-slate-700'}`}>{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowAlertConfirm(false)}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50 border border-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowAlertConfirm(false); handlePostAlert(); }}
+                disabled={!alertChecks.every(Boolean)}
+                className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-orange-600 hover:bg-orange-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Continue to Post
+              </button>
+            </div>
+
+            {/* Microcopy */}
+            <p className="text-center text-xs text-slate-400">
+              Alerts are reviewed to keep information accurate and helpful.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
