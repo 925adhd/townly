@@ -58,6 +58,16 @@ const App: React.FC = () => {
   const [user, setUser] = useState<{ id: string, name: string, email?: string, role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasBookings, setHasBookings] = useState(() => !!localStorage.getItem('townly_has_bookings'));
+  const [isFbBrowser, setIsFbBrowser] = useState(false);
+
+  // Detect Facebook/Instagram in-app browser and adjust for viewport quirks
+  useEffect(() => {
+    const ua = navigator.userAgent || '';
+    if (/FBAN|FBAV|Instagram/i.test(ua)) {
+      setIsFbBrowser(true);
+      document.documentElement.classList.add('fb-browser');
+    }
+  }, []);
 
   // Load data from Supabase on mount
   useEffect(() => {
@@ -296,7 +306,7 @@ const App: React.FC = () => {
         </main>
 
         {/* Mobile Navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: isFbBrowser ? 'calc(env(safe-area-inset-bottom, 0px) + 20px)' : 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="h-14 flex items-center justify-around">
             <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600" onMouseEnter={() => { prefetchHomeImages(); prefetchCurrentWeekSubmissions(); }}>
               <i className="fas fa-home text-lg"></i>

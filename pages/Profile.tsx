@@ -181,7 +181,7 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
               <Link to="/ask" className="flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">
                 <i className="fas fa-comments text-sm"></i> Ask a Question
               </Link>
-              <Link to="/events" className="flex items-center justify-center gap-2.5 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">
+              <Link to="/events#community" className="flex items-center justify-center gap-2.5 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">
                 <i className="fas fa-bullhorn text-sm"></i> Post to Community
               </Link>
               <Link to="/lost-found/new" className="flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] text-white font-bold text-sm min-h-[48px] py-3.5 rounded-xl transition-all">

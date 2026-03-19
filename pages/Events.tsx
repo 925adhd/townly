@@ -503,7 +503,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       )}
 
       {/* ── Community Events ── */}
-      <div>
+      <div id="community">
         <div className="flex items-center justify-between mb-1 px-1">
           <h2 className="text-xl font-bold text-slate-900">Events & Announcements</h2>
           {user ? (

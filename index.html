@@ -53,8 +53,13 @@
       .nav-page-pb {
         padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
       }
+      /* Facebook/Instagram in-app browsers mishandle fixed bottom nav */
+      .fb-browser .nav-page-pb {
+        padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px) + 20px);
+      }
       @media (min-width: 768px) {
         .nav-page-pb { padding-bottom: 0; }
+        .fb-browser .nav-page-pb { padding-bottom: 0; }
       }
 
       .branding-text {
