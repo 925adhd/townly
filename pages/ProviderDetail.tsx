@@ -2046,7 +2046,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       {!isOwner && (
         <div className="py-2 border-t border-slate-100">
           <p className="text-slate-400 text-xs">
-            Business information sourced from publicly available data. Claim this listing to manage your info, reply to reviews, or request removal.
+            Business information is sourced from publicly available data. Owners can claim or update their listing at any time.
           </p>
         </div>
       )}

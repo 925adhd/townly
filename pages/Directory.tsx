@@ -331,11 +331,11 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
             </p>
             {showSearchTip && (
               <span className="md:hidden absolute right-0 top-full mt-1 z-[200] bg-slate-800 text-white text-xs rounded-xl px-3 py-2 shadow-xl" style={{ width: 'min(256px, calc(100vw - 32px))' }}>
-                Services come from business profiles. Unclaimed listings may be incomplete.
+                Details come from business profiles. Some listings may be missing info until they're claimed.
               </span>
             )}
           </div>
-          <p className="hidden md:block text-xs text-slate-400 italic mt-0.5">Services come from business profiles. Unclaimed listings may be incomplete.</p>
+          <p className="hidden md:block text-xs text-slate-400 italic mt-0.5">Details come from business profiles. Some listings may be missing info until they're claimed.</p>
         </div>
         {user && (
           <div className="flex gap-2">
@@ -568,7 +568,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
 
       {/* Transparency footer */}
       <p className="text-center text-slate-400 text-xs leading-relaxed pt-2 pb-1">
-        Business information sourced from publicly available data. Owners may claim or request updates by clicking into their listing.
+        Business information is sourced from publicly available data. Owners can claim or update their listing at any time.
       </p>
     </div>
   );
