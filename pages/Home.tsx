@@ -254,9 +254,6 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                       {alert.title}
                       {alert.description && <span className="hidden md:inline font-normal text-slate-500"> — {alert.description}</span>}
                     </p>
-                    {alert.description && (
-                      <p className="md:hidden text-[11px] text-slate-500 leading-snug truncate">{alert.description}</p>
-                    )}
                   </div>
                   {cyclingAlerts.length > 1 && (
                     <span className="text-[10px] text-red-400 font-semibold flex-shrink-0">{safeIndex + 1}/{cyclingAlerts.length}</span>

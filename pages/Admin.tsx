@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, adminCreateCommunityEvent, createAlert, dismissAlert, reorderAlerts, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem, submitSpotlightBooking, uploadSpotlightImage } from '../lib/api';
-import type { CommunityPostType } from '../types';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, adminCreateCommunityEvent, adminCreateLostFoundPost, adminCreateAskPost, createAlert, dismissAlert, reorderAlerts, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem, submitSpotlightBooking, uploadSpotlightImage } from '../lib/api';
+import type { CommunityPostType, LostFoundType } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 const adminTenant = getCurrentTenant();
@@ -69,6 +69,28 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
   const [ceSubmitting, setCeSubmitting] = useState(false);
   const [ceError, setCeError] = useState('');
   const [ceSuccess, setCeSuccess] = useState('');
+
+  // Admin create type selector (community / lost-found / ask)
+  const [createFormType, setCreateFormType] = useState<'community' | 'lostfound' | 'ask'>('community');
+
+  // Admin create lost & found
+  const [lfType, setLfType] = useState<LostFoundType>('lost_item');
+  const [lfTitle, setLfTitle] = useState('');
+  const [lfDesc, setLfDesc] = useState('');
+  const [lfLocation, setLfLocation] = useState('');
+  const [lfTown, setLfTown] = useState('');
+  const [lfDate, setLfDate] = useState('');
+  const [lfContact, setLfContact] = useState('');
+  const [lfPhoto, setLfPhoto] = useState<File | null>(null);
+  const [lfSubmitting, setLfSubmitting] = useState(false);
+  const [lfError, setLfError] = useState('');
+
+  // Admin create ask post
+  const [askTitle, setAskTitle] = useState('');
+  const [askDesc, setAskDesc] = useState('');
+  const [askTown, setAskTown] = useState('');
+  const [askSubmitting, setAskSubmitting] = useState(false);
+  const [askError, setAskError] = useState('');
 
   // Spotlight bookings
   const [bookings, setBookings] = useState<SpotlightBooking[]>([]);
@@ -335,6 +357,48 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
       setCeError(e.message || 'Failed to create post.');
     } finally {
       setCeSubmitting(false);
+    }
+  };
+
+  const handleAdminCreateLF = async () => {
+    if (!lfTitle.trim() || !lfDesc.trim() || !user) return;
+    setLfSubmitting(true);
+    setLfError('');
+    try {
+      await adminCreateLostFoundPost({
+        type: lfType,
+        title: lfTitle,
+        description: lfDesc,
+        locationDescription: lfLocation,
+        town: lfTown,
+        dateOccurred: lfDate || new Date().toISOString().split('T')[0],
+        contactMethod: lfContact,
+      }, lfPhoto);
+      setLfTitle(''); setLfDesc(''); setLfLocation(''); setLfTown(''); setLfDate(''); setLfContact(''); setLfPhoto(null); setLfType('lost_item');
+      setShowCreateEvent(false);
+      setCeSuccess('Lost & Found post created!');
+      setTimeout(() => setCeSuccess(''), 4000);
+    } catch (e: any) {
+      setLfError(e.message || 'Failed to create post.');
+    } finally {
+      setLfSubmitting(false);
+    }
+  };
+
+  const handleAdminCreateAsk = async () => {
+    if (!askTitle.trim() || !user) return;
+    setAskSubmitting(true);
+    setAskError('');
+    try {
+      await adminCreateAskPost({ serviceNeeded: askTitle, description: askDesc, town: askTown });
+      setAskTitle(''); setAskDesc(''); setAskTown('');
+      setShowCreateEvent(false);
+      setCeSuccess('Ask post created!');
+      setTimeout(() => setCeSuccess(''), 4000);
+    } catch (e: any) {
+      setAskError(e.message || 'Failed to create post.');
+    } finally {
+      setAskSubmitting(false);
     }
   };
 
@@ -741,74 +805,213 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
             </button>
           </div>
 
-          {/* Admin Create Community Event Form */}
+          {/* Admin Create Post Form */}
           {showCreateEvent && (
             <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 mb-4">
-              <h3 className="font-bold text-slate-900 text-sm">Create Community Post</h3>
+              <h3 className="font-bold text-slate-900 text-sm">Create Post</h3>
               <p className="text-xs text-slate-400">Posts created here are published instantly (no approval needed).</p>
 
+              {/* Form type selector */}
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Post Type</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">What to Create</label>
                 <div className="flex flex-wrap gap-2">
-                  {(Object.entries(POST_TYPE_LABELS) as [CommunityPostType, string][]).map(([value, label]) => (
+                  {([
+                    { key: 'community' as const, label: 'Community Post', icon: 'fa-calendar' },
+                    { key: 'lostfound' as const, label: 'Lost & Found', icon: 'fa-magnifying-glass' },
+                    { key: 'ask' as const, label: 'Ask Post', icon: 'fa-comments' },
+                  ]).map(opt => (
                     <button
-                      key={value}
+                      key={opt.key}
                       type="button"
-                      onClick={() => setCePostType(value)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${cePostType === value ? POST_TYPE_COLORS[value] + ' shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                      onClick={() => setCreateFormType(opt.key)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${createFormType === opt.key ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
                     >
-                      {label}
+                      <i className={`fas ${opt.icon} mr-1`}></i> {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title *</label>
-                <input type="text" value={ceTitle} onChange={e => setCeTitle(e.target.value)} maxLength={200} placeholder="e.g. Church Clothes Closet, Town Meeting, Free Dinner" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date</label>
-                    <button type="button" onClick={() => { setCeNoDate(false); setCeDate(new Date().toISOString().split('T')[0]); }} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide">Today</button>
+              {/* ── Community Post Form ── */}
+              {createFormType === 'community' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Post Type</label>
+                    <div className="flex flex-wrap gap-2">
+                      {(Object.entries(POST_TYPE_LABELS) as [CommunityPostType, string][]).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setCePostType(value)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${cePostType === value ? POST_TYPE_COLORS[value] + ' shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <input type="date" disabled={ceNoDate} value={ceNoDate ? '' : ceDate} onChange={e => setCeDate(e.target.value)} className={`w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${ceNoDate ? 'opacity-40' : ''}`} />
-                  <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer">
-                    <input type="checkbox" checked={ceNoDate} onChange={e => { setCeNoDate(e.target.checked); if (e.target.checked) setCeDate(''); }} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" />
-                    <span className="text-[11px] text-slate-400">No specific date</span>
-                  </label>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
-                  <select value={ceTown} onChange={e => setCeTown(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="">Select...</option>
-                    {adminTenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location <span className="font-normal normal-case text-slate-300">(optional)</span></label>
-                  <input type="text" value={ceLocation} onChange={e => setCeLocation(e.target.value)} maxLength={300} placeholder="e.g. Clarkson Baptist Church" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description *</label>
-                  <span className={`text-xs ${ceDesc.length > 950 ? 'text-red-400' : 'text-slate-300'}`}>{ceDesc.length}/1000</span>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title *</label>
+                    <input type="text" value={ceTitle} onChange={e => setCeTitle(e.target.value)} maxLength={200} placeholder="e.g. Church Clothes Closet, Town Meeting, Free Dinner" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date</label>
+                        <button type="button" onClick={() => { setCeNoDate(false); setCeDate(new Date().toISOString().split('T')[0]); }} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide">Today</button>
+                      </div>
+                      <input type="date" disabled={ceNoDate} value={ceNoDate ? '' : ceDate} onChange={e => setCeDate(e.target.value)} className={`w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${ceNoDate ? 'opacity-40' : ''}`} />
+                      <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer">
+                        <input type="checkbox" checked={ceNoDate} onChange={e => { setCeNoDate(e.target.checked); if (e.target.checked) setCeDate(''); }} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" />
+                        <span className="text-[11px] text-slate-400">No specific date</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+                      <select value={ceTown} onChange={e => setCeTown(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Select...</option>
+                        {adminTenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location <span className="font-normal normal-case text-slate-300">(optional)</span></label>
+                      <input type="text" value={ceLocation} onChange={e => setCeLocation(e.target.value)} maxLength={300} placeholder="e.g. Clarkson Baptist Church" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description *</label>
+                      <span className={`text-xs ${ceDesc.length > 950 ? 'text-red-400' : 'text-slate-300'}`}>{ceDesc.length}/1000</span>
+                    </div>
+                    <textarea value={ceDesc} onChange={e => setCeDesc(e.target.value)} maxLength={1000} rows={6} placeholder="Full details — hours, schedules, contact info, etc." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
+                  </div>
+
+                  {ceError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{ceError}</div>}
+
+                  <div className="flex gap-3">
+                    <button onClick={() => setShowCreateEvent(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button onClick={handleAdminCreateEvent} disabled={ceSubmitting || !ceTitle.trim() || !ceDesc.trim()} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-50">
+                      {ceSubmitting ? 'Creating...' : 'Publish Post'}
+                    </button>
+                  </div>
                 </div>
-                <textarea value={ceDesc} onChange={e => setCeDesc(e.target.value)} maxLength={1000} rows={6} placeholder="Full details — hours, schedules, contact info, etc." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
-              </div>
+              )}
 
-              {ceError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{ceError}</div>}
+              {/* ── Lost & Found Form ── */}
+              {createFormType === 'lostfound' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Type</label>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { value: 'lost_pet' as const, label: 'Lost Pet' },
+                        { value: 'found_pet' as const, label: 'Found Pet' },
+                        { value: 'lost_item' as const, label: 'Lost Item' },
+                        { value: 'found_item' as const, label: 'Found Item' },
+                        { value: 'lost_package' as const, label: 'Lost Package' },
+                        { value: 'found_package' as const, label: 'Found Package' },
+                      ]).map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setLfType(opt.value)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${lfType === opt.value ? 'bg-orange-50 text-orange-700 border-orange-200 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="flex gap-3">
-                <button onClick={() => setShowCreateEvent(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onClick={handleAdminCreateEvent} disabled={ceSubmitting || !ceTitle.trim() || !ceDesc.trim()} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-50">
-                  {ceSubmitting ? 'Creating...' : 'Publish Post'}
-                </button>
-              </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Title *</label>
+                    <input type="text" value={lfTitle} onChange={e => setLfTitle(e.target.value)} maxLength={200} placeholder="e.g. Lost golden retriever, Found set of keys" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+                      <select value={lfTown} onChange={e => setLfTown(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Select...</option>
+                        {adminTenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location <span className="font-normal normal-case text-slate-300">(optional)</span></label>
+                      <input type="text" value={lfLocation} onChange={e => setLfLocation(e.target.value)} maxLength={500} placeholder="e.g. Near Main St park" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Date Occurred</label>
+                      <input type="date" value={lfDate} onChange={e => setLfDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Method <span className="font-normal normal-case text-slate-300">(optional)</span></label>
+                    <input type="text" value={lfContact} onChange={e => setLfContact(e.target.value)} maxLength={200} placeholder="e.g. Call 555-1234 or message on Facebook" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description *</label>
+                      <span className={`text-xs ${lfDesc.length > 1900 ? 'text-red-400' : 'text-slate-300'}`}>{lfDesc.length}/2000</span>
+                    </div>
+                    <textarea value={lfDesc} onChange={e => setLfDesc(e.target.value)} maxLength={2000} rows={5} placeholder="Describe what was lost/found, any identifying features, etc." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Photo <span className="font-normal normal-case text-slate-300">(optional)</span></label>
+                    <input type="file" accept="image/*" onChange={e => setLfPhoto(e.target.files?.[0] ?? null)} className="text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                  </div>
+
+                  {lfError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{lfError}</div>}
+
+                  <div className="flex gap-3">
+                    <button onClick={() => setShowCreateEvent(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button onClick={handleAdminCreateLF} disabled={lfSubmitting || !lfTitle.trim() || !lfDesc.trim()} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-600 hover:bg-orange-500 transition-colors disabled:opacity-50">
+                      {lfSubmitting ? 'Creating...' : 'Publish Post'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Ask Post Form ── */}
+              {createFormType === 'ask' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Question / Service Needed *</label>
+                    <input type="text" value={askTitle} onChange={e => setAskTitle(e.target.value)} maxLength={200} placeholder="e.g. Plumber for kitchen leak, Who mows lawns in Leitchfield?" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+                    <select value={askTown} onChange={e => setAskTown(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                      <option value="">Select...</option>
+                      {adminTenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Details <span className="font-normal normal-case text-slate-300">(optional)</span></label>
+                      <span className={`text-xs ${askDesc.length > 950 ? 'text-red-400' : 'text-slate-300'}`}>{askDesc.length}/1000</span>
+                    </div>
+                    <textarea value={askDesc} onChange={e => setAskDesc(e.target.value)} maxLength={1000} rows={4} placeholder="Any extra details about what you're looking for..." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y" />
+                  </div>
+
+                  {askError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{askError}</div>}
+
+                  <div className="flex gap-3">
+                    <button onClick={() => setShowCreateEvent(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button onClick={handleAdminCreateAsk} disabled={askSubmitting || !askTitle.trim()} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-violet-600 hover:bg-violet-500 transition-colors disabled:opacity-50">
+                      {askSubmitting ? 'Creating...' : 'Publish Post'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -1587,6 +1587,106 @@ export async function adminCreateCommunityEvent(
   return mapCommunityEvent(data);
 }
 
+export async function adminCreateLostFoundPost(
+  input: {
+    type: LostFoundType;
+    title: string;
+    description: string;
+    locationDescription: string;
+    town: Town;
+    dateOccurred: string;
+    contactMethod: string;
+  },
+  photoFile: File | null,
+): Promise<LostFoundPost> {
+  const adminId = await requireAdmin();
+  const title = sanitize(input.title, 200);
+  const description = sanitize(input.description, 2000);
+  const locationDescription = sanitize(input.locationDescription, 500);
+  const contactMethod = sanitize(input.contactMethod, 200);
+  if (!title) throw new Error('Title is required.');
+  if (!description) throw new Error('Description is required.');
+  validateTown(input.town);
+  rejectHtml(title, 'Title');
+  rejectHtml(description, 'Description');
+  rejectHtml(locationDescription, 'Location');
+
+  let photoUrl: string | null = null;
+  if (photoFile) {
+    validateImageFile(photoFile);
+    const ext = safeImageExt(photoFile);
+    const path = `${adminId}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from('lost-found-photos')
+      .upload(path, photoFile, { upsert: false });
+    if (uploadError) throw new Error('Photo upload failed. Please try again.');
+    const { data: urlData } = supabase.storage
+      .from('lost-found-photos')
+      .getPublicUrl(path);
+    photoUrl = urlData.publicUrl;
+  }
+
+  const { data, error } = await supabase
+    .from('lost_found_posts')
+    .insert({
+      user_id: adminId,
+      user_name: 'Admin',
+      type: input.type,
+      title,
+      description,
+      photo_url: photoUrl,
+      location_description: locationDescription,
+      town: input.town,
+      date_occurred: input.dateOccurred || new Date().toISOString().split('T')[0],
+      contact_method: contactMethod,
+      tenant_id: getCurrentTenant().id,
+    })
+    .select()
+    .single();
+  if (error) throw new Error('Failed to create lost & found post.');
+  return mapLostFound(data);
+}
+
+export async function adminCreateAskPost(
+  input: { serviceNeeded: string; description: string; town: Town },
+): Promise<RecommendationRequest> {
+  const adminId = await requireAdmin();
+  const serviceNeeded = sanitize(input.serviceNeeded, 200);
+  const description = sanitize(input.description, 1000);
+  if (!serviceNeeded) throw new Error('Question title is required.');
+  validateTown(input.town);
+  rejectHtml(serviceNeeded, 'Service needed');
+  rejectHtml(description, 'Description');
+
+  const baseSlug = slugify(serviceNeeded) || `community-question-${crypto.randomUUID().slice(0, 8)}`;
+  let slug = baseSlug;
+  const { data: existing } = await supabase
+    .from('recommendation_requests')
+    .select('id')
+    .eq('slug', slug)
+    .eq('tenant_id', getCurrentTenant().id)
+    .maybeSingle();
+  if (existing) {
+    slug = `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+
+  const { data, error } = await supabase
+    .from('recommendation_requests')
+    .insert({
+      user_id: adminId,
+      user_name: 'Admin',
+      service_needed: serviceNeeded,
+      description,
+      town: input.town,
+      tenant_id: getCurrentTenant().id,
+      slug,
+    })
+    .select()
+    .single();
+  if (error) throw new Error('Failed to create ask post.');
+  return mapRequest(data);
+}
+
 export async function updateCommunityEvent(
   id: string,
   fields: { title?: string; description?: string; eventDate?: string; location?: string; town?: string; postType?: CommunityEvent['postType'] },

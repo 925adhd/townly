@@ -30,25 +30,59 @@ function setMetaTag(property: string, content: string) {
   el.setAttribute('content', content);
 }
 
-// ── Related businesses (keyword match) ────────────────────────────────────────
+// ── Related businesses (weighted keyword + category match) ────────────────────
 function findRelatedProviders(serviceNeeded: string, providers: Provider[]): Provider[] {
-  const stopWords = new Set(['the', 'and', 'for', 'who', 'what', 'where', 'does', 'any', 'can', 'you', 'best', 'good', 'near', 'local']);
-  const keywords = serviceNeeded
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 3 && !stopWords.has(w));
+  const stopWords = new Set([
+    'the', 'and', 'for', 'who', 'what', 'where', 'does', 'any', 'can', 'you',
+    'best', 'good', 'near', 'local', 'need', 'looking', 'help', 'find', 'recommend',
+    'anyone', 'know', 'have', 'this', 'that', 'with', 'from', 'some', 'would',
+  ]);
 
-  if (keywords.length === 0) return [];
+  const clean = serviceNeeded.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+  const words = clean.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
 
-  return providers
-    .filter(p => p.status === 'approved')
+  if (words.length === 0) return [];
+
+  // Build bigrams for multi-word matching (e.g. "property rental" as one phrase)
+  const bigrams: string[] = [];
+  for (let i = 0; i < words.length - 1; i++) {
+    bigrams.push(`${words[i]} ${words[i + 1]}`);
+  }
+
+  const approved = providers.filter(p => p.status === 'approved');
+
+  return approved
     .map(p => {
-      const text = `${p.name} ${p.category} ${p.subcategory ?? ''} ${p.description ?? ''}`.toLowerCase();
-      const score = keywords.filter(k => new RegExp(`\\b${k}\\b`).test(text)).length;
+      const cat = p.category.toLowerCase();
+      const sub = (p.subcategory ?? '').toLowerCase();
+      const name = p.name.toLowerCase();
+      const desc = (p.description ?? '').toLowerCase();
+
+      let score = 0;
+
+      // Full phrase match against category/subcategory (strongest signal)
+      if (cat.includes(clean) || clean.includes(cat)) score += 10;
+      if (sub && (sub.includes(clean) || clean.includes(sub))) score += 8;
+
+      // Bigram matches (better context than single words)
+      for (const bg of bigrams) {
+        if (cat.includes(bg) || sub.includes(bg)) score += 6;
+        if (name.includes(bg)) score += 3;
+        if (desc.includes(bg)) score += 1;
+      }
+
+      // Single keyword matches with weighted fields
+      for (const w of words) {
+        const re = new RegExp(`\\b${w}\\b`);
+        if (re.test(cat)) score += 4;
+        if (re.test(sub)) score += 3;
+        if (re.test(name)) score += 2;
+        if (re.test(desc)) score += 1;
+      }
+
       return { provider: p, score };
     })
-    .filter(({ score }) => score > 0)
+    .filter(({ score }) => score >= 3) // require a meaningful match
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
     .map(({ provider }) => provider);
