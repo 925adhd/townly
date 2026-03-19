@@ -684,6 +684,7 @@ export async function updateLostFoundPost(
     })
     .eq('id', id)
     .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
     .select()
     .single();
   if (error) throw error;
@@ -1345,6 +1346,8 @@ export async function updateOwnerListing(
 }
 
 export async function uploadOwnerPhoto(providerId: string, userId: string, file: File): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user || session.user.id !== userId) throw new Error('Unauthorized.');
   validateImageFile(file);
   const ext = safeImageExt(file);
   const path = `${userId}/${providerId}.${ext}`;
@@ -1366,7 +1369,7 @@ export async function uploadAdminProviderPhoto(providerId: string, file: File): 
   const { error: uploadError } = await supabase.storage
     .from('provider-photos')
     .upload(path, file, { upsert: true });
-  if (uploadError) throw new Error(`Photo upload failed: ${uploadError.message}`);
+  if (uploadError) throw new Error('Photo upload failed. Please try again.');
   const { data } = supabase.storage.from('provider-photos').getPublicUrl(path);
   return data.publicUrl;
 }
@@ -2268,7 +2271,7 @@ export async function submitSpotlightBooking(
   tags?: string[],
   teaser?: string,
   stripeSessionId?: string,
-  paymentStatus: 'pending' | 'paid' | 'unpaid' = 'paid',
+  paymentStatus: 'pending' | 'paid' | 'unpaid' = 'unpaid',
 ): Promise<SpotlightBooking> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be logged in to submit a booking.');
@@ -2323,7 +2326,7 @@ export async function submitSpotlightBooking(
     if (error.message.includes('RATE_LIMIT_PAID_SUBMISSIONS')) {
       throw new Error('Too many bookings submitted today. Please try again tomorrow or contact support@townly.us.');
     }
-    throw new Error(`Failed to save booking: ${error.message}`);
+    throw new Error('Failed to save booking. Please try again or contact support@townly.us.');
   }
   return mapSpotlightBooking(data);
 }

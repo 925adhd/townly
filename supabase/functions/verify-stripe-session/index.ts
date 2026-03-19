@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     // Verify the session belongs to the calling user — prevents session ID enumeration abuse.
-    if (session.metadata?.userId && session.metadata.userId !== user.id) {
+    if (!session.metadata?.userId || session.metadata.userId !== user.id) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
       });
