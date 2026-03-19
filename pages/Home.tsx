@@ -206,7 +206,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             {userCount > 0 && (
               <p className="text-white/80 text-xs md:text-sm font-semibold mb-3 flex items-center justify-center gap-2">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
-                {userCount.toLocaleString()} locals already here
+                {userCount.toLocaleString()} locals have already joined
               </p>
             )}
 
