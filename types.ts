@@ -138,6 +138,15 @@ export interface CommunityAlert {
   icon: string;
 }
 
+export interface CommunityUpdate {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  expiresAt?: string | null;
+  source?: 'admin' | 'business' | 'auto';
+}
+
 export interface SpotlightBooking {
   id: string;
   tenantId: string;

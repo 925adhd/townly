@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
-import { LostFoundPost, CommunityAlert, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
+import { LostFoundPost, CommunityAlert, CommunityUpdate, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
 import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, areHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents, fetchUserCount, getCachedUserCount } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
@@ -26,6 +26,42 @@ const ALERT_ICON_COLORS: Record<string, string> = {
   'fa-road-barrier':         'text-yellow-600',
   'fa-house-flood-water':    'text-teal-500',
 };
+
+// Seed community updates — replace with DB fetch when ready
+const SEED_UPDATES: CommunityUpdate[] = [
+  {
+    id: 'seed-1',
+    title: 'Cougars Advance to Quarterfinals',
+    description: 'Play Friday at 1:30 PM ET.',
+    createdAt: new Date().toISOString(),
+    source: 'admin',
+  },
+  {
+    id: 'seed-2',
+    title: 'Road Work on Hwy 54',
+    description: 'Expect delays near Leitchfield this week.',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    source: 'admin',
+  },
+  {
+    id: 'seed-3',
+    title: 'Community Yard Sale Saturday',
+    description: 'Multiple homes on Sunbeam Road starting at 8 AM.',
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    source: 'admin',
+  },
+];
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
 
 const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) => {
   const [alertIndex, setAlertIndex] = useState(0);
@@ -167,8 +203,53 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
     );
   }
 
+  const hasAlerts = allAlerts.length > 0;
+
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
+
+      {/* Alert Banner — only rendered when alerts exist */}
+      {hasAlerts && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 shadow-sm" role="alert">
+          <div style={{ display: 'grid' }}>
+            {allAlerts.map((alert, i) => {
+              const isActive = i === safeIndex;
+              const isSevereNws = alert.isNws && (alert.severity === 'Extreme' || alert.severity === 'Severe');
+              return (
+                <div
+                  key={alert.id}
+                  style={{ gridArea: '1/1', opacity: isActive ? (alertVisible ? 1 : 0) : 0, transition: 'opacity 0.4s ease', visibility: isActive ? 'visible' : 'hidden', pointerEvents: isActive ? 'auto' : 'none' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isSevereNws ? 'bg-red-200' : alert.isNws ? 'bg-amber-100' : 'bg-red-100'}`}>
+                      <i className={`fas ${alert.icon} text-sm ${ALERT_ICON_COLORS[alert.icon] ?? 'text-red-700'}`}></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${isSevereNws ? 'bg-red-200 text-red-700' : alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                          {alert.isNws ? `${alert.severity} · NWS` : 'Alert'}
+                        </span>
+                        {allAlerts.length > 1 && (
+                          <span className="text-[10px] text-red-400 font-semibold">{safeIndex + 1}/{allAlerts.length}</span>
+                        )}
+                      </div>
+                      <p className="text-slate-800 text-sm font-semibold leading-snug mt-0.5 truncate">
+                        {alert.isNws ? alert.title : alert.title}
+                      </p>
+                      <p className="text-slate-600 text-xs leading-snug line-clamp-1">{alert.description}</p>
+                      {alert.isNws && alert.expires && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          {alert.senderName} · Expires {new Date(alert.expires).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section
@@ -369,91 +450,59 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             </Link>
           )}
 
-          {/* Second row: community cards */}
-          <div className="grid md:grid-cols-2 gap-3">
+          {/* Lost & Found Card */}
+          <Link to="/lost-found" className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+            {latestLF ? (
+              <>
+                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest self-start mb-2 ${
+                  latestLF.type.includes('lost') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                }`}>
+                  {latestLF.type.replace('_', ' ')}
+                </span>
+                <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{latestLF.title}</h3>
+                <p className="text-slate-500 text-xs flex items-center">
+                  <i className="fas fa-map-marker-alt mr-1 text-orange-400"></i>
+                  {latestLF.locationDescription}
+                </p>
+                <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
+                  View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500 self-start mb-2">
+                  Lost &amp; Found
+                </span>
+                <p className="text-slate-400 text-xs leading-relaxed mt-1">
+                  No lost or found items reported today.
+                </p>
+                <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
+                  View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
+                </span>
+              </>
+            )}
+          </Link>
+        </div>
+      </section>
 
-            {/* Community Alert Card — hidden on mobile when empty, always visible on desktop */}
-            <div className={`bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${allAlerts.length === 0 ? 'hidden md:block' : ''}`}>
-              {allAlerts.length > 0 ? (
-                <div style={{ display: 'grid' }}>
-                  {/* All alerts share the same grid cell — height locks to the tallest */}
-                  {allAlerts.map((alert, i) => {
-                    const isActive = i === safeIndex;
-                    const isSevereNws = alert.isNws && (alert.severity === 'Extreme' || alert.severity === 'Severe');
-                    return (
-                      <div
-                        key={alert.id}
-                        style={{ gridArea: '1/1', opacity: isActive ? (alertVisible ? 1 : 0) : 0, transition: 'opacity 0.4s ease', visibility: isActive ? 'visible' : 'hidden', pointerEvents: isActive ? 'auto' : 'none' }}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 ${isSevereNws ? 'bg-red-200 text-red-700' : alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                            <i className={`fas ${alert.icon} text-xs ${ALERT_ICON_COLORS[alert.icon] ?? 'text-red-700'}`}></i>
-                            {alert.isNws ? `${alert.severity} · NWS` : alert.title}
-                          </span>
-                          {allAlerts.length > 1 && isActive && (
-                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-200 text-red-700 flex-shrink-0">
-                              {safeIndex + 1}/{allAlerts.length}
-                            </span>
-                          )}
-                        </div>
-                        {alert.isNws && <p className="text-slate-700 text-xs font-semibold leading-snug mb-1">{alert.title}</p>}
-                        <p className="text-slate-600 text-xs leading-relaxed">{alert.description}</p>
-                        {alert.isNws && alert.expires && (
-                          <p className="text-[10px] text-slate-400 mt-1">
-                            {alert.senderName} · Expires {new Date(alert.expires).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <>
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 inline-block mb-2">
-                    Community Alert
-                  </span>
-                  <p className="text-slate-500 text-xs leading-relaxed flex items-center gap-1.5">
-                    <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
-                    No alerts reported in {tenant.name} today.
-                  </p>
-                </>
-              )}
+      {/* Community Updates */}
+      <section>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h2 className="text-base font-bold text-slate-900">
+            {hasAlerts ? 'More happening in your area' : "What's happening right now"}
+          </h2>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible scrollbar-hide">
+          {SEED_UPDATES.map(update => (
+            <div
+              key={update.id}
+              className="flex-shrink-0 w-[260px] md:w-auto bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{update.title}</h3>
+              <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">{update.description}</p>
+              <p className="text-[10px] text-slate-400 mt-2">{timeAgo(update.createdAt)}</p>
             </div>
-
-            {/* Lost & Found Card */}
-            <Link to="/lost-found" className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
-              {latestLF ? (
-                <>
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest self-start mb-2 ${
-                    latestLF.type.includes('lost') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-                  }`}>
-                    {latestLF.type.replace('_', ' ')}
-                  </span>
-                  <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{latestLF.title}</h3>
-                  <p className="text-slate-500 text-xs flex items-center">
-                    <i className="fas fa-map-marker-alt mr-1 text-orange-400"></i>
-                    {latestLF.locationDescription}
-                  </p>
-                  <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
-                    View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500 self-start mb-2">
-                    Lost &amp; Found
-                  </span>
-                  <p className="text-slate-400 text-xs leading-relaxed mt-1">
-                    No lost or found items reported today.
-                  </p>
-                  <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
-                    View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>
-                  </span>
-                </>
-              )}
-            </Link>
-
-          </div>
+          ))}
         </div>
       </section>
 
