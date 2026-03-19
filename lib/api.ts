@@ -255,12 +255,9 @@ function mapRequest(row: any): RecommendationRequest {
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 export async function fetchUserCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .is('deleted_at', null);
+  const { data, error } = await supabase.rpc('get_user_count');
   if (error) throw error;
-  return count ?? 0;
+  return data ?? 0;
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
