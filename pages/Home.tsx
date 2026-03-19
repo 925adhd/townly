@@ -213,7 +213,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
 
       {/* Pinned severe NWS alerts — always visible, never cycle away */}
       {pinnedAlerts.map(alert => (
-        <Link key={alert.id} to="/alerts" className="block bg-red-100 border border-red-300 rounded-lg px-3 py-2.5 hover:bg-red-200/60 transition-colors" role="alert">
+        <Link key={alert.id} to="/alerts" className="block bg-red-100 border border-red-300 rounded-lg px-2 py-1.5 md:px-3 md:py-2.5 hover:bg-red-200/60 transition-colors" role="alert">
           <div className="flex items-center gap-2">
             <i className={`fas ${alert.icon} text-xs flex-shrink-0 text-red-600`}></i>
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 bg-red-200 text-red-700">
@@ -235,7 +235,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
 
       {/* Cycling alerts (non-severe NWS + community) */}
       {cyclingAlerts.length > 0 && (
-        <Link to="/alerts" className="block bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 hover:bg-red-100/60 transition-colors" role="alert">
+        <Link to="/alerts" className="block bg-red-50 border border-red-200 rounded-lg px-2 py-1.5 md:px-3 md:py-2.5 hover:bg-red-100/60 transition-colors" role="alert">
           <div style={{ display: 'grid' }}>
             {cyclingAlerts.map((alert, i) => {
               const isActive = i === safeIndex;

@@ -181,7 +181,7 @@ const App: React.FC = () => {
               <i className="fas fa-tornado text-base animate-pulse"></i>
             </div>
           )}
-        <header className="bg-white border-b border-slate-200 h-20">
+        <header className="bg-white border-b border-slate-200 h-16 md:h-20">
           <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
             <span className="md:hidden absolute left-1/2 -translate-x-1/2 font-bold text-slate-900 text-base pointer-events-none">{tenant.name}</span>
             <div className="flex items-center gap-3">
@@ -261,7 +261,7 @@ const App: React.FC = () => {
         </header>
         </div>{/* end sticky top wrapper */}
 
-        <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-6">
+        <main className="flex-grow max-w-7xl mx-auto w-full px-3 py-3 md:px-4 md:py-6">
           <ErrorBoundary>
           {loading ? (
             <div className="flex items-center justify-center py-20">
