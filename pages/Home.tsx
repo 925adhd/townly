@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
-import { LostFoundPost, CommunityAlert, CommunityUpdate, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
+import { LostFoundPost, CommunityAlert, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
 import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, areHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents, fetchUserCount, getCachedUserCount } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
@@ -27,41 +27,6 @@ const ALERT_ICON_COLORS: Record<string, string> = {
   'fa-house-flood-water':    'text-teal-500',
 };
 
-// Seed community updates — replace with DB fetch when ready
-const SEED_UPDATES: CommunityUpdate[] = [
-  {
-    id: 'seed-1',
-    title: 'Cougars Advance to Quarterfinals',
-    description: 'Play Friday at 1:30 PM ET.',
-    createdAt: new Date().toISOString(),
-    source: 'admin',
-  },
-  {
-    id: 'seed-2',
-    title: 'Road Work on Hwy 54',
-    description: 'Expect delays near Leitchfield this week.',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    source: 'admin',
-  },
-  {
-    id: 'seed-3',
-    title: '2026-27 Bass Fishing Sign Ups',
-    description: '3/24/26 at 6:00 PM at the high school cafe. 7-12 grades (next school year). Boys and girls welcome. Questions? Call 270-230-2169.',
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    source: 'admin',
-  },
-];
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
 
 const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) => {
   const [alertIndex, setAlertIndex] = useState(0);
@@ -466,6 +431,8 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
           )}
 
           {/* Lost & Found Card */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 mb-2 px-1">Lost & Found</h3>
           <Link to="/lost-found" className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
             {latestLF ? (
               <>
@@ -499,29 +466,10 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
               </>
             )}
           </Link>
+          </div>
         </div>
       </section>
 
-      {/* Community Updates */}
-      <section>
-        <div className="flex items-center justify-between mb-2 px-1">
-          <h2 className="text-base font-bold text-slate-900">
-Local Updates
-          </h2>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible scrollbar-hide">
-          {SEED_UPDATES.map(update => (
-            <div
-              key={update.id}
-              className="flex-shrink-0 w-[260px] md:w-auto bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{update.title}</h3>
-              <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">{update.description}</p>
-              <p className="text-[10px] text-slate-400 mt-2">{timeAgo(update.createdAt)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Popular Categories */}
       <section>
