@@ -88,6 +88,15 @@ export interface LostFoundPost {
   createdAt: string;
 }
 
+export interface LostFoundReply {
+  id: string;
+  postId: string;
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface RecommendationRequest {
   id: string;
   userId: string;

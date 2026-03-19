@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LostFoundPost, LostFoundType, Town } from '../types';
-import { updateLostFoundStatus, updateLostFoundPost, deleteLostFoundPost, submitReport } from '../lib/api';
+import { LostFoundPost, LostFoundReply, LostFoundType, Town } from '../types';
+import { updateLostFoundStatus, updateLostFoundPost, deleteLostFoundPost, submitReport, fetchLostFoundReplies, addLostFoundReply, deleteLostFoundReply } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import { getCurrentTenant } from '../tenants';
 
@@ -63,6 +63,52 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
       setActionError(err.message || 'Failed to submit report.');
     } finally {
       setSubmittingReport(false);
+    }
+  };
+
+  // Replies state
+  const [replies, setReplies] = useState<Record<string, LostFoundReply[]>>({});
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [replyText, setReplyText] = useState<Record<string, string>>({});
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  const toggleReplies = async (postId: string) => {
+    const next = new Set(expandedReplies);
+    if (next.has(postId)) {
+      next.delete(postId);
+    } else {
+      next.add(postId);
+      if (!replies[postId]) {
+        try {
+          const data = await fetchLostFoundReplies(postId);
+          setReplies(prev => ({ ...prev, [postId]: data }));
+        } catch { /* silent */ }
+      }
+    }
+    setExpandedReplies(next);
+  };
+
+  const handleAddReply = async (postId: string) => {
+    const text = (replyText[postId] || '').trim();
+    if (!text || !user) return;
+    setSubmittingReply(true);
+    try {
+      const reply = await addLostFoundReply(postId, text, user.id, user.name);
+      setReplies(prev => ({ ...prev, [postId]: [...(prev[postId] || []), reply] }));
+      setReplyText(prev => ({ ...prev, [postId]: '' }));
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to post reply.');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const handleDeleteReply = async (postId: string, replyId: string) => {
+    try {
+      await deleteLostFoundReply(replyId);
+      setReplies(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(r => r.id !== replyId) }));
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to delete reply.');
     }
   };
 
@@ -484,6 +530,72 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
                   </div>
                 </div>
               )}
+
+              {/* Replies */}
+              <div className="border-t border-slate-100 px-5 py-3">
+                <button
+                  onClick={() => toggleReplies(post.id)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1.5 transition-colors"
+                >
+                  <i className={`fas fa-comment${expandedReplies.has(post.id) ? '' : 's'} text-[11px]`}></i>
+                  {expandedReplies.has(post.id) ? 'Hide' : ''} Replies
+                  {replies[post.id] && replies[post.id].length > 0 && (
+                    <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-1.5 py-0.5 rounded-full">{replies[post.id].length}</span>
+                  )}
+                </button>
+
+                {expandedReplies.has(post.id) && (
+                  <div className="mt-3 space-y-3">
+                    {(replies[post.id] || []).length === 0 && (
+                      <p className="text-xs text-slate-400">No replies yet.</p>
+                    )}
+                    {(replies[post.id] || []).map(reply => (
+                      <div key={reply.id} className="bg-slate-50 rounded-xl px-3 py-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-slate-700">{reply.userName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400">{new Date(reply.createdAt).toLocaleDateString()}</span>
+                            {user && (user.id === reply.userId || isAdminOrMod) && (
+                              <button
+                                onClick={() => handleDeleteReply(post.id, reply.id)}
+                                className="text-[10px] text-red-400 hover:text-red-600 font-bold"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-relaxed">{reply.text}</p>
+                      </div>
+                    ))}
+
+                    {user ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={replyText[post.id] || ''}
+                          onChange={e => setReplyText(prev => ({ ...prev, [post.id]: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(post.id); } }}
+                          placeholder="Write a reply..."
+                          maxLength={1000}
+                          className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-400 outline-none"
+                        />
+                        <button
+                          onClick={() => handleAddReply(post.id)}
+                          disabled={submittingReply || !(replyText[post.id] || '').trim()}
+                          className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-500 transition-colors disabled:opacity-50"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400">
+                        <Link to="/login?signup=true" className="text-orange-500 hover:underline font-medium">Sign in</Link> to reply.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}

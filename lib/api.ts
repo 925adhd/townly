@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Provider, Review, ReviewReply, LostFoundPost, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
+import { Provider, Review, ReviewReply, LostFoundPost, LostFoundReply, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
 import { getCurrentTenant } from '../tenants';
 
 // ── Security helpers ──────────────────────────────────────────────────────────
@@ -701,6 +701,78 @@ export async function deleteLostFoundPost(id: string): Promise<void> {
   const isAdminOrMod = profile?.role === 'admin' || profile?.role === 'moderator';
   let query = supabase
     .from('lost_found_posts')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (!isAdminOrMod) {
+    query = query.eq('user_id', session.user.id);
+  }
+  const { error } = await query;
+  if (error) throw error;
+}
+
+// ── Lost & Found Replies ──────────────────────────────────────────────────────
+
+export async function fetchLostFoundReplies(postId: string): Promise<LostFoundReply[]> {
+  const { data, error } = await supabase
+    .from('lost_found_replies')
+    .select('*')
+    .eq('post_id', postId)
+    .eq('tenant_id', getCurrentTenant().id)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    postId: r.post_id,
+    userId: r.user_id,
+    userName: r.user_name,
+    text: r.text,
+    createdAt: r.created_at,
+  }));
+}
+
+export async function addLostFoundReply(
+  postId: string,
+  text: string,
+  userId: string,
+  userName: string,
+): Promise<LostFoundReply> {
+  const sanitizedText = sanitize(text, 1000);
+  if (!sanitizedText) throw new Error('Reply cannot be empty.');
+  rejectHtml(sanitizedText, 'Reply');
+  const { data, error } = await supabase
+    .from('lost_found_replies')
+    .insert({
+      post_id: postId,
+      user_id: userId,
+      user_name: sanitize(userName, 100),
+      text: sanitizedText,
+      tenant_id: getCurrentTenant().id,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    postId: data.post_id,
+    userId: data.user_id,
+    userName: data.user_name,
+    text: data.text,
+    createdAt: data.created_at,
+  };
+}
+
+export async function deleteLostFoundReply(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  const isAdminOrMod = profile?.role === 'admin' || profile?.role === 'moderator';
+  let query = supabase
+    .from('lost_found_replies')
     .delete()
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
