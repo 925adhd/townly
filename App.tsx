@@ -306,7 +306,7 @@ const App: React.FC = () => {
         </main>
 
         {/* Mobile Navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: isFbBrowser ? 'calc(env(safe-area-inset-bottom, 0px) + 20px)' : 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: isFbBrowser ? '0px' : 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="h-14 flex items-center justify-around">
             <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600" onMouseEnter={() => { prefetchHomeImages(); prefetchCurrentWeekSubmissions(); }}>
               <i className="fas fa-home text-lg"></i>
