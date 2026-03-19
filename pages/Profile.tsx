@@ -226,7 +226,10 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
                 {activity.map(item => {
                   const kindLabel = item.kind === 'question' ? 'Question' : item.kind === 'lost_found' ? 'Lost & Found' : 'Post';
                   const kindColor = item.kind === 'question' ? 'bg-blue-100 text-blue-600' : item.kind === 'lost_found' ? 'bg-amber-100 text-amber-700' : 'bg-orange-100 text-orange-600';
-                  const linkTo = item.kind === 'question' && item.slug ? `/ask/${item.slug}` : undefined;
+                  const linkTo = item.kind === 'question' && item.slug ? `/ask/${item.slug}`
+                    : item.kind === 'post' ? `/events?event=${item.id}`
+                    : item.kind === 'lost_found' ? `/lost-found`
+                    : undefined;
 
                   const card = (
                     <div className={`bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-3.5 flex items-center gap-3 transition-all ${linkTo ? 'hover:bg-slate-50 hover:border-slate-300 hover:shadow active:scale-[0.98] cursor-pointer' : ''}`}>

@@ -480,7 +480,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                 <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">{latestLF.title}</h3>
                 <p className="text-slate-500 text-xs flex items-center">
                   <i className="fas fa-map-marker-alt mr-1 text-orange-400"></i>
-                  {latestLF.locationDescription}
+                  {latestLF.locationDescription || latestLF.town}
                 </p>
                 <span className="mt-auto pt-3 inline-flex items-center text-orange-600 text-xs font-bold">
                   View board <i className="fas fa-arrow-right ml-1 text-[10px]"></i>

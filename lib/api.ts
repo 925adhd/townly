@@ -693,12 +693,21 @@ export async function updateLostFoundPost(
 export async function deleteLostFoundPost(id: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
-  const { error } = await supabase
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  const isAdminOrMod = profile?.role === 'admin' || profile?.role === 'moderator';
+  let query = supabase
     .from('lost_found_posts')
     .delete()
     .eq('id', id)
-    .eq('user_id', session.user.id)
     .eq('tenant_id', getCurrentTenant().id);
+  if (!isAdminOrMod) {
+    query = query.eq('user_id', session.user.id);
+  }
+  const { error } = await query;
   if (error) throw error;
 }
 
@@ -808,12 +817,21 @@ export async function unresolveRequest(id: string): Promise<void> {
 export async function deleteRequest(id: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
-  const { error, count } = await supabase
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  const isAdminOrMod = profile?.role === 'admin' || profile?.role === 'moderator';
+  let query = supabase
     .from('recommendation_requests')
     .delete({ count: 'exact' })
     .eq('id', id)
-    .eq('user_id', session.user.id)
     .eq('tenant_id', getCurrentTenant().id);
+  if (!isAdminOrMod) {
+    query = query.eq('user_id', session.user.id);
+  }
+  const { error, count } = await query;
   if (error) throw error;
   if (count === 0) throw new Error('Request not found or permission denied.');
 }
@@ -1520,7 +1538,7 @@ export async function submitCommunityEvent(
     user_name: sanitize(resolvedName, 100),
     title: sanitizedTitle,
     description: sanitizedDescription,
-    event_date: eventDate,
+    event_date: eventDate || new Date().toISOString().split('T')[0],
     location: sanitizedLocation,
     town: sanitize(town, 100),
     post_type: postType,
@@ -1533,6 +1551,62 @@ export async function submitCommunityEvent(
     }
     throw new Error('Failed to submit event. Please try again.');
   }
+  return mapCommunityEvent(data);
+}
+
+export async function adminCreateCommunityEvent(
+  title: string,
+  description: string,
+  eventDate: string,
+  location: string,
+  town: string,
+  postType: CommunityEvent['postType'] = 'event',
+): Promise<CommunityEvent> {
+  const adminId = await requireAdmin();
+  const sanitizedTitle = sanitize(title, 200);
+  const sanitizedDescription = sanitize(description, 2000);
+  const sanitizedLocation = sanitize(location, 300);
+  if (!sanitizedTitle) throw new Error('Post title is required.');
+  if (!sanitizedDescription) throw new Error('Description is required.');
+  rejectHtml(sanitizedTitle, 'Title');
+  rejectHtml(sanitizedDescription, 'Description');
+  rejectHtml(sanitizedLocation, 'Location');
+  const { data, error } = await supabase.from('community_events').insert({
+    user_id: adminId,
+    user_name: 'Admin',
+    title: sanitizedTitle,
+    description: sanitizedDescription,
+    event_date: eventDate || new Date().toISOString().split('T')[0],
+    location: sanitizedLocation,
+    town: sanitize(town, 100),
+    post_type: postType,
+    tenant_id: getCurrentTenant().id,
+    status: 'approved',
+  }).select().single();
+  if (error) throw new Error('Failed to create post.');
+  return mapCommunityEvent(data);
+}
+
+export async function updateCommunityEvent(
+  id: string,
+  fields: { title?: string; description?: string; eventDate?: string; location?: string; town?: string; postType?: CommunityEvent['postType'] },
+): Promise<CommunityEvent> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+  const isAdminOrMod = profile?.role === 'admin' || profile?.role === 'moderator';
+  const updates: Record<string, any> = {};
+  if (fields.title !== undefined) { const v = sanitize(fields.title, 200); rejectHtml(v, 'Title'); updates.title = v; }
+  if (fields.description !== undefined) { const v = sanitize(fields.description, 2000); rejectHtml(v, 'Description'); updates.description = v; }
+  if (fields.eventDate !== undefined) updates.event_date = fields.eventDate || new Date().toISOString().split('T')[0];
+  if (fields.location !== undefined) { const v = sanitize(fields.location, 300); rejectHtml(v, 'Location'); updates.location = v; }
+  if (fields.town !== undefined) updates.town = sanitize(fields.town, 100);
+  if (fields.postType !== undefined) updates.post_type = fields.postType;
+  if (Object.keys(updates).length === 0) throw new Error('No changes provided.');
+  let query = supabase.from('community_events').update(updates).eq('id', id).eq('tenant_id', getCurrentTenant().id);
+  if (!isAdminOrMod) query = query.eq('user_id', session.user.id);
+  const { data, error } = await query.select().single();
+  if (error) throw new Error('Failed to update post.');
   return mapCommunityEvent(data);
 }
 

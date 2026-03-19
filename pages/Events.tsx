@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CommunityEvent, CommunityPostType, SpotlightBooking } from '../types';
-import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions, deleteCommunityEvent, deleteOwnCommunityEvent, flagCommunityEvent } from '../lib/api';
+import { fetchApprovedCommunityEvents, submitCommunityEvent, fetchCurrentWeekSubmissions, deleteCommunityEvent, deleteOwnCommunityEvent, flagCommunityEvent, updateCommunityEvent } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -43,6 +43,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const [eTitle, setETitle] = useState('');
   const [eDesc, setEDesc] = useState('');
   const [eDate, setEDate] = useState('');
+  const [eNoDate, setENoDate] = useState(false);
   const [eLocation, setELocation] = useState('');
   const [eTown, setETown] = useState(tenant.towns[0] ?? '');
   const [ePostType, setEPostType] = useState<CommunityPostType>('event');
@@ -80,6 +81,44 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; isAdmin: boolean } | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Edit event
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const startEdit = (ev: CommunityEvent) => {
+    setEditingEventId(ev.id);
+    setEditTitle(ev.title);
+    setEditDesc(ev.description);
+    setEditDate(ev.eventDate);
+    setEditLocation(ev.location);
+    setEditError('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEventId) return;
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const updated = await updateCommunityEvent(editingEventId, {
+        title: editTitle,
+        description: editDesc,
+        eventDate: editDate,
+        location: editLocation,
+      });
+      setEvents(prev => prev.map(e => e.id === editingEventId ? updated : e));
+      setEditingEventId(null);
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to save changes.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const handleDeleteEvent = (id: string) => setDeleteConfirm({ id, isAdmin: true });
   const handleDeleteOwnEvent = (id: string) => setDeleteConfirm({ id, isAdmin: false });
@@ -145,11 +184,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const newEvent = await submitCommunityEvent(eTitle, eDesc, eDate, eLocation, eTown, ePostType);
+      const finalDate = eNoDate ? '' : eDate;
+      const newEvent = await submitCommunityEvent(eTitle, eDesc, finalDate, eLocation, eTown, ePostType);
       setEvents(prev => [...prev, newEvent].sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()));
       setSubmitted(true);
       setShowForm(false);
-      setETitle(''); setEDesc(''); setEDate(''); setELocation(''); setETown(tenant.towns[0] ?? ''); setEPostType('event');
+      setETitle(''); setEDesc(''); setEDate(''); setENoDate(false); setELocation(''); setETown(tenant.towns[0] ?? ''); setEPostType('event');
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to submit. Please try again.');
     } finally {
@@ -182,13 +222,15 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
   function tagColor(tag: string): string {
     const t = tag.toLowerCase();
-    if (t.includes('free')) return 'bg-emerald-100 text-emerald-700';
+    if (t.includes('free admission')) return 'bg-emerald-100 text-emerald-700';
+    if (t.includes('all ages')) return 'bg-sky-100 text-sky-700';
+    if (t.includes('family')) return 'bg-violet-100 text-violet-700';
     if (t.includes('community')) return 'bg-blue-100 text-blue-700';
-    if (t.includes('grand opening') || t.includes('business')) return 'bg-amber-100 text-amber-700';
     if (t.includes('music')) return 'bg-purple-100 text-purple-700';
     if (t.includes('food')) return 'bg-orange-100 text-orange-700';
-    if (t.includes('outdoor')) return 'bg-green-100 text-green-700';
+    if (t.includes('outdoor')) return 'bg-teal-100 text-teal-700';
     if (t.includes('fundraiser')) return 'bg-rose-100 text-rose-700';
+    if (t.includes('grand opening') || t.includes('business')) return 'bg-amber-100 text-amber-700';
     return 'bg-slate-100 text-slate-600';
   }
 
@@ -268,22 +310,42 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               )}
               <div className="p-7 flex flex-col gap-3">
                 {filteredSpotlight.eventDate && (
-                  <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
-                    <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
-                    {formatEventDate(filteredSpotlight.eventDate)}
-                  </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
+                      <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
+                      {formatEventDate(filteredSpotlight.eventDate)}
+                    </span>
+                    {filteredSpotlight.flyerUrl && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDbFlyerUrl(filteredSpotlight.flyerUrl!); }}
+                        className="md:hidden inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                      >
+                        <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                      </button>
+                    )}
+                  </div>
                 )}
-                <div>
+                <div className="flex items-start justify-between gap-2">
                   <h3 className="font-bold text-slate-900 text-base leading-tight">{filteredSpotlight.title}</h3>
+                  {!filteredSpotlight.eventDate && filteredSpotlight.flyerUrl && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDbFlyerUrl(filteredSpotlight.flyerUrl!); }}
+                      className="md:hidden inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                    >
+                      <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                    </button>
+                  )}
+                </div>
+                <div>
                   {filteredSpotlight.location && (
-                    <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                    <p className="text-slate-700 text-xs font-medium mt-1 flex items-center gap-1">
                       <i className="fas fa-map-marker-alt text-orange-400"></i> {filteredSpotlight.location}
                       {filteredSpotlight.town && <span className="text-slate-300 mx-1">·</span>}
-                      {filteredSpotlight.town}
+                      <span className="text-slate-400">{filteredSpotlight.town}</span>
                     </p>
                   )}
                 </div>
-                <p className="text-slate-500 text-sm leading-relaxed">{filteredSpotlight.description}</p>
+                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap border-t border-amber-200/60 pt-3 mt-1">{filteredSpotlight.description}</p>
                 {(filteredSpotlight.eventTime || (filteredSpotlight.tags && filteredSpotlight.tags.length > 0)) && (
                   <div className="flex flex-wrap items-center gap-2">
                     {filteredSpotlight.eventTime && (
@@ -299,8 +361,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end md:justify-between mt-1">
+                  <div className="hidden md:flex items-center gap-2">
                     {filteredSpotlight.flyerUrl && (
                       <button
                         onClick={() => setDbFlyerUrl(filteredSpotlight.flyerUrl!)}
@@ -348,22 +410,42 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 onClick={() => sub.flyerUrl && setDbFlyerUrl(sub.flyerUrl!)}
               >
                 {sub.eventDate && (
-                  <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
-                    <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
-                    {formatEventDate(sub.eventDate)}
-                  </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
+                      <i className="fas fa-calendar text-amber-400 text-[10px]"></i>
+                      {formatEventDate(sub.eventDate)}
+                    </span>
+                    {sub.flyerUrl && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDbFlyerUrl(sub.flyerUrl!); }}
+                        className="md:hidden inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                      >
+                        <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                      </button>
+                    )}
+                  </div>
                 )}
                 {sub.imageUrl && (
                   <img src={sub.imageUrl} alt={sub.title} loading="lazy" className="w-full max-h-[160px] object-cover rounded-xl" />
                 )}
-                <h3 className="font-bold text-slate-900 text-sm leading-tight">{sub.title}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-bold text-slate-900 text-sm leading-tight">{sub.title}</h3>
+                  {!sub.eventDate && sub.flyerUrl && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDbFlyerUrl(sub.flyerUrl!); }}
+                      className="md:hidden inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                    >
+                      <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                    </button>
+                  )}
+                </div>
                 {sub.location && (
-                  <p className="text-slate-500 text-xs flex items-center gap-1">
+                  <p className="text-slate-700 text-xs font-medium flex items-center gap-1">
                     <i className="fas fa-map-marker-alt text-orange-400 text-[10px]"></i> {sub.location}
-                    {sub.town && <><span className="text-slate-300 mx-1">·</span>{sub.town}</>}
+                    {sub.town && <><span className="text-slate-300 mx-1">·</span><span className="text-slate-400">{sub.town}</span></>}
                   </p>
                 )}
-                <p className="text-slate-500 text-xs leading-relaxed">{sub.description}</p>
+                <p className="text-slate-500 text-xs leading-relaxed whitespace-pre-wrap border-t border-slate-100 pt-2.5">{sub.description}</p>
                 {(sub.eventTime || (sub.tags && sub.tags.length > 0)) && (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {sub.eventTime && (
@@ -379,8 +461,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end md:justify-between mt-1">
+                  <div className="hidden md:flex items-center gap-2">
                     {sub.flyerUrl && (
                       <button
                         onClick={() => setDbFlyerUrl(sub.flyerUrl!)}
@@ -496,35 +578,70 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </div>
 
                 {/* Content */}
-                <h3 className="font-bold text-slate-900 text-sm leading-tight break-words">{ev.title}</h3>
-                <p className="text-slate-500 text-xs flex items-center gap-1 break-words">
-                  <i className="fas fa-map-marker-alt text-orange-400 text-[10px] flex-shrink-0"></i> {ev.location}
-                  {ev.town && <span className="text-slate-300 mx-1">·</span>}
-                  {ev.town}
-                </p>
-                <p className="text-slate-500 text-xs leading-relaxed break-words">{ev.description}</p>
+                {editingEventId === ev.id ? (
+                  <div className="space-y-2">
+                    <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} maxLength={200} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <input type="text" value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Location" maxLength={300} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} maxLength={1000} rows={5} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-y" />
+                    {editError && <p className="text-red-500 text-xs">{editError}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={handleSaveEdit} disabled={editSaving || !editTitle.trim() || !editDesc.trim()} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors disabled:opacity-50">
+                        {editSaving ? 'Saving...' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingEventId(null)} className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-slate-900 text-sm leading-tight break-words">{ev.title}</h3>
+                    <p className="text-slate-700 text-xs font-medium flex items-center gap-1 break-words">
+                      <i className="fas fa-map-marker-alt text-orange-400 text-[10px] flex-shrink-0"></i> {ev.location}
+                      {ev.town && <span className="text-slate-300 mx-1">·</span>}
+                      <span className="text-slate-400">{ev.town}</span>
+                    </p>
+                    <p className="text-slate-500 text-xs leading-relaxed break-words whitespace-pre-wrap border-t border-slate-100 pt-2">{ev.description}</p>
+                  </>
+                )}
 
-                {/* Bottom row: posted by + delete */}
+                {/* Bottom row: posted by + edit/delete */}
+                {editingEventId !== ev.id && (
                 <div className="flex items-center justify-between pt-1">
                   <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
-                  {isAdmin ? (
-                    <button
-                      onClick={() => handleDeleteEvent(ev.id)}
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                      title="Delete (admin)"
-                    >
-                      <i className="fas fa-trash-alt text-sm"></i>
-                    </button>
-                  ) : user?.id === ev.userId ? (
-                    <button
-                      onClick={() => handleDeleteOwnEvent(ev.id)}
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                      title="Remove your post"
-                    >
-                      <i className="fas fa-trash-alt text-sm"></i>
-                    </button>
-                  ) : null}
+                  <div className="flex items-center gap-3">
+                    {(isAdmin || user?.id === ev.userId) && (
+                      <button
+                        onClick={() => startEdit(ev)}
+                        className="text-slate-400 hover:text-blue-500 transition-colors"
+                        title="Edit post"
+                      >
+                        <i className="fas fa-pen text-xs"></i>
+                      </button>
+                    )}
+                    {isAdmin ? (
+                      <button
+                        onClick={() => handleDeleteEvent(ev.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                        title="Delete (admin)"
+                      >
+                        <i className="fas fa-trash-alt text-sm"></i>
+                      </button>
+                    ) : user?.id === ev.userId ? (
+                      <button
+                        onClick={() => handleDeleteOwnEvent(ev.id)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                        title="Remove your post"
+                      >
+                        <i className="fas fa-trash-alt text-sm"></i>
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
+                )}
               </div>
             ))}
           </div>
@@ -672,7 +789,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title *</label>
                 <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -687,19 +804,23 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date</label>
                     <button
                       type="button"
-                      onClick={() => setEDate(new Date().toISOString().split('T')[0])}
+                      onClick={() => { setENoDate(false); setEDate(new Date().toISOString().split('T')[0]); }}
                       className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide"
                     >
                       Today
                     </button>
                   </div>
                   <input
-                    required
                     type="date"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={eDate}
+                    disabled={eNoDate}
+                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none ${eNoDate ? 'opacity-40' : ''}`}
+                    value={eNoDate ? '' : eDate}
                     onChange={e => setEDate(e.target.value)}
                   />
+                  <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer">
+                    <input type="checkbox" checked={eNoDate} onChange={e => { setENoDate(e.target.checked); if (e.target.checked) setEDate(''); }} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" />
+                    <span className="text-[11px] text-slate-400">No specific date</span>
+                  </label>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
@@ -713,9 +834,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location <span className="font-normal normal-case text-slate-300">(optional)</span></label>
                 <input
-                  required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="e.g. Courthouse Square, City Park, Main St"
                   value={eLocation}
@@ -724,15 +844,15 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description</label>
-                  <span className={`text-xs ${eDesc.length > 280 ? 'text-red-400' : 'text-slate-300'}`}>{eDesc.length}/300</span>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description *</label>
+                  <span className={`text-xs ${eDesc.length > 950 ? 'text-red-400' : 'text-slate-300'}`}>{eDesc.length}/1000</span>
                 </div>
                 <textarea
                   required
-                  rows={3}
-                  maxLength={300}
+                  rows={5}
+                  maxLength={1000}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                  placeholder="What's happening? Share details the community should know or attend."
+                  placeholder="What's happening? Share details the community should know. You can include hours, schedules, contact info, etc."
                   value={eDesc}
                   onChange={e => setEDesc(e.target.value)}
                 />

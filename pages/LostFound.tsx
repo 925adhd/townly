@@ -396,8 +396,8 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
 
           return (
             <div key={post.id} className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col ${post.status === 'resolved' ? 'opacity-60' : ''}`}>
-              <div className="relative h-48 bg-slate-100">
-                <img src={post.photoUrl || `https://picsum.photos/seed/${post.id}/400/300`} alt="" loading="lazy" className="w-full h-full object-cover" />
+              <div className="relative bg-slate-100">
+                <img src={post.photoUrl || `https://picsum.photos/seed/${post.id}/400/300`} alt="" loading="lazy" className="w-full max-h-72 object-contain" />
                 <div className={`absolute top-4 left-4 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
                   post.type.includes('lost') ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
                 }`}>
