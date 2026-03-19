@@ -507,7 +507,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
       <section>
         <div className="flex items-center justify-between mb-2 px-1">
           <h2 className="text-base font-bold text-slate-900">
-            {hasAlerts ? 'More happening in your area' : "What's happening right now"}
+Happening Now
           </h2>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible scrollbar-hide">
