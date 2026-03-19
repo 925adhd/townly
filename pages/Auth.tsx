@@ -69,7 +69,7 @@ const Auth: React.FC = () => {
   const isSocialContext = new URLSearchParams(location.search).has('signup');
 
   return (
-    <div className="max-w-md mx-auto pt-2 sm:pt-6 pb-6">
+    <div className="max-w-md md:max-w-lg mx-auto pt-2 sm:pt-4 pb-6">
       {isSocialContext && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium px-4 py-3 rounded-2xl mb-3 flex items-center gap-2">
           <i className="fas fa-lock text-blue-400 flex-shrink-0"></i>
@@ -77,8 +77,8 @@ const Auth: React.FC = () => {
         </div>
       )}
       <div className="bg-white p-4 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-2 sm:mb-6">
-           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-10 h-10 sm:w-20 sm:h-20 mx-auto mb-1 sm:mb-2 object-contain animate-rock" />
+        <div className="text-center mb-2 sm:mb-4">
+           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-1 object-contain animate-rock" />
            <h1 className="text-lg sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : 'Join Townly'}</h1>
            <p className="text-orange-600 font-semibold text-xs sm:text-sm mt-0.5">{tenant.tagline}</p>
         </div>
@@ -172,14 +172,14 @@ const Auth: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-600 text-white font-bold py-2.5 sm:py-4 rounded-xl shadow-lg hover:bg-orange-500 transition-colors transform active:scale-[0.98] disabled:opacity-60"
+            className="w-full bg-orange-600 text-white font-bold py-2.5 sm:py-3.5 rounded-xl shadow-lg hover:bg-orange-500 transition-colors transform active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 my-4 sm:my-5">
+        <div className="flex items-center gap-3 my-3 sm:my-4">
           <div className="flex-1 h-px bg-slate-200"></div>
           <span className="text-xs text-slate-400 font-medium">or</span>
           <div className="flex-1 h-px bg-slate-200"></div>
@@ -205,7 +205,7 @@ const Auth: React.FC = () => {
           </button>
         </div>
 
-        <div className="mt-4 sm:mt-6 pt-3 sm:pt-5 border-t border-slate-100 text-center">
+        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setError(''); setConfirmPassword(''); setShowPassword(false); setShowConfirmPassword(false); }}
             className="text-sm font-semibold text-orange-600"
