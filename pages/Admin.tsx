@@ -745,6 +745,9 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <h2 className="font-bold text-slate-900 text-base">{claim.providerName}</h2>
                       <p className="text-xs text-slate-500">Requested by <span className="font-semibold text-slate-700">{claim.userName}</span></p>
+                      {claim.userEmail && (
+                        <p className="text-xs text-slate-500"><i className="fas fa-lock text-[10px] text-slate-300 mr-1"></i>Account email: <span className="font-semibold text-slate-700">{claim.userEmail}</span></p>
+                      )}
                       {claim.verificationDetail && (
                         <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100 whitespace-pre-line">
                           {claim.verificationDetail}
