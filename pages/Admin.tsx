@@ -1022,19 +1022,17 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
                   <p className="text-[10px] text-slate-400 mt-0.5">16:9 ratio for events page</p>
                 </div>
                 {adminCreateType === 'spotlight' && (
-                  <>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Thumbnail</label>
                       <input type="file" accept="image/*" onChange={e => setAcThumb(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
                       <p className="text-[10px] text-slate-400 mt-0.5">1:1 square for home page</p>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Flyer</label>
-                      <input type="file" accept="image/*" onChange={e => setAcFlyer(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                      <p className="text-[10px] text-slate-400 mt-0.5">3:4 portrait flyer</p>
-                    </div>
-                  </>
                 )}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Flyer</label>
+                  <input type="file" accept="image/*" onChange={e => setAcFlyer(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                  <p className="text-[10px] text-slate-400 mt-0.5">3:4 portrait flyer</p>
+                </div>
               </div>
 
               {acError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{acError}</div>}

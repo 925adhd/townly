@@ -372,8 +372,8 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
           {/* Second row: community cards */}
           <div className="grid md:grid-cols-2 gap-3">
 
-            {/* Community Alert Card */}
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+            {/* Community Alert Card — hidden on mobile when empty, always visible on desktop */}
+            <div className={`bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${allAlerts.length === 0 ? 'hidden md:block' : ''}`}>
               {allAlerts.length > 0 ? (
                 <div style={{ display: 'grid' }}>
                   {/* All alerts share the same grid cell — height locks to the tallest */}
@@ -410,7 +410,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
               ) : (
                 <>
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-red-100 text-red-700 inline-block mb-2">
-                    🚨 Community Alert
+                    Community Alert
                   </span>
                   <p className="text-slate-500 text-xs leading-relaxed flex items-center gap-1.5">
                     <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
@@ -424,11 +424,6 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             <Link to="/lost-found" className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               {latestLF ? (
                 <>
-                  {latestLF.photoUrl && (
-                    <div className="w-full h-32 rounded-xl overflow-hidden mb-2 bg-slate-100">
-                      <img src={latestLF.photoUrl} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest self-start mb-2 ${
                     latestLF.type.includes('lost') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
                   }`}>
