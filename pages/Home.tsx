@@ -45,8 +45,8 @@ const SEED_UPDATES: CommunityUpdate[] = [
   },
   {
     id: 'seed-3',
-    title: 'Community Yard Sale Saturday',
-    description: 'Multiple homes on Sunbeam Road starting at 8 AM.',
+    title: '2026-27 Bass Fishing Sign Ups',
+    description: '3/24/26 at 6:00 PM at the high school cafe. 7-12 grades (next school year). Boys and girls welcome. Questions? Call 270-230-2169.',
     createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     source: 'admin',
   },
