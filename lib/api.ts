@@ -1633,7 +1633,7 @@ export async function submitCommunityEvent(
     town: sanitize(town, 100),
     post_type: postType,
     tenant_id: getCurrentTenant().id,
-    status: 'pending',
+    status: 'approved',
   }).select().single();
   if (error) {
     if (error.message.includes('RATE_LIMIT_EVENTS')) {
@@ -1845,8 +1845,8 @@ export async function deleteOwnCommunityEvent(id: string): Promise<void> {
   if (error) throw new Error('Failed to delete event.');
 }
 
-export async function flagCommunityEvent(id: string, title: string): Promise<void> {
-  await submitReport('community_event', id, title, 'Flagged as inappropriate');
+export async function flagCommunityEvent(id: string, title: string, reason?: string): Promise<void> {
+  await submitReport('community_event', id, title, reason || 'Flagged as inappropriate');
 }
 
 // ── Community Alerts ──────────────────────────────────────────────────────────

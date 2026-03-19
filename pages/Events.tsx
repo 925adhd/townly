@@ -164,13 +164,16 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   };
 
   const [flaggingEventId, setFlaggingEventId] = useState<string | null>(null);
+  const [flagReason, setFlagReason] = useState('');
   const [flagSubmitting, setFlagSubmitting] = useState(false);
 
   const handleFlagEvent = async (id: string, title: string) => {
+    if (!flagReason.trim()) return;
     setFlagSubmitting(true);
     try {
-      await flagCommunityEvent(id, title);
+      await flagCommunityEvent(id, title, flagReason.trim());
       setFlaggingEventId(null);
+      setFlagReason('');
     } catch (err: any) {
       alert(err.message || 'Failed to submit flag.');
     } finally {
@@ -379,7 +382,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     title="Share this spotlight"
                   >
                     <i className={`fas ${copiedBookingId === filteredSpotlight.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-lg`}></i>
-                    {copiedBookingId === filteredSpotlight.id && <span className="text-xs font-semibold text-emerald-500">Copied!</span>}
+                    <span className={`text-xs font-semibold ${copiedBookingId === filteredSpotlight.id ? 'text-emerald-500' : ''}`}>{copiedBookingId === filteredSpotlight.id ? 'Copied!' : 'Share'}</span>
                   </button>
                 </div>
               </div>
@@ -476,7 +479,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     title="Share this listing"
                   >
                     <i className={`fas ${copiedBookingId === sub.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-lg`}></i>
-                    {copiedBookingId === sub.id && <span className="text-xs font-semibold text-emerald-500">Copied!</span>}
+                    <span className={`text-xs font-semibold ${copiedBookingId === sub.id ? 'text-emerald-500' : ''}`}>{copiedBookingId === sub.id ? 'Copied!' : 'Share'}</span>
                   </button>
                 </div>
               </div>
@@ -534,7 +537,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           <div className="grid gap-3 md:grid-cols-2">
             {filteredEvents.map((ev: CommunityEvent) => (
               <div key={ev.id} id={`event-${ev.id}`} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col gap-2 min-w-0 overflow-hidden transition-all">
-                {/* Top row: badge + date + share + flag */}
+                {/* Top row: badge + date + flag */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex-shrink-0 ${POST_TYPE_COLORS[ev.postType ?? 'event']}`}>
@@ -542,38 +545,15 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     </span>
                     {ev.eventDate && <span className="text-slate-400 text-xs truncate">{formatEventDate(ev.eventDate)}</span>}
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  {user && user.id !== ev.userId && !isAdmin && (
                     <button
-                      onClick={() => handleShareEvent(ev)}
-                      className="text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1"
-                      title="Share this post"
+                      onClick={() => { setFlaggingEventId(ev.id); setFlagReason(''); }}
+                      className="text-slate-300 hover:text-orange-400 transition-colors flex-shrink-0"
+                      title="Flag as inappropriate"
                     >
-                      <i className={`fas ${copiedEventId === ev.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
-                      {copiedEventId === ev.id && <span className="text-[10px] font-semibold text-emerald-500">Copied!</span>}
+                      <i className="fas fa-flag text-xs"></i>
                     </button>
-                    {user && user.id !== ev.userId && !isAdmin && (
-                      flaggingEventId === ev.id ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleFlagEvent(ev.id, ev.title)}
-                            disabled={flagSubmitting}
-                            className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-                          >
-                            {flagSubmitting ? 'Flagging...' : 'Confirm'}
-                          </button>
-                          <button onClick={() => setFlaggingEventId(null)} className="text-[10px] text-slate-400 hover:text-slate-600">Cancel</button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setFlaggingEventId(ev.id)}
-                          className="text-slate-300 hover:text-orange-400 transition-colors"
-                          title="Flag as inappropriate"
-                        >
-                          <i className="fas fa-flag text-sm"></i>
-                        </button>
-                      )
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 {/* Content */}
@@ -607,39 +587,72 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   </>
                 )}
 
-                {/* Bottom row: posted by + edit/delete */}
+                {/* Bottom row: posted by + share/flag/edit/delete */}
                 {editingEventId !== ev.id && (
-                <div className="flex items-center justify-between pt-1">
-                  <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
-                  <div className="flex items-center gap-3">
-                    {(isAdmin || user?.id === ev.userId) && (
+                <>
+                  {flaggingEventId === ev.id && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+                      <p className="text-xs font-semibold text-red-700">Why are you flagging this post?</p>
+                      <input
+                        type="text"
+                        value={flagReason}
+                        onChange={e => setFlagReason(e.target.value)}
+                        placeholder="e.g. Spam, misleading, offensive..."
+                        maxLength={200}
+                        className="w-full bg-white border border-red-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:ring-2 focus:ring-red-400 outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleFlagEvent(ev.id, ev.title)}
+                          disabled={flagSubmitting || !flagReason.trim()}
+                          className="text-[11px] font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {flagSubmitting ? 'Submitting...' : 'Submit Flag'}
+                        </button>
+                        <button onClick={() => { setFlaggingEventId(null); setFlagReason(''); }} className="text-[11px] text-slate-400 hover:text-slate-600">Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
+                    <div className="flex items-center gap-3">
                       <button
-                        onClick={() => startEdit(ev)}
-                        className="text-slate-400 hover:text-blue-500 transition-colors"
-                        title="Edit post"
+                        onClick={() => handleShareEvent(ev)}
+                        className="text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1"
+                        title="Share this post"
                       >
-                        <i className="fas fa-pen text-xs"></i>
+                        <i className={`fas ${copiedEventId === ev.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
+                        <span className={`text-[10px] font-semibold ${copiedEventId === ev.id ? 'text-emerald-500' : ''}`}>{copiedEventId === ev.id ? 'Copied!' : 'Share'}</span>
                       </button>
-                    )}
-                    {isAdmin ? (
-                      <button
-                        onClick={() => handleDeleteEvent(ev.id)}
-                        className="text-red-400 hover:text-red-600 transition-colors"
-                        title="Delete (admin)"
-                      >
-                        <i className="fas fa-trash-alt text-sm"></i>
-                      </button>
-                    ) : user?.id === ev.userId ? (
-                      <button
-                        onClick={() => handleDeleteOwnEvent(ev.id)}
-                        className="text-red-400 hover:text-red-600 transition-colors"
-                        title="Remove your post"
-                      >
-                        <i className="fas fa-trash-alt text-sm"></i>
-                      </button>
-                    ) : null}
+                      {(isAdmin || user?.id === ev.userId) && (
+                        <button
+                          onClick={() => startEdit(ev)}
+                          className="text-slate-400 hover:text-blue-500 transition-colors"
+                          title="Edit post"
+                        >
+                          <i className="fas fa-pen text-xs"></i>
+                        </button>
+                      )}
+                      {isAdmin ? (
+                        <button
+                          onClick={() => handleDeleteEvent(ev.id)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="Delete (admin)"
+                        >
+                          <i className="fas fa-trash-alt text-sm"></i>
+                        </button>
+                      ) : user?.id === ev.userId ? (
+                        <button
+                          onClick={() => handleDeleteOwnEvent(ev.id)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="Remove your post"
+                        >
+                          <i className="fas fa-trash-alt text-sm"></i>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
+                </>
                 )}
               </div>
             ))}
