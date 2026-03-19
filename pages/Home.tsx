@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
 import { LostFoundPost, CommunityAlert, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
-import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents } from '../lib/api';
+import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents, fetchUserCount } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -97,11 +97,13 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [userCount, setUserCount] = useState<number>(0);
 
   useEffect(() => {
     fetchProviders().then(setProviders).catch(() => {});
     fetchRequests().then(setQuestions).catch(() => {});
     fetchApprovedCommunityEvents().then(setEvents).catch(() => {});
+    fetchUserCount().then(setUserCount).catch(() => {});
   }, []);
 
   // Close dropdown on outside click
@@ -196,9 +198,15 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             <h1 className="text-xl md:text-5xl font-bold text-white leading-tight mb-2 md:mb-3">
               What's happening in your town?
             </h1>
-            <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-6">
+            <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-3">
               Find local events, businesses, and community updates in Grayson County KY
             </p>
+            {userCount > 0 && (
+              <p className="text-white/60 text-xs md:text-sm font-medium mb-4">
+                <i className="fas fa-users mr-1.5 text-orange-400"></i>
+                {userCount.toLocaleString()} locals and growing
+              </p>
+            )}
 
             {/* CTA Buttons — hidden on mobile */}
             <div className="hidden md:flex flex-row justify-center gap-3 mb-5">

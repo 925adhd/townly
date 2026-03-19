@@ -252,6 +252,17 @@ function mapRequest(row: any): RecommendationRequest {
   };
 }
 
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+export async function fetchUserCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .is('deleted_at', null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 // ── Providers ─────────────────────────────────────────────────────────────────
 
 let _providersCache: Provider[] | null = null;
