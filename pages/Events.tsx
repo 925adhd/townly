@@ -279,7 +279,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* Current Spotlights */}
+      {/* Current Spotlights — hide entire section when searching with no match */}
+      {(!searchQ || filteredSpotlight) && (
       <div id="spotlight">
         <h2 className="text-xl font-bold text-orange-500 leading-tight flex items-center gap-2 mb-1">
           <i className="fas fa-star"></i> Weekly Spotlight
@@ -393,8 +394,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
         </div>
       </div>
+      )}
 
-      {/* Featured Listings */}
+      {/* Featured Listings — hide when searching with no match */}
+      {(!searchQ || filteredFeatured.length > 0) && (
       <div>
         <h2 className="text-xl font-bold text-slate-900 mb-1 px-1 -mt-4">Featured Listings</h2>
         <p className="text-slate-400 text-xs mb-4 px-1">Posts with extra visibility this week.</p>
@@ -488,6 +491,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
         </div>
       </div>
+      )}
 
       {/* ── Community Events ── */}
       <div>
