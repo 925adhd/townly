@@ -1200,16 +1200,32 @@ export async function submitClaim(
     throw new Error('This listing has already been claimed by a verified owner.');
   }
 
-  // Reject if there is already a pending claim for this listing (prevents claim-queue flooding).
+  // Reject if this user already has a pending claim on this listing.
   const { data: existingPending } = await supabase
     .from('listing_claims')
     .select('id')
     .eq('provider_id', providerId)
+    .eq('user_id', session.user.id)
     .eq('tenant_id', getCurrentTenant().id)
     .eq('status', 'pending')
     .maybeSingle();
   if (existingPending) {
-    throw new Error('This listing already has a claim under review. Please check back after the current claim is resolved.');
+    throw new Error('You already have a pending claim for this listing. We\'ll be in touch soon.');
+  }
+
+  // Reject if this user was recently rejected for this listing (30-day cooldown).
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentRejection } = await supabase
+    .from('listing_claims')
+    .select('id')
+    .eq('provider_id', providerId)
+    .eq('user_id', session.user.id)
+    .eq('tenant_id', getCurrentTenant().id)
+    .eq('status', 'rejected')
+    .gte('created_at', thirtyDaysAgo)
+    .maybeSingle();
+  if (recentRejection) {
+    throw new Error('Your previous claim for this listing was not approved. You can try again after 30 days.');
   }
 
   const sanitizedDetail = sanitize(verificationDetail, 500);
