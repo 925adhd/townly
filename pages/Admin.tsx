@@ -297,9 +297,18 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
       let imageUrl = '';
       let thumbnailUrl: string | undefined;
       let flyerUrl: string | undefined;
-      if (acBanner) imageUrl = await uploadSpotlightImage(acBanner);
-      if (acThumb) thumbnailUrl = await uploadSpotlightImage(acThumb);
-      if (acFlyer) flyerUrl = await uploadSpotlightImage(acFlyer);
+      if (adminCreateType === 'featured') {
+        // Featured gets one 3:4 image used as both card image and flyer
+        if (acFlyer) {
+          const url = await uploadSpotlightImage(acFlyer);
+          imageUrl = url;
+          flyerUrl = url;
+        }
+      } else {
+        if (acBanner) imageUrl = await uploadSpotlightImage(acBanner);
+        if (acThumb) thumbnailUrl = await uploadSpotlightImage(acThumb);
+        if (acFlyer) flyerUrl = await uploadSpotlightImage(acFlyer);
+      }
 
       const booking = await submitSpotlightBooking(
         adminCreateType,
@@ -1015,25 +1024,31 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Banner Image {adminCreateType === 'spotlight' ? '*' : ''}</label>
-                  <input type="file" accept="image/*" onChange={e => setAcBanner(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                  <p className="text-[10px] text-slate-400 mt-0.5">16:9 ratio for events page</p>
+              {adminCreateType === 'spotlight' ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Banner Image *</label>
+                    <input type="file" accept="image/*" onChange={e => setAcBanner(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                    <p className="text-[10px] text-slate-400 mt-0.5">16:9 ratio for events page</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Thumbnail</label>
+                    <input type="file" accept="image/*" onChange={e => setAcThumb(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                    <p className="text-[10px] text-slate-400 mt-0.5">1:1 square for home page</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Flyer</label>
+                    <input type="file" accept="image/*" onChange={e => setAcFlyer(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                    <p className="text-[10px] text-slate-400 mt-0.5">3:4 portrait flyer</p>
+                  </div>
                 </div>
-                {adminCreateType === 'spotlight' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Thumbnail</label>
-                      <input type="file" accept="image/*" onChange={e => setAcThumb(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                      <p className="text-[10px] text-slate-400 mt-0.5">1:1 square for home page</p>
-                    </div>
-                )}
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Flyer</label>
+              ) : (
+                <div className="max-w-xs">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Flyer Image *</label>
                   <input type="file" accept="image/*" onChange={e => setAcFlyer(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-                  <p className="text-[10px] text-slate-400 mt-0.5">3:4 portrait flyer</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">3:4 portrait — used as both the card image and flyer</p>
                 </div>
-              </div>
+              )}
 
               {acError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{acError}</div>}
 

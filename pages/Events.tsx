@@ -56,12 +56,15 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       .catch(console.error);
   }, []);
 
-  // Scroll to shared event once events are loaded
+  // Scroll to shared event/spotlight/featured once loaded
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const eventId = params.get('event');
-    if (!eventId || loadingEvents) return;
-    const el = document.getElementById(`event-${eventId}`);
+    const spotlightId = params.get('spotlight');
+    const featuredId = params.get('featured');
+    const targetId = eventId ? `event-${eventId}` : spotlightId ? `booking-${spotlightId}` : featuredId ? `booking-${featuredId}` : null;
+    if (!targetId || loadingEvents) return;
+    const el = document.getElementById(targetId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('ring-2', 'ring-orange-400');
@@ -106,6 +109,17 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   };
 
   const [copiedEventId, setCopiedEventId] = useState<string | null>(null);
+  const [copiedBookingId, setCopiedBookingId] = useState<string | null>(null);
+
+  const handleShareBooking = async (id: string, title: string, type: 'spotlight' | 'featured') => {
+    const url = `${window.location.origin}/events?${type}=${id}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `${title} — Grayson County Townly`, url }); } catch { /* dismissed */ }
+    } else {
+      try { await navigator.clipboard.writeText(url); setCopiedBookingId(id); setTimeout(() => setCopiedBookingId(null), 2500); } catch { /* silent */ }
+    }
+  };
+
   const [flaggingEventId, setFlaggingEventId] = useState<string | null>(null);
   const [flagSubmitting, setFlagSubmitting] = useState(false);
 
@@ -230,6 +244,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           {filteredSpotlight ? (
             /* ── DB-driven spotlight ── */
             <div
+              id={`booking-${filteredSpotlight.id}`}
               className={`rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60 ${filteredSpotlight.flyerUrl ? 'cursor-pointer' : ''}`}
               onClick={() => filteredSpotlight.flyerUrl && setDbFlyerUrl(filteredSpotlight.flyerUrl)}
             >
@@ -277,14 +292,24 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     ))}
                   </div>
                 )}
-                {filteredSpotlight.flyerUrl && (
+                <div className="flex items-center gap-2 mt-1">
+                  {filteredSpotlight.flyerUrl && (
+                    <button
+                      onClick={() => setDbFlyerUrl(filteredSpotlight.flyerUrl!)}
+                      className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                    </button>
+                  )}
                   <button
-                    onClick={() => setDbFlyerUrl(filteredSpotlight.flyerUrl!)}
-                    className="self-start inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors mt-1"
+                    onClick={(e) => { e.stopPropagation(); handleShareBooking(filteredSpotlight.id, filteredSpotlight.title, 'spotlight'); }}
+                    className="inline-flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition-colors"
+                    title="Share this spotlight"
                   >
-                    <i className="fas fa-file-image text-[10px]"></i> View Flyer
+                    <i className={`fas ${copiedBookingId === filteredSpotlight.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
+                    {copiedBookingId === filteredSpotlight.id && <span className="text-[10px] font-semibold text-emerald-500">Copied!</span>}
                   </button>
-                )}
+                </div>
               </div>
             </div>
           ) : (
@@ -309,12 +334,23 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             filteredFeatured.map((sub: SpotlightBooking) => (
               <div
                 key={sub.id}
+                id={`booking-${sub.id}`}
                 className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-2.5 shadow-sm ${sub.flyerUrl ? 'cursor-pointer' : ''}`}
                 onClick={() => sub.flyerUrl && setDbFlyerUrl(sub.flyerUrl!)}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
-                  {sub.eventDate && <span className="text-slate-400 text-xs">{formatEventDate(sub.eventDate)}</span>}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest bg-slate-100 text-slate-500">Featured Listing</span>
+                    {sub.eventDate && <span className="text-slate-400 text-xs">{formatEventDate(sub.eventDate)}</span>}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleShareBooking(sub.id, sub.title, 'featured'); }}
+                    className="text-slate-300 hover:text-blue-400 transition-colors flex items-center gap-1"
+                    title="Share this listing"
+                  >
+                    <i className={`fas ${copiedBookingId === sub.id ? 'fa-check text-emerald-500' : 'fa-share-from-square'} text-sm`}></i>
+                    {copiedBookingId === sub.id && <span className="text-[10px] font-semibold text-emerald-500">Copied!</span>}
+                  </button>
                 </div>
                 {sub.imageUrl && (
                   <img src={sub.imageUrl} alt={sub.title} loading="lazy" className="w-full max-h-[160px] object-cover rounded-xl" />
