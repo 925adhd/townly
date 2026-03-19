@@ -2188,6 +2188,9 @@ export async function updateSpotlightBooking(
     town?: string;
     weekStart?: string;
     adminNotes?: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+    flyerUrl?: string;
   }
 ): Promise<SpotlightBooking> {
   const payload: Record<string, any> = {};
@@ -2201,6 +2204,9 @@ export async function updateSpotlightBooking(
   if (updates.town !== undefined) payload.town = updates.town;
   if (updates.weekStart !== undefined) payload.week_start = updates.weekStart;
   if (updates.adminNotes !== undefined) payload.admin_notes = sanitize(updates.adminNotes, 500);
+  if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl ? validateUrl(updates.imageUrl) : null;
+  if (updates.thumbnailUrl !== undefined) payload.thumbnail_url = updates.thumbnailUrl ? validateUrl(updates.thumbnailUrl) : null;
+  if (updates.flyerUrl !== undefined) payload.flyer_url = updates.flyerUrl ? validateUrl(updates.flyerUrl) : null;
 
   const { data, error } = await supabase.from('paid_submissions').update(payload).eq('id', id).select().single();
   if (error) throw error;

@@ -64,7 +64,10 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
   const [bookingsError, setBookingsError] = useState('');
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
   const [editingBooking, setEditingBooking] = useState<string | null>(null);
-  const [editFields, setEditFields] = useState<{ title: string; description: string; eventDate: string; eventTime: string; tags: string[]; location: string; town: string; weekStart: string; adminNotes: string }>({ title: '', description: '', eventDate: '', eventTime: '', tags: [], location: '', town: '', weekStart: '', adminNotes: '' });
+  const [editFields, setEditFields] = useState<{ title: string; description: string; eventDate: string; eventTime: string; tags: string[]; location: string; town: string; weekStart: string; adminNotes: string; imageUrl: string; thumbnailUrl: string; flyerUrl: string }>({ title: '', description: '', eventDate: '', eventTime: '', tags: [], location: '', town: '', weekStart: '', adminNotes: '', imageUrl: '', thumbnailUrl: '', flyerUrl: '' });
+  const [editBanner, setEditBanner] = useState<File | null>(null);
+  const [editThumb, setEditThumb] = useState<File | null>(null);
+  const [editFlyer, setEditFlyer] = useState<File | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Admin create spotlight/featured
@@ -428,13 +431,25 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
       town: b.town ?? '',
       weekStart: b.weekStart,
       adminNotes: b.adminNotes ?? '',
+      imageUrl: b.imageUrl ?? '',
+      thumbnailUrl: b.thumbnailUrl ?? '',
+      flyerUrl: b.flyerUrl ?? '',
     });
+    setEditBanner(null);
+    setEditThumb(null);
+    setEditFlyer(null);
   };
 
   const handleSaveEdit = async (id: string) => {
     setActingBooking(id);
     setBookingsError('');
     try {
+      let imageUrl = editFields.imageUrl;
+      let thumbnailUrl = editFields.thumbnailUrl;
+      let flyerUrl = editFields.flyerUrl;
+      if (editBanner) imageUrl = await uploadSpotlightImage(editBanner);
+      if (editThumb) thumbnailUrl = await uploadSpotlightImage(editThumb);
+      if (editFlyer) flyerUrl = await uploadSpotlightImage(editFlyer);
       const updated = await updateSpotlightBooking(id, {
         title: editFields.title,
         description: editFields.description,
@@ -445,6 +460,9 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
         town: editFields.town,
         weekStart: editFields.weekStart,
         adminNotes: editFields.adminNotes,
+        imageUrl,
+        thumbnailUrl,
+        flyerUrl,
       });
       setBookings(prev => prev.map(b => b.id === id ? updated : b));
       setEditingBooking(null);
@@ -1130,6 +1148,26 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
                         </div>
                       </div>
                       <input type="text" placeholder="Admin notes" value={editFields.adminNotes} onChange={e => setEditFields(f => ({ ...f, adminNotes: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-300" />
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Images</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium">Banner (16:9)</label>
+                            {editFields.imageUrl && !editBanner && <img src={editFields.imageUrl} alt="" className="w-full h-16 object-cover rounded-lg mt-1 mb-1" />}
+                            <input type="file" accept="image/*" onChange={e => setEditBanner(e.target.files?.[0] ?? null)} className="w-full text-[10px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 file:text-slate-600" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium">Thumbnail (1:1)</label>
+                            {editFields.thumbnailUrl && !editThumb && <img src={editFields.thumbnailUrl} alt="" className="w-16 h-16 object-cover rounded-lg mt-1 mb-1" />}
+                            <input type="file" accept="image/*" onChange={e => setEditThumb(e.target.files?.[0] ?? null)} className="w-full text-[10px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 file:text-slate-600" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium">Flyer (3:4)</label>
+                            {editFields.flyerUrl && !editFlyer && <img src={editFields.flyerUrl} alt="" className="w-16 h-20 object-cover rounded-lg mt-1 mb-1" />}
+                            <input type="file" accept="image/*" onChange={e => setEditFlyer(e.target.files?.[0] ?? null)} className="w-full text-[10px] text-slate-500 file:mr-1 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-100 file:text-slate-600" />
+                          </div>
+                        </div>
+                      </div>
                       <div className="flex gap-2">
                         <button disabled={actingBooking === b.id} onClick={() => handleSaveEdit(b.id)} className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold py-2 rounded-xl transition-colors">
                           {actingBooking === b.id ? 'Saving...' : 'Save Changes'}
