@@ -297,7 +297,7 @@ const App: React.FC = () => {
 
         {/* Mobile Navigation */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 mobile-nav-shadow" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          <div className="h-16 flex items-center justify-around">
+          <div className="h-14 flex items-center justify-around">
             <Link to="/" className="flex flex-col items-center text-slate-400 hover:text-orange-600" onMouseEnter={() => { prefetchHomeImages(); prefetchCurrentWeekSubmissions(); }}>
               <i className="fas fa-home text-lg"></i>
               <span className="text-[10px] mt-1 font-medium">Home</span>
