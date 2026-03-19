@@ -208,9 +208,9 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
 
-      {/* Alert Banner — only rendered when alerts exist */}
+      {/* Alert Banner — slim, only when alerts exist */}
       {hasAlerts && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 shadow-sm" role="alert">
+        <Link to="/alerts" className="block bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 hover:bg-red-100/60 transition-colors" role="alert">
           <div style={{ display: 'grid' }}>
             {allAlerts.map((alert, i) => {
               const isActive = i === safeIndex;
@@ -219,36 +219,32 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                 <div
                   key={alert.id}
                   style={{ gridArea: '1/1', opacity: isActive ? (alertVisible ? 1 : 0) : 0, transition: 'opacity 0.4s ease', visibility: isActive ? 'visible' : 'hidden', pointerEvents: isActive ? 'auto' : 'none' }}
+                  className="flex items-center gap-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isSevereNws ? 'bg-red-200' : alert.isNws ? 'bg-amber-100' : 'bg-red-100'}`}>
-                      <i className={`fas ${alert.icon} text-sm ${ALERT_ICON_COLORS[alert.icon] ?? 'text-red-700'}`}></i>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${isSevereNws ? 'bg-red-200 text-red-700' : alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                          {alert.isNws ? `${alert.severity} · NWS` : 'Alert'}
-                        </span>
-                        {allAlerts.length > 1 && (
-                          <span className="text-[10px] text-red-400 font-semibold">{safeIndex + 1}/{allAlerts.length}</span>
-                        )}
-                      </div>
-                      <p className="text-slate-800 text-sm font-semibold leading-snug mt-0.5 truncate">
-                        {alert.isNws ? alert.title : alert.title}
-                      </p>
-                      <p className="text-slate-600 text-xs leading-snug line-clamp-1">{alert.description}</p>
-                      {alert.isNws && alert.expires && (
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {alert.senderName} · Expires {new Date(alert.expires).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                        </p>
-                      )}
-                    </div>
+                  <i className={`fas ${alert.icon} text-xs flex-shrink-0 ${isSevereNws ? 'text-red-600' : ALERT_ICON_COLORS[alert.icon] ?? 'text-red-600'}`}></i>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 ${isSevereNws ? 'bg-red-200 text-red-700' : alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                    {alert.isNws ? 'NWS' : 'Alert'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-800 text-xs font-semibold leading-snug truncate">
+                      {alert.title}
+                      {/* Description inline on desktop only */}
+                      {alert.description && <span className="hidden md:inline font-normal text-slate-500"> — {alert.description}</span>}
+                    </p>
+                    {/* Description on its own line on mobile */}
+                    {alert.description && (
+                      <p className="md:hidden text-[11px] text-slate-500 leading-snug truncate">{alert.description}</p>
+                    )}
                   </div>
+                  {allAlerts.length > 1 && (
+                    <span className="text-[10px] text-red-400 font-semibold flex-shrink-0">{safeIndex + 1}/{allAlerts.length}</span>
+                  )}
+                  <i className="fas fa-chevron-right text-[9px] text-red-300 flex-shrink-0"></i>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Link>
       )}
 
       {/* Hero Section */}

@@ -34,6 +34,7 @@ import Profile from './pages/Profile';
 import Search from './pages/Search';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import Alerts from './pages/Alerts';
 import { supabase } from './lib/supabase';
 import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions, prefetchUserCount } from './lib/api';
 
@@ -285,6 +286,7 @@ const App: React.FC = () => {
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
               <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
               <Route path="/admin" element={<Admin user={user} communityAlerts={communityAlerts} setCommunityAlerts={setCommunityAlerts} />} />
+              <Route path="/alerts" element={<Alerts communityAlerts={communityAlerts} nwsAlerts={nwsAlerts} />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="*" element={<Navigate to="/" replace />} />
