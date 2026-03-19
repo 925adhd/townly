@@ -407,11 +407,10 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Contact Method</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Contact Method <span className="font-normal normal-case text-slate-300">(optional)</span></label>
                     <input
                       type="text"
                       name="edit-contact"
-                      required
                       value={eContact}
                       onChange={e => setEContact(formatPhone(e.target.value))}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -463,10 +462,12 @@ const LostFound: React.FC<LostFoundProps> = ({ posts, setPosts, user }) => {
                   <span>{new Date(post.dateOccurred).toLocaleDateString()}</span>
                 </div>
                 <p className="text-slate-600 text-sm mb-4 line-clamp-3">{post.description}</p>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-4">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Details</div>
-                  <div className="text-slate-900 text-xs font-semibold">{post.contactMethod}</div>
-                </div>
+                {post.contactMethod && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-4">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact Details</div>
+                    <div className="text-slate-900 text-xs font-semibold">{post.contactMethod}</div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-50">
                   <span className="text-xs text-slate-400">By {post.userName}</span>

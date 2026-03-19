@@ -209,12 +209,11 @@ const CreateLostFound: React.FC<CreateLostFoundProps> = ({ setPosts, user }) => 
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Contact Method</label>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Contact Method <span className="font-normal normal-case text-slate-300">(optional)</span></label>
           <input
             type="text"
             name="contact"
-            required
-            placeholder="e.g. Call (270) 555-1234 or Message me here"
+            placeholder="Phone, Facebook, email, etc."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-orange-500 outline-none"
             value={contact}
             onChange={e => setContact(formatPhone(e.target.value))}
