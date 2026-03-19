@@ -208,7 +208,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const filteredEvents = events.filter((ev: CommunityEvent) => matchesSearch([ev.title, ev.description, ev.location, ev.town]));
 
   return (
-    <div className="space-y-10 pb-6 -mt-6 md:mt-0">
+    <div className="space-y-10 pb-6 -mt-2 md:mt-0">
 
       {/* Header + Search */}
       <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-3">
