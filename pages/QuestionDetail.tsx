@@ -57,8 +57,10 @@ function findRelatedProviders(serviceNeeded: string, providers: Provider[]): Pro
       const sub = (p.subcategory ?? '').toLowerCase();
       const name = p.name.toLowerCase();
       const desc = (p.description ?? '').toLowerCase();
+      const searchable = `${cat} ${sub} ${name} ${desc}`;
 
       let score = 0;
+      let matchedWords = 0;
 
       // Full phrase match against category/subcategory (strongest signal)
       if (cat.includes(clean) || clean.includes(cat)) score += 10;
@@ -68,21 +70,28 @@ function findRelatedProviders(serviceNeeded: string, providers: Provider[]): Pro
       for (const bg of bigrams) {
         if (cat.includes(bg) || sub.includes(bg)) score += 6;
         if (name.includes(bg)) score += 3;
-        if (desc.includes(bg)) score += 1;
+        if (desc.includes(bg)) score += 2;
       }
 
-      // Single keyword matches with weighted fields
+      // Single keyword matches — track how many distinct words match
       for (const w of words) {
         const re = new RegExp(`\\b${w}\\b`);
-        if (re.test(cat)) score += 4;
+        const matched = re.test(searchable);
+        if (matched) matchedWords++;
+        if (re.test(cat)) score += 3;
         if (re.test(sub)) score += 3;
         if (re.test(name)) score += 2;
         if (re.test(desc)) score += 1;
       }
 
+      // Require at least 2 distinct query words to match somewhere in the provider,
+      // unless the query is a single word (then 1 match is fine)
+      const minWords = words.length === 1 ? 1 : 2;
+      if (matchedWords < minWords) score = 0;
+
       return { provider: p, score };
     })
-    .filter(({ score }) => score >= 3) // require a meaningful match
+    .filter(({ score }) => score >= 5) // require a meaningful match
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
     .map(({ provider }) => provider);

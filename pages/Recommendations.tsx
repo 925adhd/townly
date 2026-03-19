@@ -119,32 +119,29 @@ const Recommendations: React.FC<RecommendationsProps> = ({ requests, setRequests
         </div>
       )}
 
-      <div className="flex flex-col items-center text-center gap-4">
-        <div className="space-y-1.5">
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-bold text-slate-900">Ask the Community</h1>
-          <p className="text-slate-400 text-xs mt-2">Looking for a business? Try the <Link to="/directory" className="text-blue-400 hover:underline">Business Directory</Link> first.</p>
-          <p className="text-slate-400 text-xs">If you don't find what you need, ask the community for advice.</p>
-        </div>
-        {!showForm && (
-          <div className="pt-1">
-            {user ? (
+          {!showForm && (
+            user ? (
               <button
                 onClick={() => setShowForm(true)}
-                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors flex-shrink-0"
               >
-                Ask a Question
+                <i className="fas fa-plus mr-1.5"></i>Ask
               </button>
             ) : (
               <Link
                 to="/login?signup=true"
                 state={{ from: location.pathname }}
-                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors flex-shrink-0"
               >
-                Ask a Question
+                <i className="fas fa-plus mr-1.5"></i>Ask
               </Link>
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
+        <p className="text-slate-400 text-xs">Looking for a business? Try the <Link to="/directory" className="text-blue-400 hover:underline">Business Directory</Link> first. If you don't find what you need, ask the community for advice.</p>
       </div>
 
       {showForm && (
