@@ -19,10 +19,14 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       const el = document.getElementById(scrollTo);
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     }
+    if (location.hash) {
+      const el = document.getElementById(location.hash.slice(1));
+      if (el) { el.scrollIntoView({ block: 'start' }); return; }
+    }
     const params = new URLSearchParams(location.search);
     const eventId = params.get('event');
     if (!eventId) { window.scrollTo(0, 0); }
-  }, [location.search, location.state]);
+  }, [location.search, location.state, location.hash]);
 
   // DB-driven flyer lightbox — stores the image URL to show, or null
   const [dbFlyerUrl, setDbFlyerUrl] = useState<string | null>(null);
@@ -234,7 +238,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       </div>
 
       {/* Current Spotlights */}
-      <div>
+      <div id="spotlight">
         <h2 className="text-xl font-bold text-orange-500 leading-tight flex items-center gap-2 mb-1">
           <i className="fas fa-star"></i> Weekly Spotlight
         </h2>
