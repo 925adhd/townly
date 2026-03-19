@@ -254,10 +254,18 @@ function mapRequest(row: any): RecommendationRequest {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
+let _userCountCache: number | null = null;
+
 export async function fetchUserCount(): Promise<number> {
+  if (_userCountCache !== null) return _userCountCache;
   const { data, error } = await supabase.rpc('get_user_count');
   if (error) throw error;
-  return data ?? 0;
+  _userCountCache = data ?? 0;
+  return _userCountCache;
+}
+
+export function prefetchUserCount(): void {
+  fetchUserCount().catch(() => {});
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────

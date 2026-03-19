@@ -203,14 +203,12 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-3">
               Find local events, businesses, and community updates in Grayson County KY
             </p>
-            <p className="text-xs md:text-sm font-semibold mb-3 flex items-center justify-center gap-2 min-h-[1.25rem]">
-              {userCount > 0 && (
-                <span className="text-white/80 flex items-center gap-2 animate-in fade-in duration-300">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
-                  {userCount.toLocaleString()} locals already here
-                </span>
-              )}
-            </p>
+            {userCount > 0 && (
+              <p className="text-white/80 text-xs md:text-sm font-semibold mb-3 flex items-center justify-center gap-2">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
+                {userCount.toLocaleString()} locals already here
+              </p>
+            )}
 
             {/* CTA Buttons — hidden on mobile */}
             <div className="hidden md:flex flex-row justify-center gap-3 mt-3 mb-6">

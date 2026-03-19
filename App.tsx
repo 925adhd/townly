@@ -35,12 +35,13 @@ import Search from './pages/Search';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import { supabase } from './lib/supabase';
-import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions } from './lib/api';
+import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions, prefetchUserCount } from './lib/api';
 
 // Kick off background fetches immediately on module load — before any component mounts
 prefetchProviders();
 prefetchHomeImages();
 prefetchCurrentWeekSubmissions();
+prefetchUserCount();
 import ErrorBoundary from './components/ErrorBoundary';
 import Avatar from './components/avatar/Avatar';
 import { LostFoundPost, RecommendationRequest, CommunityAlert } from './types';
