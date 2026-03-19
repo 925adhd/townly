@@ -209,7 +209,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
   const hasAlerts = pinnedAlerts.length > 0 || cyclingAlerts.length > 0;
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 pb-4">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-4">
 
       {/* Pinned severe NWS alerts — always visible, never cycle away */}
       {pinnedAlerts.map(alert => (
