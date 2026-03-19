@@ -268,6 +268,10 @@ export function prefetchUserCount(): void {
   fetchUserCount().catch(() => {});
 }
 
+export function getCachedUserCount(): number {
+  return _userCountCache ?? 0;
+}
+
 // ── Providers ─────────────────────────────────────────────────────────────────
 
 let _providersCache: Provider[] | null = null;
@@ -2127,6 +2131,10 @@ export function prefetchHomeImages(): void {
     };
     img.src = src;
   });
+}
+
+export function areHomeImagesReady(): boolean {
+  return _homeImagesReady;
 }
 
 export function onHomeImagesReady(cb: () => void): void {

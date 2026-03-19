@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { IconHome, IconCar, IconScissors, IconStethoscope, IconToolsKitchen2, IconBuildingChurch } from '@tabler/icons-react';
 import { LostFoundPost, CommunityAlert, SpotlightBooking, Provider, RecommendationRequest, CommunityEvent } from '../types';
-import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents, fetchUserCount } from '../lib/api';
+import { fetchCurrentWeekSubmissions, prefetchHomeImages, onHomeImagesReady, areHomeImagesReady, fetchProviders, fetchRequests, fetchApprovedCommunityEvents, fetchUserCount, getCachedUserCount } from '../lib/api';
 import { getCurrentTenant } from '../tenants';
 
 const tenant = getCurrentTenant();
@@ -31,7 +31,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
   const [alertIndex, setAlertIndex] = useState(0);
   const [alertVisible, setAlertVisible] = useState(true);
   const [search, setSearch] = useState('');
-  const [imagesReady, setImagesReady] = useState(false);
+  const [imagesReady, setImagesReady] = useState(areHomeImagesReady);
   const [currentSpotlight, setCurrentSpotlight] = useState<SpotlightBooking | null>(null);
   const navigate = useNavigate();
 
@@ -97,7 +97,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const [userCount, setUserCount] = useState<number>(0);
+  const [userCount, setUserCount] = useState<number>(getCachedUserCount);
 
   useEffect(() => {
     fetchProviders().then(setProviders).catch(() => {});
