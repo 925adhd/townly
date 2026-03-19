@@ -511,6 +511,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
         <span className="mx-1.5">·</span>
         <Link to="/terms" className="hover:underline">Terms of Service</Link>
       </p>
+      <p>&copy; {new Date().getFullYear()} Townly. All rights reserved.</p>
     </div>
 
     </div>
