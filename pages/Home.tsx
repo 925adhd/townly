@@ -202,30 +202,30 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
               Find local events, businesses, and community updates in Grayson County KY
             </p>
             {userCount > 0 && (
-              <p className="text-white/70 text-xs md:text-sm font-medium mb-4 flex items-center justify-center gap-2 animate-in fade-in duration-300">
+              <p className="text-white/80 text-xs md:text-sm font-semibold mb-3 flex items-center justify-center gap-2 animate-in fade-in duration-300">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
                 {userCount.toLocaleString()} locals already here
               </p>
             )}
 
             {/* CTA Buttons — hidden on mobile */}
-            <div className="hidden md:flex flex-row justify-center gap-3 mb-5">
+            <div className="hidden md:flex flex-row justify-center gap-3 mt-3 mb-6">
               <Link
                 to="/events"
-                className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Browse Events
               </Link>
               <Link
                 to="/directory"
-                className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 text-white/85 px-6 py-2.5 rounded-xl font-medium text-sm transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-1.5 bg-transparent border border-white/40 hover:bg-white/10 hover:shadow-lg hover:scale-[1.02] text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
               >
                 Find Local Businesses
               </Link>
             </div>
 
             {/* Search Bar */}
-            <div ref={searchRef} className="w-full relative mt-3 md:mt-0 md:max-w-2xl">
+            <div ref={searchRef} className="w-full relative mt-2 md:mt-0 md:max-w-2xl">
               <form onSubmit={handleSearch}>
                 <input
                   type="text"
@@ -241,7 +241,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                   type="text"
                   name="search"
                   autoComplete="off"
-                  placeholder="Search businesses, events, questions..."
+                  placeholder="Search businesses, events, or ask a question..."
                   className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
