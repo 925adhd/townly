@@ -175,10 +175,12 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
         className="text-center relative overflow-visible rounded-3xl text-white px-4 py-8 md:px-16 md:py-16"
       >
         {/* Background image + dark overlay — clipped to rounded shape */}
-        <div
-          className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none"
-          style={{ backgroundImage: "url('/images/lakebackground.webp')", backgroundPosition: 'center', backgroundSize: 'cover', backgroundRepeat: 'no-repeat' }}
-        >
+        <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+          <img
+            src="/images/lakebackground.webp"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           <div
             className="absolute inset-0"
             style={{ background: 'linear-gradient(to right, rgba(10, 25, 50, 0.85), rgba(10, 25, 50, 0.60))' }}
