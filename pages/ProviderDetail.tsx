@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town, OwnerUpdate } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate, upsertOwnerUpdate, deleteOwnerUpdate } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate, upsertOwnerUpdate, deleteOwnerUpdate } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import Avatar from '../components/avatar/Avatar';
@@ -1120,6 +1120,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [eAdminAddress, setEAdminAddress] = useState('');
   const [eAdminHoursSchedule, setEAdminHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
   const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
+  const [eAdminImageFile, setEAdminImageFile] = useState<File | null>(null);
+  const [eAdminImagePreview, setEAdminImagePreview] = useState<string | null>(null);
+  const [eAdminImageRemoved, setEAdminImageRemoved] = useState(false);
+  const eAdminImageRef = React.useRef<HTMLInputElement>(null);
   const [togglingClaim, setTogglingClaim] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [ownerUpdate, setOwnerUpdate] = useState<OwnerUpdate | null>(null);
@@ -1216,6 +1220,9 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     setEAdminAddress(provider.address || '');
     setEAdminHoursSchedule(DEFAULT_HOURS_SCHEDULE);
     setEAdminTier(provider.listingTier);
+    setEAdminImageFile(null);
+    setEAdminImagePreview(provider.image || null);
+    setEAdminImageRemoved(false);
     setEditError('');
     setEditing(true);
   };
@@ -1225,6 +1232,12 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     setSaving(true);
     setEditError('');
     try {
+      let imageUrl = provider.image || '';
+      if (eAdminImageFile) {
+        imageUrl = await uploadAdminProviderPhoto(provider.id, eAdminImageFile);
+      } else if (eAdminImageRemoved) {
+        imageUrl = '';
+      }
       const updated = await updateProvider(provider.id, {
         name: eName,
         category: eCat,
@@ -1238,6 +1251,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
         address: stripTownFromAddress(eAdminAddress, eTown),
         hours: serializeHoursSchedule(eAdminHoursSchedule),
         listingTier: eAdminTier,
+        image: imageUrl,
       });
       setProvider(updated);
       setEditing(false);
@@ -1721,6 +1735,47 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                 placeholder="Briefly describe this business..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Listing Image</label>
+              <div className="flex items-center gap-4">
+                {eAdminImagePreview && (
+                  <img src={eAdminImagePreview} alt="Current" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
+                )}
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => eAdminImageRef.current?.click()}
+                    className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl transition-colors"
+                  >
+                    <i className="fas fa-camera mr-1"></i>{eAdminImagePreview ? 'Change Image' : 'Upload Image'}
+                  </button>
+                  {eAdminImagePreview && (
+                    <button
+                      type="button"
+                      onClick={() => { setEAdminImageFile(null); setEAdminImagePreview(null); setEAdminImageRemoved(true); }}
+                      className="text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors"
+                    >
+                      <i className="fas fa-trash mr-1"></i>Remove Image
+                    </button>
+                  )}
+                  <input
+                    ref={eAdminImageRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setEAdminImageFile(file);
+                        setEAdminImagePreview(URL.createObjectURL(file));
+                        setEAdminImageRemoved(false);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div>

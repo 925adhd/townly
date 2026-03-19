@@ -1356,6 +1356,21 @@ export async function uploadOwnerPhoto(providerId: string, userId: string, file:
   return data.publicUrl;
 }
 
+export async function uploadAdminProviderPhoto(providerId: string, file: File): Promise<string> {
+  await requireModOrAdmin();
+  validateImageFile(file);
+  const ext = safeImageExt(file);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Authentication required.');
+  const path = `admin/${providerId}_${Date.now()}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from('provider-photos')
+    .upload(path, file, { upsert: true });
+  if (uploadError) throw new Error(`Photo upload failed: ${uploadError.message}`);
+  const { data } = supabase.storage.from('provider-photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 // ── Review Replies ─────────────────────────────────────────────────────────────
 
 function mapReviewReply(row: any): ReviewReply {

@@ -430,7 +430,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                 onMouseEnter={() => prefetchProviderDetail(p.id)}
                 className={`group p-4 border shadow-sm [@media(hover:hover)]:hover:shadow-md transition-all flex flex-row items-center gap-4 ${reportingId === p.id || (p.listingTier === 'featured' && (p.phone || p.website)) ? 'rounded-t-2xl' : 'rounded-2xl'} ${p.listingTier === 'featured' ? 'bg-amber-50 border-amber-300 [@media(hover:hover)]:hover:border-amber-400 border-l-4' : 'bg-white border-slate-100 [@media(hover:hover)]:hover:border-blue-200'}`}
               >
-                <div className="w-16 h-16 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
+                <div className="w-16 h-16 sm:w-24 sm:h-24 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-100">
                   {img
                     ? <img src={img} alt={p.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     : (() => { const Icon = icon; return <Icon className={`w-7 h-7 ${iconColor}`} stroke={1.5} />; })()
