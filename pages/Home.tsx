@@ -98,25 +98,28 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
     ...communityAlerts.map(a => ({ ...a, isNws: false, severity: null, expires: null, senderName: null })),
   ];
 
-  // Reset index when pool size changes to avoid out-of-bounds
+  // Severe NWS alerts are pinned (never cycle away) — the rest cycle normally
+  const pinnedAlerts = allAlerts.filter(a => a.isNws && (a.severity === 'Extreme' || a.severity === 'Severe'));
+  const cyclingAlerts = allAlerts.filter(a => !(a.isNws && (a.severity === 'Extreme' || a.severity === 'Severe')));
+
+  // Reset index when cycling pool size changes to avoid out-of-bounds
   useEffect(() => {
     setAlertIndex(0);
-  }, [allAlerts.length]);
+  }, [cyclingAlerts.length]);
 
   useEffect(() => {
-    if (allAlerts.length <= 1) return;
+    if (cyclingAlerts.length <= 1) return;
     const timer = setInterval(() => {
       setAlertVisible(false);
       setTimeout(() => {
-        setAlertIndex(i => (i + 1) % allAlerts.length);
+        setAlertIndex(i => (i + 1) % cyclingAlerts.length);
         setAlertVisible(true);
       }, 400);
     }, 5000);
     return () => clearInterval(timer);
-  }, [allAlerts.length]);
+  }, [cyclingAlerts.length]);
 
-  const safeIndex = allAlerts.length > 0 ? alertIndex % allAlerts.length : 0;
-  const activeAlert = allAlerts[safeIndex] ?? null;
+  const safeIndex = cyclingAlerts.length > 0 ? alertIndex % cyclingAlerts.length : 0;
 
   const categories = [
     { name: 'Home Services', label: 'Home Services', icon: IconHome, color: 'bg-blue-100 text-blue-600' },
@@ -203,41 +206,60 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
     );
   }
 
-  const hasAlerts = allAlerts.length > 0;
+  const hasAlerts = pinnedAlerts.length > 0 || cyclingAlerts.length > 0;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-4">
 
-      {/* Alert Banner — slim, only when alerts exist */}
-      {hasAlerts && (
+      {/* Pinned severe NWS alerts — always visible, never cycle away */}
+      {pinnedAlerts.map(alert => (
+        <Link key={alert.id} to="/alerts" className="block bg-red-100 border border-red-300 rounded-lg px-3 py-2.5 hover:bg-red-200/60 transition-colors" role="alert">
+          <div className="flex items-center gap-2">
+            <i className={`fas ${alert.icon} text-xs flex-shrink-0 text-red-600`}></i>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 bg-red-200 text-red-700">
+              {alert.severity} · NWS
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-red-900 text-xs font-bold leading-snug truncate">
+                {alert.title}
+                {alert.description && <span className="hidden md:inline font-normal text-red-700"> — {alert.description}</span>}
+              </p>
+              {alert.description && (
+                <p className="md:hidden text-[11px] text-red-700 leading-snug truncate">{alert.description}</p>
+              )}
+            </div>
+            <i className="fas fa-chevron-right text-[9px] text-red-400 flex-shrink-0"></i>
+          </div>
+        </Link>
+      ))}
+
+      {/* Cycling alerts (non-severe NWS + community) */}
+      {cyclingAlerts.length > 0 && (
         <Link to="/alerts" className="block bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 hover:bg-red-100/60 transition-colors" role="alert">
           <div style={{ display: 'grid' }}>
-            {allAlerts.map((alert, i) => {
+            {cyclingAlerts.map((alert, i) => {
               const isActive = i === safeIndex;
-              const isSevereNws = alert.isNws && (alert.severity === 'Extreme' || alert.severity === 'Severe');
               return (
                 <div
                   key={alert.id}
                   style={{ gridArea: '1/1', opacity: isActive ? (alertVisible ? 1 : 0) : 0, transition: 'opacity 0.4s ease', visibility: isActive ? 'visible' : 'hidden', pointerEvents: isActive ? 'auto' : 'none' }}
                   className="flex items-center gap-2"
                 >
-                  <i className={`fas ${alert.icon} text-xs flex-shrink-0 ${isSevereNws ? 'text-red-600' : ALERT_ICON_COLORS[alert.icon] ?? 'text-red-600'}`}></i>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 ${isSevereNws ? 'bg-red-200 text-red-700' : alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                  <i className={`fas ${alert.icon} text-xs flex-shrink-0 ${ALERT_ICON_COLORS[alert.icon] ?? 'text-red-600'}`}></i>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 ${alert.isNws ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                     {alert.isNws ? 'NWS' : 'Alert'}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-800 text-xs font-semibold leading-snug truncate">
                       {alert.title}
-                      {/* Description inline on desktop only */}
                       {alert.description && <span className="hidden md:inline font-normal text-slate-500"> — {alert.description}</span>}
                     </p>
-                    {/* Description on its own line on mobile */}
                     {alert.description && (
                       <p className="md:hidden text-[11px] text-slate-500 leading-snug truncate">{alert.description}</p>
                     )}
                   </div>
-                  {allAlerts.length > 1 && (
-                    <span className="text-[10px] text-red-400 font-semibold flex-shrink-0">{safeIndex + 1}/{allAlerts.length}</span>
+                  {cyclingAlerts.length > 1 && (
+                    <span className="text-[10px] text-red-400 font-semibold flex-shrink-0">{safeIndex + 1}/{cyclingAlerts.length}</span>
                   )}
                   <i className="fas fa-chevron-right text-[9px] text-red-300 flex-shrink-0"></i>
                 </div>
