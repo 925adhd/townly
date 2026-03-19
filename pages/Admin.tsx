@@ -1,7 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { ContentReport, ReportContentType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
-import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, reorderAlerts, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem } from '../lib/api';
+import { fetchPendingProviders, approveProvider, rejectProvider, fetchReports, dismissReport, removeContent, fetchPendingClaims, approveClaim, rejectClaim, fetchPendingCommunityEvents, approveCommunityEvent, deleteCommunityEvent, createAlert, dismissAlert, reorderAlerts, fetchSpotlightBookings, updateSpotlightBookingStatus, deleteSpotlightBooking, updateSpotlightBooking, formatWeekRange, fetchEarlyAccessRequests, updateEarlyAccessStatus, deleteEarlyAccessRequest, fetchActivityFeed, ActivityItem, submitSpotlightBooking, uploadSpotlightImage } from '../lib/api';
+import { getCurrentTenant } from '../tenants';
+
+const adminTenant = getCurrentTenant();
 
 interface AdminProps {
   user: { id: string; name: string; role?: string } | null;
@@ -63,6 +66,24 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
   const [editingBooking, setEditingBooking] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<{ title: string; description: string; eventDate: string; eventTime: string; tags: string[]; location: string; town: string; weekStart: string; adminNotes: string }>({ title: '', description: '', eventDate: '', eventTime: '', tags: [], location: '', town: '', weekStart: '', adminNotes: '' });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Admin create spotlight/featured
+  const [showAdminCreate, setShowAdminCreate] = useState(false);
+  const [adminCreateType, setAdminCreateType] = useState<'spotlight' | 'featured'>('spotlight');
+  const [acTitle, setAcTitle] = useState('');
+  const [acTeaser, setAcTeaser] = useState('');
+  const [acDesc, setAcDesc] = useState('');
+  const [acEventDate, setAcEventDate] = useState('');
+  const [acEventTime, setAcEventTime] = useState('');
+  const [acLocation, setAcLocation] = useState('');
+  const [acTown, setAcTown] = useState('');
+  const [acWeekStart, setAcWeekStart] = useState('');
+  const [acTags, setAcTags] = useState<string[]>([]);
+  const [acBanner, setAcBanner] = useState<File | null>(null);
+  const [acThumb, setAcThumb] = useState<File | null>(null);
+  const [acFlyer, setAcFlyer] = useState<File | null>(null);
+  const [acSubmitting, setAcSubmitting] = useState(false);
+  const [acError, setAcError] = useState('');
 
   // Early access requests
   const [accessRequests, setAccessRequests] = useState<EarlyAccessRequest[]>([]);
@@ -264,6 +285,51 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
     }
   };
 
+
+  const handleAdminCreateBooking = async () => {
+    if (!acTitle.trim() || !acDesc.trim() || !acWeekStart || !user) return;
+    setAcSubmitting(true);
+    setAcError('');
+    try {
+      let imageUrl = '';
+      let thumbnailUrl: string | undefined;
+      let flyerUrl: string | undefined;
+      if (acBanner) imageUrl = await uploadSpotlightImage(acBanner);
+      if (acThumb) thumbnailUrl = await uploadSpotlightImage(acThumb);
+      if (acFlyer) flyerUrl = await uploadSpotlightImage(acFlyer);
+
+      const booking = await submitSpotlightBooking(
+        adminCreateType,
+        acTitle.trim(),
+        acDesc.trim(),
+        acWeekStart,
+        acEventDate || '',
+        acEventTime || '',
+        acLocation.trim(),
+        acTown,
+        user.name,
+        user.email || '',
+        '',
+        imageUrl,
+        thumbnailUrl,
+        flyerUrl,
+        acTags.length > 0 ? acTags : undefined,
+        adminCreateType === 'spotlight' ? acTeaser.trim() || undefined : undefined,
+        undefined,
+        'unpaid',
+      );
+      setBookings(prev => [booking, ...prev]);
+      // Reset form
+      setAcTitle(''); setAcTeaser(''); setAcDesc(''); setAcEventDate(''); setAcEventTime('');
+      setAcLocation(''); setAcTown(''); setAcWeekStart(''); setAcTags([]);
+      setAcBanner(null); setAcThumb(null); setAcFlyer(null);
+      setShowAdminCreate(false);
+    } catch (e: any) {
+      setAcError(e.message || 'Failed to create booking.');
+    } finally {
+      setAcSubmitting(false);
+    }
+  };
 
   const handlePostAlert = async () => {
     if (!alertTitle.trim() || !alertDescription.trim() || !user) return;
@@ -854,10 +920,116 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
         <>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-slate-900">Spotlight & Featured Bookings</h2>
-            <button onClick={() => { setBookingsLoaded(false); }} className="text-xs text-slate-400 hover:text-slate-600">
-              <i className="fas fa-refresh mr-1"></i> Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowAdminCreate(v => !v)} className="text-xs font-bold text-orange-600 hover:text-orange-500">
+                <i className={`fas ${showAdminCreate ? 'fa-minus' : 'fa-plus'} mr-1`}></i> {showAdminCreate ? 'Close' : 'Create New'}
+              </button>
+              <button onClick={() => { setBookingsLoaded(false); }} className="text-xs text-slate-400 hover:text-slate-600">
+                <i className="fas fa-refresh mr-1"></i> Refresh
+              </button>
+            </div>
           </div>
+
+          {/* Admin Create Spotlight/Featured Form */}
+          {showAdminCreate && (
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 mb-4">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-sm">Create Booking</h3>
+                <div className="flex bg-slate-100 rounded-lg p-0.5 ml-auto">
+                  <button onClick={() => setAdminCreateType('spotlight')} className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${adminCreateType === 'spotlight' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>Spotlight</button>
+                  <button onClick={() => setAdminCreateType('featured')} className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${adminCreateType === 'featured' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Featured</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Title *</label>
+                  <input type="text" value={acTitle} onChange={e => setAcTitle(e.target.value)} maxLength={200} placeholder="Event or business name" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Week *</label>
+                  <input type="date" value={acWeekStart} onChange={e => setAcWeekStart(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  <p className="text-[10px] text-slate-400 mt-0.5">Pick the Sunday of the week</p>
+                </div>
+              </div>
+
+              {adminCreateType === 'spotlight' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Teaser <span className="font-normal normal-case">(home page, max 120 chars)</span></label>
+                  <input type="text" value={acTeaser} onChange={e => setAcTeaser(e.target.value)} maxLength={120} placeholder="Short hook for the home page" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Description *</label>
+                <textarea value={acDesc} onChange={e => setAcDesc(e.target.value)} maxLength={600} rows={3} placeholder="Full description for the events page" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Date</label>
+                  <input type="date" value={acEventDate} onChange={e => setAcEventDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Event Time</label>
+                  <input type="text" value={acEventTime} onChange={e => setAcEventTime(e.target.value)} placeholder="e.g. 4:30 – 6:30 PM" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
+                  <select value={acTown} onChange={e => setAcTown(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <option value="">Select...</option>
+                    {adminTenant.towns.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Venue</label>
+                <input type="text" value={acLocation} onChange={e => setAcLocation(e.target.value)} maxLength={300} placeholder="e.g. Grayson County Park" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Tags <span className="font-normal normal-case">(optional)</span></label>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Free Admission', 'All Ages Welcome', 'Family Friendly', 'Community Event', 'Live Music', 'Food & Drinks', 'Outdoor Event', 'Fundraiser', 'Grand Opening', 'Business Event'].map(tag => (
+                    <button key={tag} onClick={() => setAcTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${acTags.includes(tag) ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'}`}>{tag}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Banner Image {adminCreateType === 'spotlight' ? '*' : ''}</label>
+                  <input type="file" accept="image/*" onChange={e => setAcBanner(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                  <p className="text-[10px] text-slate-400 mt-0.5">16:9 ratio for events page</p>
+                </div>
+                {adminCreateType === 'spotlight' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Thumbnail</label>
+                      <input type="file" accept="image/*" onChange={e => setAcThumb(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                      <p className="text-[10px] text-slate-400 mt-0.5">1:1 square for home page</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Flyer</label>
+                      <input type="file" accept="image/*" onChange={e => setAcFlyer(e.target.files?.[0] ?? null)} className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+                      <p className="text-[10px] text-slate-400 mt-0.5">3:4 portrait flyer</p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {acError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">{acError}</div>}
+
+              <div className="flex gap-3">
+                <button onClick={() => setShowAdminCreate(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onClick={handleAdminCreateBooking} disabled={acSubmitting || !acTitle.trim() || !acDesc.trim() || !acWeekStart} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-600 hover:bg-orange-500 transition-colors disabled:opacity-50">
+                  {acSubmitting ? 'Creating...' : `Create ${adminCreateType === 'spotlight' ? 'Spotlight' : 'Featured'}`}
+                </button>
+              </div>
+            </div>
+          )}
+
           {bookingsError && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-2xl mb-4">{bookingsError}</div>}
           {loadingBookings ? (
             <div className="text-center py-10 text-slate-400 text-sm">Loading bookings...</div>

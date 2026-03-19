@@ -424,6 +424,11 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
             <Link to="/lost-found" className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               {latestLF ? (
                 <>
+                  {latestLF.photoUrl && (
+                    <div className="w-full h-32 rounded-xl overflow-hidden mb-2 bg-slate-100">
+                      <img src={latestLF.photoUrl} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest self-start mb-2 ${
                     latestLF.type.includes('lost') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
                   }`}>
