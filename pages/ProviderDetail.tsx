@@ -218,90 +218,92 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 overflow-y-auto">
-      <div className="flex min-h-full items-start justify-center p-4 pt-6">
-      <div className="bg-white rounded-3xl shadow-2xl p-5 max-w-sm w-full space-y-4">
+      <div className="flex min-h-full items-start justify-center p-3 pt-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-sm w-full space-y-3">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}</h2>
-            <p className="text-slate-500 text-sm mt-0.5">{provider.name}</p>
+            <h2 className="text-base font-bold text-slate-900">{provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}</h2>
+            <p className="text-slate-500 text-xs mt-0.5">{provider.name}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
         </div>
 
-        <p className="text-slate-600 text-sm leading-relaxed">
-          Let us know you're the owner and we'll stop by to verify in person. It's quick and completely free.
+        <p className="text-slate-600 text-xs leading-relaxed">
+          Let us know you're the owner and we'll stop by to verify in person. Quick and completely free.
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Your name</label>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Your name</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="John Smith"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Phone number</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="(270) 555-0100"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Phone</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="(270) 555-0100"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@email.com"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="owner@yourbusiness.com"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Business address</label>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Business address</label>
             <input
               type="text"
               value={address}
               onChange={e => setAddress(e.target.value)}
               placeholder="123 Main St, Leitchfield, KY"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {provider.address && <p className="mt-1 text-xs text-slate-400">Pre-filled from listing — update if incorrect.</p>}
+            {provider.address && <p className="mt-0.5 text-[10px] text-slate-400">Pre-filled from listing — update if incorrect.</p>}
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Anything we should know? <span className="normal-case text-slate-300">(optional)</span></label>
-            <textarea
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Note <span className="normal-case text-slate-300">(optional)</span></label>
+            <input
+              type="text"
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder="Best time to visit, ask for a specific person, etc."
-              rows={2}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              placeholder="Best time to visit, ask for someone, etc."
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
+        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-3 py-2 rounded-lg">{error}</div>}
 
-        <div className="flex gap-3">
-          <button onClick={onClose} className="bg-slate-100 text-slate-700 font-bold px-5 py-2.5 rounded-xl hover:bg-slate-200 transition-colors text-sm">
+        <div className="flex gap-2">
+          <button onClick={onClose} className="bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors text-sm">
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="flex-1 bg-blue-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60 text-sm"
+            className="flex-1 bg-blue-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 text-sm"
           >
             {submitting ? 'Submitting...' : 'Submit Claim'}
           </button>
         </div>
 
-        <p className="text-center text-xs text-slate-400">Claiming is always free. We'll verify in person.</p>
+        <p className="text-center text-[10px] text-slate-400">Claiming is always free. We'll verify in person.</p>
       </div>
       </div>
     </div>
