@@ -69,30 +69,30 @@ const Auth: React.FC = () => {
   const isSocialContext = new URLSearchParams(location.search).has('signup');
 
   return (
-    <div className="max-w-md md:max-w-lg mx-auto pt-2 sm:pt-4 pb-6">
+    <div className="max-w-md md:max-w-lg mx-auto pt-1 sm:pt-4 pb-4">
       {isSocialContext && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium px-4 py-3 rounded-2xl mb-3 flex items-center gap-2">
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-xs sm:text-sm font-medium px-3 py-2 sm:px-4 sm:py-3 rounded-2xl mb-2 sm:mb-3 flex items-center gap-2">
           <i className="fas fa-lock text-blue-400 flex-shrink-0"></i>
           Sign in or create a free account to continue.
         </div>
       )}
-      <div className="bg-white p-4 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-2 sm:mb-4">
-           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-1 object-contain animate-rock" />
-           <h1 className="text-lg sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : 'Join Townly'}</h1>
-           <p className="text-orange-600 font-semibold text-xs sm:text-sm mt-0.5">{tenant.tagline}</p>
+      <div className="bg-white p-3 sm:p-8 rounded-3xl border border-slate-100 shadow-xl">
+        <div className="text-center mb-1.5 sm:mb-4">
+           <img src="/images/chair-icon.webp" alt={tenant.displayName} className="w-8 h-8 sm:w-14 sm:h-14 mx-auto mb-0.5 sm:mb-1 object-contain animate-rock" />
+           <h1 className="text-base sm:text-2xl font-bold text-slate-900">{isLogin ? 'Welcome Back' : 'Join Townly'}</h1>
+           <p className="text-orange-600 font-semibold text-[11px] sm:text-sm">{tenant.tagline}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-1.5 sm:space-y-3">
           {!isLogin && (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Full Name</label>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5 sm:mb-1 ml-1">Full Name</label>
               <input
                 type="text"
                 name="name"
                 autoComplete="name"
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                 placeholder="Enter your name"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -100,27 +100,27 @@ const Auth: React.FC = () => {
             </div>
           )}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Email</label>
+            <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5 sm:mb-1 ml-1">Email</label>
             <input
               type="email"
               name="email"
               autoComplete="email"
               required
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
               placeholder="you@example.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Password</label>
+            <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5 sm:mb-1 ml-1">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 autoComplete="current-password"
                 required
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 sm:px-4 py-2 sm:py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -137,14 +137,14 @@ const Auth: React.FC = () => {
 
           {!isLogin && (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Confirm Password</label>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5 sm:mb-1 ml-1">Confirm Password</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirm-password"
                   autoComplete="new-password"
                   required
-                  className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 sm:py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none ${confirmPassword && password !== confirmPassword ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
+                  className={`w-full bg-slate-50 border rounded-xl px-3 sm:px-4 py-2 sm:py-3 pr-11 text-sm focus:ring-2 focus:ring-orange-500 outline-none ${confirmPassword && password !== confirmPassword ? 'border-red-300 focus:ring-red-400' : 'border-slate-200'}`}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
@@ -158,13 +158,13 @@ const Auth: React.FC = () => {
                 </button>
               </div>
               {confirmPassword && password !== confirmPassword && (
-                <p className="text-red-500 text-xs mt-1 ml-1">Passwords do not match</p>
+                <p className="text-red-500 text-xs mt-0.5 ml-1">Passwords do not match</p>
               )}
             </div>
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
+            <div className="bg-red-50 border border-red-200 text-red-600 text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl">
               {error}
             </div>
           )}
@@ -179,36 +179,34 @@ const Auth: React.FC = () => {
         </form>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 my-3 sm:my-4">
+        <div className="flex items-center gap-3 my-2 sm:my-4">
           <div className="flex-1 h-px bg-slate-200"></div>
           <span className="text-xs text-slate-400 font-medium">or</span>
           <div className="flex-1 h-px bg-slate-200"></div>
         </div>
 
         {/* Social login buttons */}
-        <div className="flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              const from = (location.state as any)?.from || '/';
-              signInWithProvider('google', `${window.location.origin}${from}`).catch(err => setError(err.message));
-            }}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-semibold py-2.5 sm:py-3 rounded-xl transition-all text-sm"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Continue with Google
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const from = (location.state as any)?.from || '/';
+            signInWithProvider('google', `${window.location.origin}${from}`).catch(err => setError(err.message));
+          }}
+          className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 hover:bg-slate-50 active:scale-[0.98] text-slate-700 font-semibold py-2 sm:py-3 rounded-xl transition-all text-sm"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
 
-        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100 text-center">
+        <div className="mt-2 sm:mt-4 pt-2 sm:pt-4 border-t border-slate-100 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setError(''); setConfirmPassword(''); setShowPassword(false); setShowConfirmPassword(false); }}
-            className="text-sm font-semibold text-orange-600"
+            className="text-xs sm:text-sm font-semibold text-orange-600"
           >
             {isLogin ? "Don't have an account? Join for free" : "Already have an account? Sign in"}
           </button>
