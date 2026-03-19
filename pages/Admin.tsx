@@ -742,31 +742,12 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
               {claims.map(claim => (
                 <div key={claim.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-3">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1 min-w-0 flex-1">
+                    <div className="space-y-1.5 min-w-0 flex-1">
                       <h2 className="font-bold text-slate-900 text-base">{claim.providerName}</h2>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>Claimed by <span className="font-semibold text-slate-700">{claim.userName}</span></span>
-                        {claim.userEmail && <span className="text-slate-400">({claim.userEmail})</span>}
-                        <span>·</span>
-                        <span className="capitalize bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{claim.verificationMethod}</span>
-                      </div>
+                      <p className="text-xs text-slate-500">Requested by <span className="font-semibold text-slate-700">{claim.userName}</span></p>
                       {claim.verificationDetail && (
-                        <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
-                          <span className="font-semibold text-slate-400 text-xs uppercase tracking-wide block mb-0.5">Verification detail</span>
+                        <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100 whitespace-pre-line">
                           {claim.verificationDetail}
-                        </p>
-                      )}
-                      {claim.proofUrl && (
-                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5">
-                          <span className="font-semibold text-slate-400 text-xs uppercase tracking-wide block">
-                            Proof — {claim.proofType === 'storefront' ? 'Storefront photo' : claim.proofType === 'google_facebook' ? 'Google/Facebook screenshot' : claim.proofType === 'business_card' ? 'Business card' : 'Document'}
-                          </span>
-                          <a href={claim.proofUrl} target="_blank" rel="noopener noreferrer" className="block">
-                            <img src={claim.proofUrl} alt="Ownership proof" className="max-h-40 rounded-lg border border-slate-200 object-contain bg-white" />
-                          </a>
-                          <a href={claim.proofUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                            <i className="fas fa-external-link-alt text-[10px]"></i> Open full size
-                          </a>
                         </div>
                       )}
                       <p className="text-slate-400 text-xs">{new Date(claim.createdAt).toLocaleDateString()}</p>

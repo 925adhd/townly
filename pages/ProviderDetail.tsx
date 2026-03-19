@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town, OwnerUpdate } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, uploadClaimProof, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate, upsertOwnerUpdate, deleteOwnerUpdate } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, updateOwnerListing, uploadOwnerPhoto, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, fetchFeaturedCount, logListingView, fetchListingStats, ListingStats, submitEarlyAccessRequest, checkEarlyAccessRequest, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate, upsertOwnerUpdate, deleteOwnerUpdate } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomSelect from '../components/CustomSelect';
 import Avatar from '../components/avatar/Avatar';
@@ -184,47 +184,29 @@ interface ClaimModalProps {
   onSubmitted: () => void;
 }
 
-const PROOF_TYPES = [
-  { value: 'google_facebook', label: 'Screenshot of Google Business Profile or Facebook Page admin panel' },
-  { value: 'storefront', label: 'Photo of storefront or signage' },
-  { value: 'business_card', label: 'Photo of business card' },
-] as const;
-
-type VerifyOption = 'email' | 'phone' | 'upload';
-
 const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubmitted }) => {
-  const [verifyOption, setVerifyOption] = useState<VerifyOption>('email');
-  const [detail, setDetail] = useState('');
-  const [proofType, setProofType] = useState<string>('google_facebook');
-  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [name, setName] = useState(user.name || '');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState(user.email ?? '');
+  const [address, setAddress] = useState(provider.address ?? '');
+  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleVerifyOptionChange = (opt: VerifyOption) => {
-    setVerifyOption(opt);
-    setDetail(opt === 'email' ? (user.email ?? '') : '');
-    setProofFile(null);
-  };
-
   const handleSubmit = async () => {
-    if (verifyOption !== 'upload' && !detail.trim()) {
-      setError('Please provide your verification details.');
-      return;
-    }
-    if (verifyOption === 'upload' && !proofFile) {
-      setError('Please select a file to upload.');
-      return;
-    }
+    if (!name.trim()) { setError('Please enter your name.'); return; }
+    if (!phone.trim() && !email.trim()) { setError('Please provide a phone number or email so we can reach you.'); return; }
     setSubmitting(true);
     setError('');
     try {
-      let proofUrl: string | undefined;
-      if (proofFile) {
-        proofUrl = await uploadClaimProof(proofFile);
-      }
-      const dbMethod = verifyOption === 'upload' ? 'manual' : verifyOption;
-      const dbDetail = verifyOption === 'upload' ? `Proof upload: ${proofType}` : detail.trim();
-      await submitClaim(provider.id, provider.name, dbMethod, dbDetail, proofUrl, proofFile ? proofType : undefined);
+      const detail = [
+        `Name: ${name.trim()}`,
+        phone.trim() ? `Phone: ${phone.trim()}` : '',
+        email.trim() ? `Email: ${email.trim()}` : '',
+        address.trim() ? `Address: ${address.trim()}` : '',
+        message.trim() ? `Note: ${message.trim()}` : '',
+      ].filter(Boolean).join('\n');
+      await submitClaim(provider.id, provider.name, 'manual', detail);
       onSubmitted();
       onClose();
     } catch (err: any) {
@@ -246,78 +228,63 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">&times;</button>
         </div>
 
-        <p className="text-slate-600 text-sm font-medium">Verify your connection to this business</p>
+        <p className="text-slate-600 text-sm leading-relaxed">
+          Let us know you're the owner and we'll stop by to verify in person. It's quick and completely free.
+        </p>
 
-        <div className="space-y-2">
-          {([
-            { value: 'email' as VerifyOption, label: 'Verify with business email' },
-            { value: 'phone' as VerifyOption, label: 'Verify with phone' },
-            { value: 'upload' as VerifyOption, label: 'Upload proof of ownership' },
-          ]).map(opt => (
-            <label
-              key={opt.value}
-              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${verifyOption === opt.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}
-            >
-              <input
-                type="radio"
-                name="verifyOption"
-                value={opt.value}
-                checked={verifyOption === opt.value}
-                onChange={() => handleVerifyOptionChange(opt.value)}
-                className="text-blue-600"
-              />
-              <span className="text-sm font-medium text-slate-700">{opt.label}</span>
-            </label>
-          ))}
-        </div>
-
-        {verifyOption !== 'upload' && (
+        <div className="space-y-3">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-              {verifyOption === 'email' ? 'Business email address' : 'Phone number'}
-            </label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Your name</label>
             <input
-              type={verifyOption === 'email' ? 'email' : 'tel'}
-              value={detail}
-              onChange={e => setDetail(e.target.value)}
-              placeholder={verifyOption === 'email' ? 'owner@yourbusiness.com' : '(270) 555-0100'}
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="John Smith"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
             />
-            {verifyOption === 'phone' && (
-              <p className="mt-1.5 text-xs text-slate-400">We'll give you a quick call to verify you're the owner and confirm your claim.</p>
-            )}
           </div>
-        )}
-
-        {verifyOption === 'upload' && (
-          <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50 space-y-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Upload proof of ownership</p>
-            <div className="space-y-1.5">
-              {PROOF_TYPES.map(opt => (
-                <label key={opt.value} className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors text-xs ${proofType === opt.value ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-                  <input
-                    type="radio"
-                    name="proofType"
-                    value={opt.value}
-                    checked={proofType === opt.value}
-                    onChange={() => setProofType(opt.value)}
-                    className="mt-0.5 text-blue-600 flex-shrink-0"
-                  />
-                  <span className="text-slate-700 font-medium leading-snug">{opt.label}</span>
-                </label>
-              ))}
-            </div>
-            <div>
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                onChange={e => setProofFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-              />
-              {proofFile && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><i className="fas fa-check-circle"></i> {proofFile.name}</p>}
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Phone number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="(270) 555-0100"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
           </div>
-        )}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="owner@yourbusiness.com"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Business address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder="123 Main St, Leitchfield, KY"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            {provider.address && <p className="mt-1 text-xs text-slate-400">Pre-filled from listing — update if incorrect.</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Anything we should know? <span className="normal-case text-slate-300">(optional)</span></label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Best time to visit, ask for a specific person, etc."
+              rows={2}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+            />
+          </div>
+        </div>
 
         {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
 
@@ -334,7 +301,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
           </button>
         </div>
 
-        <p className="text-center text-xs text-slate-400">Claiming is always free. We'll review within 1–2 business days.</p>
+        <p className="text-center text-xs text-slate-400">Claiming is always free. We'll verify in person.</p>
       </div>
       </div>
     </div>
@@ -1534,7 +1501,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       {claimSubmitted && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex items-center gap-3">
           <i className="fas fa-circle-check text-emerald-500"></i>
-          <p className="text-emerald-700 text-sm font-semibold">Claim request submitted. Our team will review it and notify you.</p>
+          <p className="text-emerald-700 text-sm font-semibold">Claim request submitted! We'll reach out to schedule an in-person verification.</p>
         </div>
       )}
 
