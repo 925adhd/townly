@@ -285,9 +285,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Current Spotlights — hide entire section when searching with no match */}
       {(!searchQ || filteredSpotlight) && (
       <div id="spotlight">
-        <h2 className="text-xl font-bold text-orange-500 leading-tight flex items-center gap-2 mb-1">
-          <i className="fas fa-star"></i> Weekly Spotlight
-        </h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-xl font-bold text-orange-500 leading-tight flex items-center gap-2">
+            <i className="fas fa-star"></i> Weekly Spotlight
+          </h2>
+          <a href="#pricing-spotlight" className="text-[11px] text-slate-400 hover:text-orange-500 transition-colors font-medium">Book a Spotlight <i className="fas fa-arrow-down text-[9px] ml-0.5"></i></a>
+        </div>
         <p className="text-slate-500 text-sm mb-3">Promote an event, business, or announcement.</p>
         <div className="grid gap-4">
 
@@ -402,7 +405,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Featured Listings — hide when searching with no match */}
       {(!searchQ || filteredFeatured.length > 0) && (
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1 px-1 -mt-4">Featured Listings</h2>
+        <div className="flex items-center justify-between mb-1 px-1 -mt-4">
+          <h2 className="text-xl font-bold text-slate-900">Featured Listings</h2>
+          <a href="#pricing-featured" className="text-[11px] text-slate-400 hover:text-blue-500 transition-colors font-medium">Get Featured <i className="fas fa-arrow-down text-[9px] ml-0.5"></i></a>
+        </div>
         <p className="text-slate-400 text-xs mb-4 px-1">Posts with extra visibility this week.</p>
         <div className="grid md:grid-cols-2 gap-4">
 
@@ -668,7 +674,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <div className="space-y-4">
 
           {/* Local Spotlight — full width */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200 rounded-3xl p-8 space-y-3 shadow-md">
+          <div id="pricing-spotlight" className="bg-gradient-to-br from-amber-50 to-orange-50/70 border border-amber-200 rounded-3xl p-8 space-y-3 shadow-md">
             <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center shadow-sm">
               <i className="fas fa-star text-amber-500 text-xl"></i>
             </div>
@@ -700,7 +706,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
           </div>
 
           {/* Featured Post */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm">
+          <div id="pricing-featured" className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm">
             <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
               <i className="fas fa-bullhorn text-slate-400 text-base"></i>
             </div>
