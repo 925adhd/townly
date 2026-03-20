@@ -1329,7 +1329,10 @@ export async function updateOwnerListing(
     .eq('id', id)
     .single();
   if (fetchErr || !existing) throw new Error('Listing not found.');
-  if (existing.claimed_by !== session.user.id) throw new Error('You do not own this listing.');
+  const role = session.user.app_metadata?.role;
+  if (existing.claimed_by !== session.user.id && role !== 'admin' && role !== 'moderator') {
+    throw new Error('You do not own this listing.');
+  }
 
   if (input.town !== undefined) validateTown(input.town);
   if (input.description) rejectHtml(input.description, 'Description');
@@ -1363,7 +1366,9 @@ export async function updateOwnerListing(
 
 export async function uploadOwnerPhoto(providerId: string, userId: string, file: File): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user || session.user.id !== userId) throw new Error('Unauthorized.');
+  if (!session?.user) throw new Error('Unauthorized.');
+  const role = session.user.app_metadata?.role;
+  if (session.user.id !== userId && role !== 'admin' && role !== 'moderator') throw new Error('Unauthorized.');
   validateImageFile(file);
   const ext = safeImageExt(file);
   const path = `${userId}/${providerId}.${ext}`;
