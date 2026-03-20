@@ -458,6 +458,19 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
   const [eAddress, setEAddress] = useState(provider.address ?? '');
   const [eOwnerTown, setEOwnerTown] = useState<Town>(provider.town);
   const [eHoursSchedule, setEHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
+  // Church service times: [{name, day, time}]
+  const isChurch = provider.category === 'Churches';
+  const [serviceEntries, setServiceEntries] = useState<{name: string; day: string; time: string}[]>(() => {
+    if (!isChurch || !provider.hours) return [];
+    return provider.hours.split(', ').map(s => {
+      const match = s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/);
+      if (match) return { name: match[1], day: match[2], time: match[3] };
+      return { name: s, day: 'Sun', time: '10am' };
+    });
+  });
+  const [newServiceName, setNewServiceName] = useState('');
+  const [newServiceDay, setNewServiceDay] = useState('Sun');
+  const [newServiceTime, setNewServiceTime] = useState('10am');
   const [eFacebook, setEFacebook] = useState(stripFbPrefix(provider.facebook ?? ''));
   const [eWebsite, setEWebsite] = useState(stripHttps(provider.website ?? ''));
   const [eTags, setETags] = useState<string[]>(provider.tags ?? []);
@@ -477,7 +490,9 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
         description: eDesc,
         phone: ePhone,
         address: stripTownFromAddress(eAddress, eOwnerTown),
-        hours: serializeHoursSchedule(eHoursSchedule),
+        hours: isChurch
+          ? serviceEntries.map(s => `${s.name} – ${s.day} ${s.time}`).join(', ')
+          : serializeHoursSchedule(eHoursSchedule),
         facebook: eFacebook ? `https://facebook.com/${eFacebook}` : '',
         website: eWebsite ? `https://${eWebsite}` : '',
         tags: eTags,
@@ -654,7 +669,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
         <form onSubmit={handleSave} className="space-y-4 border-t border-emerald-200 pt-4">
           {/* Photo upload */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Business Photo</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{provider.category === 'Churches' ? 'Church Photo' : 'Business Photo'}</label>
             <div className="flex items-center gap-3">
               {provider.image
                 ? <img src={provider.image} className="w-16 h-16 rounded-xl object-cover border border-slate-200" alt="" />
@@ -677,7 +692,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
               value={eDesc}
               onChange={e => setEDesc(e.target.value)}
               rows={3}
-              placeholder="Briefly describe your business and the services you offer..."
+              placeholder={provider.category === 'Churches' ? "Describe your church, denomination, and what visitors can expect..." : "Briefly describe your business and the services you offer..."}
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
             />
           </div>
@@ -760,7 +775,60 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
             </select>
           </div>
 
-          {/* Hours builder */}
+          {/* Hours / Service Times builder */}
+          {isChurch ? (
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Service Times</label>
+            {provider.hours && (
+              <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                <i className="fas fa-clock text-[10px]"></i>
+                Currently saved: <span className="font-medium text-slate-600">{provider.hours}</span>
+              </p>
+            )}
+            <div className="bg-white border border-slate-200 rounded-xl px-3 py-3 space-y-2">
+              {serviceEntries.map((entry, i) => (
+                <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg px-2.5 py-2">
+                  <span className="text-xs font-semibold text-slate-700 flex-1 min-w-0 truncate">{entry.name}</span>
+                  <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">{entry.day} {entry.time}</span>
+                  <button type="button" onClick={() => setServiceEntries(prev => prev.filter((_, idx) => idx !== i))} className="text-red-300 hover:text-red-500 text-xs flex-shrink-0"><i className="fas fa-times"></i></button>
+                </div>
+              ))}
+              <div className="border-t border-slate-100 pt-2 space-y-2">
+                <input
+                  type="text"
+                  value={newServiceName}
+                  onChange={e => setNewServiceName(e.target.value)}
+                  placeholder="e.g. Sunday Morning Worship, Children's Church..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:ring-1 focus:ring-emerald-500 outline-none"
+                />
+                <div className="flex items-center gap-2">
+                  <select value={newServiceDay} onChange={e => setNewServiceDay(e.target.value)} className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:ring-1 focus:ring-emerald-500 outline-none">
+                    {HOUR_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <select value={newServiceTime} onChange={e => setNewServiceTime(e.target.value)} className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:ring-1 focus:ring-emerald-500 outline-none">
+                    {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newServiceName.trim()) return;
+                      setServiceEntries(prev => [...prev, { name: newServiceName.trim(), day: newServiceDay, time: newServiceTime }]);
+                      setNewServiceName('');
+                    }}
+                    className="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+              {serviceEntries.length > 0 && (
+                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                  Preview: <span className="font-medium text-slate-600">{serviceEntries.map(s => `${s.name} – ${s.day} ${s.time}`).join(', ')}</span>
+                </p>
+              )}
+            </div>
+          </div>
+          ) : (
           <div>
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Hours</label>
             {provider.hours && (
@@ -811,6 +879,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
               </p>
             </div>
           </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -821,7 +890,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
                   type="text"
                   value={eFacebook}
                   onChange={e => setEFacebook(stripFbPrefix(e.target.value))}
-                  placeholder="yourbusiness"
+                  placeholder={isChurch ? 'yourchurch' : 'yourbusiness'}
                   className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-900 outline-none min-w-0"
                 />
               </div>
@@ -834,7 +903,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
                   type="text"
                   value={eWebsite}
                   onChange={e => setEWebsite(stripHttps(e.target.value))}
-                  placeholder="yourbusiness.com"
+                  placeholder={isChurch ? 'yourchurch.com' : 'yourbusiness.com'}
                   className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-900 outline-none min-w-0"
                 />
               </div>
@@ -843,8 +912,8 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
 
           {/* Service Tags */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Service Tags</label>
-            <p className="text-xs text-slate-400 mb-2">Add keywords for services you offer so customers can find you (e.g. "oil change", "roof repair").</p>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{provider.category === 'Churches' ? 'Ministry Tags' : 'Service Tags'}</label>
+            <p className="text-xs text-slate-400 mb-2">{provider.category === 'Churches' ? 'Add keywords for ministries and programs you offer (e.g. "youth group", "food pantry", "vacation bible school").' : 'Add keywords for services you offer so customers can find you (e.g. "oil change", "roof repair").'}</p>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -858,7 +927,7 @@ const [earlyAccessSubmitted, setEarlyAccessSubmitted] = useState(false);
                     setTagInput('');
                   }
                 }}
-                placeholder="Type a service and press Enter..."
+                placeholder={provider.category === 'Churches' ? "Type a ministry and press Enter..." : "Type a service and press Enter..."}
                 className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
               />
               <button
@@ -1373,8 +1442,9 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </a>
           )}
 
-          {/* Hours — today only + expand */}
+          {/* Hours / Service Times — today only + expand */}
           {provider.hours && (() => {
+            const isChurchListing = provider.category === 'Churches';
             const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
             const todayName = days[new Date().getDay()];
             const lines = provider.hours.split('\n').filter(Boolean);
@@ -1383,8 +1453,8 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             // Single-line or short hours — just show them directly, no expand needed
             if (lines.length <= 1) {
               return (
-                <div className="text-xs text-slate-500 flex items-center gap-1.5">
-                  <i className="fas fa-clock text-slate-400 text-[11px] flex-shrink-0"></i>
+                <div className="text-xs text-slate-500 flex items-start gap-1.5">
+                  <i className={`fas ${isChurchListing ? 'fa-church' : 'fa-clock'} text-slate-400 text-[11px] mt-0.5 flex-shrink-0`}></i>
                   <span>{provider.hours}</span>
                 </div>
               );
@@ -1645,7 +1715,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Hours</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">{provider.category === 'Churches' ? 'Service Times' : 'Hours'}</label>
               {provider.hours && (
                 <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
                   <i className="fas fa-clock text-[10px]"></i>
@@ -1748,7 +1818,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Service Tags</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{provider.category === 'Churches' ? 'Ministry Tags' : 'Service Tags'}</label>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
