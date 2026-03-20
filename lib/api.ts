@@ -465,11 +465,44 @@ export async function toggleClaimStatus(
     .update({
       claim_status: status,
       claimed_by: status === 'claimed' ? (ownerId ?? null) : null,
+      pending_owner_email: null,
     })
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
   invalidateProvidersCache();
+}
+
+/** Admin pre-assigns an email so the listing auto-claims when that person signs up. */
+export async function preAssignOwner(id: string, email: string): Promise<void> {
+  await requireModOrAdmin();
+  const { error } = await supabase
+    .from('providers')
+    .update({ pending_owner_email: email.trim().toLowerCase() })
+    .eq('id', id)
+    .eq('tenant_id', getCurrentTenant().id);
+  if (error) throw error;
+  invalidateProvidersCache();
+}
+
+/** Called on login — auto-claims any listings pre-assigned to this user's email. */
+export async function claimPendingListings(userId: string, email: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('providers')
+    .update({
+      claim_status: 'claimed',
+      claimed_by: userId,
+      pending_owner_email: null,
+    })
+    .eq('pending_owner_email', email.trim().toLowerCase())
+    .eq('tenant_id', getCurrentTenant().id)
+    .select('id');
+  if (error) { console.error('claimPendingListings error:', error); return false; }
+  if (data && data.length > 0) {
+    invalidateProvidersCache();
+    return true;
+  }
+  return false;
 }
 
 export async function addProvider(

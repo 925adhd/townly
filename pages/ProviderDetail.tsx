@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town, OwnerUpdate } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, logListingView, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, fetchOwnerUpdate } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, logListingView, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, preAssignOwner, fetchOwnerUpdate } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import Avatar from '../components/avatar/Avatar';
 import { getCurrentTenant } from '../tenants';
@@ -488,6 +488,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [grantEmail, setGrantEmail] = useState('');
   const [grantError, setGrantError] = useState('');
   const [grantLoading, setGrantLoading] = useState(false);
+  const [grantSuccess, setGrantSuccess] = useState('');
 
   if (providerLoading) return <div className="flex items-center justify-center py-20"><div className="text-slate-400 text-sm font-medium">Loading...</div></div>;
   if (!provider) return <div className="text-center py-12">Business not found.</div>;
@@ -524,7 +525,11 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     try {
       const found = await lookupUserByEmail(grantEmail);
       if (!found) {
-        setGrantError("No account found with that email. They'll need to sign up first, then you can assign them.");
+        // No account yet — pre-assign so it auto-claims when they sign up
+        await preAssignOwner(provider.id, grantEmail);
+        setGrantSuccess(`No account yet — pre-assigned to ${grantEmail.trim().toLowerCase()}. It will auto-claim when they sign up.`);
+        setShowGrantModal(false);
+        setTimeout(() => setGrantSuccess(''), 6000);
         setGrantLoading(false);
         return;
       }
@@ -695,6 +700,11 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           <button onClick={handleOpenGrantModal} className="text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1">
             <i className="fas fa-user-plus text-[10px]"></i> Assign Owner
           </button>
+        </div>
+      )}
+      {grantSuccess && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-4 py-2.5 rounded-xl flex items-center gap-2">
+          <i className="fas fa-clock text-emerald-400"></i>{grantSuccess}
         </div>
       )}
 
@@ -1635,7 +1645,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-4">
             <div>
               <p className="text-slate-900 font-bold text-base">Assign Business Owner</p>
-              <p className="text-slate-500 text-sm mt-1">Enter the owner's email. They must already have a Townly account, or sign up with this email after you assign them.</p>
+              <p className="text-slate-500 text-sm mt-1">Enter the owner's email. If they already have an account, it will be assigned immediately. If not, it will auto-claim when they sign up.</p>
             </div>
             <input
               type="email"

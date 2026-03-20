@@ -37,7 +37,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Alerts from './pages/Alerts';
 import { supabase } from './lib/supabase';
-import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions, prefetchUserCount, fetchMyClaimedListing } from './lib/api';
+import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions, prefetchUserCount, fetchMyClaimedListing, claimPendingListings } from './lib/api';
 
 // Kick off background fetches immediately on module load — before any component mounts
 prefetchProviders();
@@ -149,6 +149,11 @@ const App: React.FC = () => {
         return;
       }
       setUser({ id: supabaseUser.id, name, email: supabaseUser.email ?? undefined, role: profile?.role ?? undefined });
+
+      // Auto-claim any listings pre-assigned to this email by an admin
+      if (supabaseUser.email) {
+        claimPendingListings(supabaseUser.id, supabaseUser.email).catch(() => {});
+      }
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
