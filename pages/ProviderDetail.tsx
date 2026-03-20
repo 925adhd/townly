@@ -1157,6 +1157,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [eAdminTagInput, setEAdminTagInput] = useState('');
   const [eAdminAddress, setEAdminAddress] = useState('');
   const [eAdminHoursSchedule, setEAdminHoursSchedule] = useState<DaySchedule[]>(DEFAULT_HOURS_SCHEDULE);
+  const [eAdminServiceEntries, setEAdminServiceEntries] = useState<{name: string; day: string; time: string}[]>([]);
+  const [eAdminNewServiceName, setEAdminNewServiceName] = useState('');
+  const [eAdminNewServiceDay, setEAdminNewServiceDay] = useState('Sun');
+  const [eAdminNewServiceTime, setEAdminNewServiceTime] = useState('10am');
   const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
   const [eAdminImageFile, setEAdminImageFile] = useState<File | null>(null);
   const [eAdminImagePreview, setEAdminImagePreview] = useState<string | null>(null);
@@ -1257,6 +1261,17 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     setEAdminTagInput('');
     setEAdminAddress(provider.address || '');
     setEAdminHoursSchedule(DEFAULT_HOURS_SCHEDULE);
+    // Initialize church service entries from existing hours string
+    if (provider.category === 'Churches' && provider.hours) {
+      setEAdminServiceEntries(provider.hours.split(', ').map(s => {
+        const match = s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/);
+        if (match) return { name: match[1], day: match[2], time: match[3] };
+        return { name: s, day: 'Sun', time: '10am' };
+      }));
+    } else {
+      setEAdminServiceEntries([]);
+    }
+    setEAdminNewServiceName('');
     setEAdminTier(provider.listingTier);
     setEAdminImageFile(null);
     setEAdminImagePreview(provider.image || null);
@@ -1287,7 +1302,9 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
         description: eAdminDesc,
         tags: eAdminTags,
         address: stripTownFromAddress(eAdminAddress, eTown),
-        hours: serializeHoursSchedule(eAdminHoursSchedule),
+        hours: provider.category === 'Churches'
+          ? eAdminServiceEntries.map(s => `${s.name} – ${s.day} ${s.time}`).join(', ')
+          : serializeHoursSchedule(eAdminHoursSchedule),
         listingTier: eAdminTier,
         image: imageUrl,
       });
@@ -1445,6 +1462,32 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           {/* Hours / Service Times — today only + expand */}
           {provider.hours && (() => {
             const isChurchListing = provider.category === 'Churches';
+            // Churches: show each service on its own line
+            if (isChurchListing) {
+              const services = provider.hours.split(', ').filter(Boolean);
+              return (
+                <div className="text-xs text-slate-500">
+                  <div className="flex items-start gap-1.5">
+                    <i className="fas fa-church text-slate-400 text-[11px] mt-1 flex-shrink-0"></i>
+                    <div className="space-y-0.5">
+                      <span className="font-semibold text-slate-700 text-[11px] uppercase tracking-wide">Service Hours</span>
+                      {services.map((s, i) => {
+                        const match = s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/);
+                        if (match) {
+                          return (
+                            <div key={i}>
+                              <span className="font-semibold text-slate-700">{match[1]}</span>
+                              <span className="text-slate-400"> · {match[2]} {match[3]}</span>
+                            </div>
+                          );
+                        }
+                        return <div key={i}>{s}</div>;
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
             const todayName = days[new Date().getDay()];
             const lines = provider.hours.split('\n').filter(Boolean);
@@ -1454,7 +1497,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             if (lines.length <= 1) {
               return (
                 <div className="text-xs text-slate-500 flex items-start gap-1.5">
-                  <i className={`fas ${isChurchListing ? 'fa-church' : 'fa-clock'} text-slate-400 text-[11px] mt-0.5 flex-shrink-0`}></i>
+                  <i className="fas fa-clock text-slate-400 text-[11px] mt-0.5 flex-shrink-0"></i>
                   <span>{provider.hours}</span>
                 </div>
               );
@@ -1612,10 +1655,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       {/* Admin Edit Form */}
       {editing && (
         <div className="bg-white p-6 rounded-3xl border border-blue-100 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Edit Business Info</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{provider.category === 'Churches' ? 'Edit Church Info' : 'Edit Business Info'}</h2>
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Business Name</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{provider.category === 'Churches' ? 'Church Name' : 'Business Name'}</label>
               <input
                 type="text"
                 name="business-name"
@@ -1669,7 +1712,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Specific Service</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{provider.category === 'Churches' ? 'Denomination' : 'Specific Service'}</label>
               <input
                 type="text"
                 name="subcategory"
@@ -1695,7 +1738,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               <input
                 type="text"
                 name="facebook"
-                placeholder="yourbusiness"
+                placeholder={provider.category === 'Churches' ? 'yourchurch' : 'yourbusiness'}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 value={eFacebook}
                 onChange={e => setEFacebook(stripFbPrefix(e.target.value))}
@@ -1707,15 +1750,68 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               <input
                 type="text"
                 name="website"
-                placeholder="yoursite.com"
+                placeholder={provider.category === 'Churches' ? 'yourchurch.com' : 'yoursite.com'}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 value={eWebsite}
                 onChange={e => setEWebsite(stripHttps(e.target.value))}
               />
             </div>
 
+            {provider.category === 'Churches' ? (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">{provider.category === 'Churches' ? 'Service Times' : 'Hours'}</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Service Times</label>
+              {provider.hours && (
+                <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                  <i className="fas fa-clock text-[10px]"></i>
+                  Currently saved: <span className="font-medium text-slate-600">{provider.hours}</span>
+                </p>
+              )}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 space-y-2">
+                {eAdminServiceEntries.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-2.5 py-2">
+                    <span className="text-xs font-semibold text-slate-700 flex-1 min-w-0 truncate">{entry.name}</span>
+                    <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">{entry.day} {entry.time}</span>
+                    <button type="button" onClick={() => setEAdminServiceEntries(prev => prev.filter((_, idx) => idx !== i))} className="text-red-300 hover:text-red-500 text-xs flex-shrink-0"><i className="fas fa-times"></i></button>
+                  </div>
+                ))}
+                <div className="border-t border-slate-100 pt-2 space-y-2">
+                  <input
+                    type="text"
+                    value={eAdminNewServiceName}
+                    onChange={e => setEAdminNewServiceName(e.target.value)}
+                    placeholder="e.g. Sunday Morning Worship, Children's Church..."
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 focus:ring-1 focus:ring-blue-500 outline-none"
+                  />
+                  <div className="flex items-center gap-2">
+                    <select value={eAdminNewServiceDay} onChange={e => setEAdminNewServiceDay(e.target.value)} className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none">
+                      {HOUR_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <select value={eAdminNewServiceTime} onChange={e => setEAdminNewServiceTime(e.target.value)} className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none">
+                      {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!eAdminNewServiceName.trim()) return;
+                        setEAdminServiceEntries(prev => [...prev, { name: eAdminNewServiceName.trim(), day: eAdminNewServiceDay, time: eAdminNewServiceTime }]);
+                        setEAdminNewServiceName('');
+                      }}
+                      className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+                {eAdminServiceEntries.length > 0 && (
+                  <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                    Preview: <span className="font-medium text-slate-600">{eAdminServiceEntries.map(s => `${s.name} – ${s.day} ${s.time}`).join(', ')}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            ) : (
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Hours</label>
               {provider.hours && (
                 <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
                   <i className="fas fa-clock text-[10px]"></i>
@@ -1764,6 +1860,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                 </p>
               </div>
             </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Description</label>
@@ -1771,7 +1868,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                 value={eAdminDesc}
                 onChange={e => setEAdminDesc(e.target.value)}
                 rows={3}
-                placeholder="Briefly describe this business..."
+                placeholder={provider.category === 'Churches' ? "Describe this church, denomination, and what visitors can expect..." : "Briefly describe this business..."}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
