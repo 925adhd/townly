@@ -29,6 +29,7 @@ import Spotlights from './pages/Events';
 import BookSpotlight from './pages/BookSpotlight';
 import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
+import OwnerPortal from './pages/OwnerPortal';
 import MyBookings from './pages/MyBookings';
 import Profile from './pages/Profile';
 import Search from './pages/Search';
@@ -36,7 +37,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Alerts from './pages/Alerts';
 import { supabase } from './lib/supabase';
-import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions, prefetchUserCount } from './lib/api';
+import { fetchLostFound, fetchRequests, fetchActiveAlerts, signOut, prefetchProviders, prefetchHomeImages, prefetchCurrentWeekSubmissions, prefetchUserCount, fetchMyClaimedListing } from './lib/api';
 
 // Kick off background fetches immediately on module load — before any component mounts
 prefetchProviders();
@@ -59,6 +60,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hasBookings, setHasBookings] = useState(() => !!localStorage.getItem('townly_has_bookings'));
   const [isFbBrowser, setIsFbBrowser] = useState(false);
+  const [hasClaimedListing, setHasClaimedListing] = useState(false);
 
   // Detect Facebook/Instagram in-app browser and adjust for viewport quirks
   useEffect(() => {
@@ -161,6 +163,12 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Check if user has a claimed listing (for nav button)
+  useEffect(() => {
+    if (!user) { setHasClaimedListing(false); return; }
+    fetchMyClaimedListing().then(p => setHasClaimedListing(!!p)).catch(() => {});
+  }, [user?.id]);
+
   // Keep hasBookings in sync if BookingSuccess sets the flag in the same tab
   useEffect(() => {
     const onStorage = () => setHasBookings(!!localStorage.getItem('townly_has_bookings'));
@@ -226,6 +234,12 @@ const App: React.FC = () => {
                 <span className="text-[10px] mt-1 font-medium">Admin</span>
               </Link>
             )}
+            {hasClaimedListing && user?.role !== 'admin' && (
+              <Link to="/my-listing" className="md:hidden flex flex-col items-center text-slate-400 hover:text-emerald-600 transition-colors">
+                <i className="fas fa-store text-lg"></i>
+                <span className="text-[10px] mt-1 font-medium">My Listing</span>
+              </Link>
+            )}
             </div>
 
             <nav className="hidden md:flex items-center space-x-6">
@@ -240,6 +254,9 @@ const App: React.FC = () => {
                   </Link>
                   {user.role === 'admin' && (
                     <Link to="/admin" className="text-xs font-bold text-slate-400 hover:text-orange-600 transition-colors">Admin</Link>
+                  )}
+                  {hasClaimedListing && user.role !== 'admin' && (
+                    <Link to="/my-listing" className="text-xs font-bold text-emerald-500 hover:text-emerald-600 transition-colors">My Listing</Link>
                   )}
                   <button onClick={handleLogout} className="text-sm font-semibold text-orange-600">Logout</button>
                 </div>
@@ -296,6 +313,7 @@ const App: React.FC = () => {
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
               <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
               <Route path="/admin" element={<Admin user={user} communityAlerts={communityAlerts} setCommunityAlerts={setCommunityAlerts} />} />
+              <Route path="/my-listing" element={<OwnerPortal user={user} />} />
               <Route path="/alerts" element={<Alerts communityAlerts={communityAlerts} nwsAlerts={nwsAlerts} />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />

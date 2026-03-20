@@ -294,6 +294,11 @@ export function prefetchProviders(): void {
   fetchProviders().catch(console.error);
 }
 
+/** Invalidate the providers cache so the next fetch hits the DB. */
+export function invalidateProvidersCache(): void {
+  _providersCache = null;
+}
+
 export async function fetchProviderById(id: string): Promise<Provider | null> {
   if (_providersCache) {
     const hit = _providersCache.find(p => p.id === id);
@@ -396,6 +401,7 @@ export async function deleteProvider(id: string): Promise<void> {
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw new Error('Failed to delete provider.');
+  invalidateProvidersCache();
   await supabase.from('audit_log').insert({ actor_id: actorId, action: 'delete_provider', target_table: 'providers', target_id: id, tenant_id: getCurrentTenant().id });
 }
 
@@ -404,26 +410,29 @@ export async function updateProvider(
   input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string; description?: string; tags?: string[]; address?: string; hours?: string; image?: string; listingTier?: 'none' | 'standard' | 'featured' | 'spotlight' }
 ): Promise<Provider> {
   await requireModOrAdmin();
+  const payload: Record<string, unknown> = {
+    name: sanitize(input.name, 200),
+    category: input.category,
+    subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
+    phone: input.phone ? sanitize(input.phone, 20) : null,
+    town: input.town,
+    facebook: input.facebook ? validateUrl(input.facebook) : null,
+    website: input.website ? validateUrl(input.website) : null,
+    description: input.description ? sanitize(input.description, 2000) : null,
+    address: input.address ? sanitize(input.address, 300) : null,
+    hours: input.hours ? sanitize(input.hours, 500) : null,
+  };
+  if ('image' in input) payload.image = input.image ? validateUrl(input.image) : null;
+  if (input.listingTier !== undefined) payload.listing_tier = input.listingTier;
+  if (input.tags !== undefined) payload.tags = input.tags.map(t => sanitize(t, 50)).slice(0, 20);
+
   const { error } = await supabase
     .from('providers')
-    .update({
-      name: sanitize(input.name, 200),
-      category: input.category,
-      subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
-      phone: input.phone ? sanitize(input.phone, 20) : null,
-      town: input.town,
-      facebook: input.facebook ? validateUrl(input.facebook) : null,
-      website: input.website ? validateUrl(input.website) : null,
-      description: input.description ? sanitize(input.description, 2000) : null,
-      address: input.address ? sanitize(input.address, 300) : null,
-      hours: input.hours ? sanitize(input.hours, 500) : null,
-      image: input.image ? validateUrl(input.image) : null,
-      ...(input.listingTier !== undefined && { listing_tier: input.listingTier }),
-      ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
-    })
+    .update(payload)
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
+  invalidateProvidersCache();
   const { data, error: fetchError } = await supabase
     .from('providers')
     .select('*')
@@ -460,6 +469,7 @@ export async function toggleClaimStatus(
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
+  invalidateProvidersCache();
 }
 
 export async function addProvider(
@@ -1337,22 +1347,24 @@ export async function updateOwnerListing(
   if (input.town !== undefined) validateTown(input.town);
   if (input.description) rejectHtml(input.description, 'Description');
 
+  const payload: Record<string, unknown> = {};
+  if ('description' in input) payload.description = input.description ? sanitize(input.description, 2000) : null;
+  if ('phone' in input) payload.phone = input.phone ? sanitize(input.phone, 20) : null;
+  if ('address' in input) payload.address = input.address ? sanitize(input.address, 300) : null;
+  if ('hours' in input) payload.hours = input.hours ? sanitize(input.hours, 500) : null;
+  if ('facebook' in input) payload.facebook = input.facebook ? validateUrl(input.facebook) : null;
+  if ('website' in input) payload.website = input.website ? validateUrl(input.website) : null;
+  if ('image' in input) payload.image = input.image ? validateUrl(input.image) : null;
+  if (input.town !== undefined) payload.town = input.town;
+  if (input.tags !== undefined) payload.tags = input.tags.map(t => sanitize(t, 50)).slice(0, 20);
+
   const { error } = await supabase
     .from('providers')
-    .update({
-      description: input.description ? sanitize(input.description, 2000) : null,
-      phone: input.phone ? sanitize(input.phone, 20) : null,
-      address: input.address ? sanitize(input.address, 300) : null,
-      hours: input.hours ? sanitize(input.hours, 500) : null,
-      facebook: input.facebook ? validateUrl(input.facebook) : null,
-      website: input.website ? validateUrl(input.website) : null,
-      image: input.image ? validateUrl(input.image) : null,
-      ...(input.town !== undefined && { town: input.town }),
-      ...(input.tags !== undefined && { tags: input.tags.map(t => sanitize(t, 50)).slice(0, 20) }),
-    })
+    .update(payload)
     .eq('id', id)
     .eq('tenant_id', getCurrentTenant().id);
   if (error) throw error;
+  invalidateProvidersCache();
 
   const { data, error: fetchError } = await supabase
     .from('providers')
