@@ -264,29 +264,26 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
       {/* Header + CTA + Search */}
       <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight mb-0.5">
-              What's happening<br /><span className="text-xl text-slate-500 font-semibold">in {tenant.name}</span>
-            </h1>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-slate-900"><span className="md:hidden">Around Town</span><span className="hidden md:inline">Around {tenant.name}</span></h1>
           {user ? (
             <button
               onClick={() => { setShowForm(true); setSubmitted(false); }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
             >
-              <i className="fas fa-plus text-xs"></i> Post Something
+              <i className="fas fa-plus text-[10px]"></i> Create Post
             </button>
           ) : (
             <Link
               to="/login?signup=true"
               state={{ from: location.pathname }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
             >
-              <i className="fas fa-plus text-xs"></i> Post Something
+              <i className="fas fa-plus text-[10px]"></i> Create Post
             </Link>
           )}
         </div>
+        <p className="text-slate-500 text-sm -mt-2">Local events, yard sales, church gatherings, and community updates.</p>
         <div className="relative">
           <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
           <input
@@ -311,9 +308,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Weekly Spotlight — only show when a spotlight exists */}
       {filteredSpotlight && (
       <div id="spotlight">
-        <h2 className="text-lg font-bold text-orange-500 leading-tight flex items-center gap-2 mb-3">
-          <i className="fas fa-star"></i> Weekly Spotlight
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-orange-500 leading-tight flex items-center gap-2">
+            <i className="fas fa-star"></i> Weekly Spotlight
+          </h2>
+          <Link to="/promote#spotlight" className="text-[11px] text-slate-400 hover:text-orange-500 transition-colors font-medium">Book a Spotlight <i className="fas fa-arrow-right text-[9px] ml-0.5"></i></Link>
+        </div>
         <div className="grid gap-4">
             <div
               id={`booking-${filteredSpotlight.id}`}
@@ -418,10 +418,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* Featured This Week — only show when featured posts exist */}
       {filteredFeatured.length > 0 && (
       <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-          <i className="fas fa-star text-blue-500 text-sm"></i> Featured This Week
-        </h2>
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i className="fas fa-star text-blue-500 text-sm"></i> Featured This Week
+          </h2>
+          <Link to="/promote#featured" className="text-[11px] text-slate-400 hover:text-blue-500 transition-colors font-medium">Get Featured <i className="fas fa-arrow-right text-[9px] ml-0.5"></i></Link>
+        </div>
+        <div className="grid gap-4">
             {filteredFeatured.map((sub: SpotlightBooking) => (
               <div
                 key={sub.id}
@@ -670,6 +673,14 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Promote link */}
+      <div className="text-center mt-2">
+        <Link to="/promote" className="inline-flex items-center gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors">
+          <i className="fas fa-bullhorn text-xs"></i> Want more visibility? Promote your post
+          <i className="fas fa-arrow-right text-xs"></i>
+        </Link>
       </div>
 
       {/* Delete Confirm Modal */}
