@@ -731,7 +731,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <p>✔ Is this helpful to the community?</p>
               <p>✔ Is it a real event, yard sale, or gathering?</p>
               <p className="text-red-500">❌ No opinions, complaints, or rants</p>
-              <p className="text-amber-700">🏪 Businesses must use <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Posts</Link> or <Link to={user ? '/book/spotlight' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Spotlight</Link> for promotions.</p>
+              <p className="text-amber-700">🏪 Promoting a business? Get more visibility with a <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> or <Link to={user ? '/book/spotlight' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Spotlight</Link>.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
@@ -749,7 +749,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   ))}
                 </div>
                 {ePostType === 'yard_sale' && (
-                  <p className="text-[11px] text-amber-600 mt-1.5">For personal household sales only. Businesses must use Featured or Spotlight.</p>
+                  <p className="text-[11px] text-amber-600 mt-1.5">For personal household sales only. Promoting a business? Try Featured or Spotlight.</p>
                 )}
                 {ePostType === 'church' && (
                   <p className="text-[11px] text-violet-500 mt-1.5">For church services, revivals, Bible studies, and religious gatherings.</p>
