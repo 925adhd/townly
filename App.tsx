@@ -85,6 +85,32 @@ const App: React.FC = () => {
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
+  // Poll for fresh data every 15s (only when tab is visible)
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    const poll = () => {
+      if (document.visibilityState !== 'visible') return;
+      Promise.all([
+        fetchLostFound(),
+        fetchRequests(),
+        fetchActiveAlerts(),
+      ]).then(([lf, req, alerts]) => {
+        setLostFound(lf);
+        setRequests(req);
+        setCommunityAlerts(alerts);
+      }).catch(() => {});
+      // Also refresh prefetched caches (providers, spotlights, user count)
+      prefetchProviders();
+      prefetchCurrentWeekSubmissions();
+      prefetchUserCount();
+    };
+    interval = setInterval(poll, 15_000);
+    // Also poll immediately when tab becomes visible after being hidden
+    const onVisible = () => { if (document.visibilityState === 'visible') poll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
+
   // Fetch NWS alerts for Grayson County — poll every 5 minutes
   useEffect(() => {
     const fetchNWS = () => {

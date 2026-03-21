@@ -170,6 +170,14 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
   const [loadingProviders, setLoadingProviders] = useState(true);
   useEffect(() => {
     fetchProviders().then(setProviders).catch(console.error).finally(() => setLoadingProviders(false));
+    // Re-fetch when tab becomes visible (picks up changes made elsewhere)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProviders().then(setProviders).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();

@@ -59,7 +59,6 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     fetchCurrentWeekSubmissions()
       .then(subs => {
         setWeekSubmissions(subs);
-        // Preload the spotlight hero image so it's ready before paint
         const hero = subs.find(s => s.type === 'spotlight');
         if (hero?.imageUrl) {
           const link = document.createElement('link');
@@ -70,6 +69,15 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         }
       })
       .catch(console.error);
+    // Re-fetch when tab becomes visible
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchApprovedCommunityEvents().then(setEvents).catch(() => {});
+        fetchCurrentWeekSubmissions().then(setWeekSubmissions).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   // Scroll to shared event/spotlight/featured once loaded
