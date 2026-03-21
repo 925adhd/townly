@@ -410,18 +410,17 @@ export async function updateProvider(
   input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string; description?: string; tags?: string[]; address?: string; hours?: string; image?: string; listingTier?: 'none' | 'standard' | 'featured' | 'spotlight' }
 ): Promise<Provider> {
   await requireModOrAdmin();
-  const payload: Record<string, unknown> = {
-    name: sanitize(input.name, 200),
-    category: input.category,
-    subcategory: input.subcategory ? sanitize(input.subcategory, 100) : null,
-    phone: input.phone ? sanitize(input.phone, 20) : null,
-    town: input.town,
-    facebook: input.facebook ? validateUrl(input.facebook) : null,
-    website: input.website ? validateUrl(input.website) : null,
-    description: input.description ? sanitize(input.description, 2000) : null,
-    address: input.address ? sanitize(input.address, 300) : null,
-    hours: input.hours ? sanitize(input.hours, 500) : null,
-  };
+  const payload: Record<string, unknown> = {};
+  if ('name' in input) payload.name = sanitize(input.name, 200);
+  if ('category' in input) payload.category = input.category;
+  if ('subcategory' in input) payload.subcategory = input.subcategory ? sanitize(input.subcategory, 100) : null;
+  if ('phone' in input) payload.phone = input.phone ? sanitize(input.phone, 20) : null;
+  if ('town' in input) payload.town = input.town;
+  if ('facebook' in input) payload.facebook = input.facebook ? validateUrl(input.facebook) : null;
+  if ('website' in input) payload.website = input.website ? validateUrl(input.website) : null;
+  if ('description' in input) payload.description = input.description ? sanitize(input.description, 2000) : null;
+  if ('address' in input) payload.address = input.address ? sanitize(input.address, 300) : null;
+  if ('hours' in input) payload.hours = input.hours ? sanitize(input.hours, 500) : null;
   if ('image' in input) payload.image = input.image ? validateUrl(input.image) : null;
   if (input.listingTier !== undefined) payload.listing_tier = input.listingTier;
   if (input.tags !== undefined) payload.tags = input.tags.map(t => sanitize(t, 50)).slice(0, 20);

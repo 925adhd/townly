@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Provider, Review, ReviewReply, Category, Town, OwnerUpdate } from '../types';
-import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, logListingView, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, preAssignOwner, fetchOwnerUpdate } from '../lib/api';
+import { updateProvider, deleteProvider, deleteReview, deleteOwnReview, uploadAdminProviderPhoto, submitUpdateRequest, submitClaim, fetchReviewReplies, submitReviewReply, updateReviewReply, deleteReviewReply, deleteOwnReviewReply, markReplyResolution, logListingView, fetchProviderById, fetchReviewsByProvider, toggleClaimStatus, lookupUserByEmail, preAssignOwner, fetchOwnerUpdate, invalidateProvidersCache } from '../lib/api';
 import CustomSelect from '../components/CustomSelect';
 import Avatar from '../components/avatar/Avatar';
 import { getCurrentTenant } from '../tenants';
@@ -562,22 +562,27 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     });
   };
 
-  const openEdit = () => {
-    setEName(provider.name);
-    setECat(provider.category);
-    setESub(provider.subcategory || '');
-    setEPhone(provider.phone || '');
-    setETown(provider.town);
-    setEFacebook(stripFbPrefix(provider.facebook || ''));
-    setEWebsite(stripHttps(provider.website || ''));
-    setEAdminDesc(provider.description || '');
-    setEAdminTags(provider.tags ?? []);
+  const openEdit = async () => {
+    // Re-fetch fresh data from DB so we never overwrite concurrent changes
+    invalidateProvidersCache();
+    const fresh = await fetchProviderById(provider.id);
+    const p = fresh || provider;
+    if (fresh) setProvider(fresh);
+    setEName(p.name);
+    setECat(p.category);
+    setESub(p.subcategory || '');
+    setEPhone(p.phone || '');
+    setETown(p.town);
+    setEFacebook(stripFbPrefix(p.facebook || ''));
+    setEWebsite(stripHttps(p.website || ''));
+    setEAdminDesc(p.description || '');
+    setEAdminTags(p.tags ?? []);
     setEAdminTagInput('');
-    setEAdminAddress(provider.address || '');
+    setEAdminAddress(p.address || '');
     setEAdminHoursSchedule(DEFAULT_HOURS_SCHEDULE);
     // Initialize church service entries from existing hours string
-    if (provider.category === 'Churches' && provider.hours) {
-      setEAdminServiceEntries(provider.hours.split(', ').map(s => {
+    if (p.category === 'Churches' && p.hours) {
+      setEAdminServiceEntries(p.hours.split(', ').map(s => {
         const match = s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/);
         if (match) return { name: match[1], day: match[2], time: match[3] };
         return { name: s, day: 'Sun', time: '10am' };
@@ -586,9 +591,9 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       setEAdminServiceEntries([]);
     }
     setEAdminNewServiceName('');
-    setEAdminTier(provider.listingTier);
+    setEAdminTier(p.listingTier);
     setEAdminImageFile(null);
-    setEAdminImagePreview(provider.image || null);
+    setEAdminImagePreview(p.image || null);
     setEAdminImageRemoved(false);
     setEditError('');
     setEditing(true);
@@ -784,23 +789,39 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             // Churches: show each service on its own line
             if (isChurchListing) {
               const services = provider.hours.split(', ').filter(Boolean);
+              const dayOrder: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+              const parseTime = (t: string) => {
+                const m = t.match(/^(\d+)(?::(\d+))?\s*(am|pm)$/i);
+                if (!m) return 0;
+                let h = parseInt(m[1]); const min = parseInt(m[2] || '0');
+                if (m[3].toLowerCase() === 'pm' && h !== 12) h += 12;
+                if (m[3].toLowerCase() === 'am' && h === 12) h = 0;
+                return h * 60 + min;
+              };
+              const sorted = services
+                .map(s => ({ raw: s, match: s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/) }))
+                .sort((a, b) => {
+                  if (!a.match || !b.match) return 0;
+                  const dA = dayOrder[a.match[2]] ?? 7, dB = dayOrder[b.match[2]] ?? 7;
+                  if (dA !== dB) return dA - dB;
+                  return parseTime(a.match[3]) - parseTime(b.match[3]);
+                });
               return (
                 <div className="text-xs text-slate-500">
                   <div className="flex items-start gap-1.5">
                     <i className="fas fa-church text-slate-400 text-[11px] mt-1 flex-shrink-0"></i>
                     <div className="space-y-0.5">
                       <span className="font-semibold text-slate-700 text-[11px] uppercase tracking-wide">Service Hours</span>
-                      {services.map((s, i) => {
-                        const match = s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/);
-                        if (match) {
+                      {sorted.map((s, i) => {
+                        if (s.match) {
                           return (
                             <div key={i}>
-                              <span className="font-semibold text-slate-700">{match[1]}</span>
-                              <span className="text-slate-400"> · {match[2]} {match[3]}</span>
+                              <span className="font-semibold text-slate-700">{s.match[1]}</span>
+                              <span className="text-slate-400"> · {s.match[2]} {s.match[3]}</span>
                             </div>
                           );
                         }
-                        return <div key={i}>{s}</div>;
+                        return <div key={i}>{s.raw}</div>;
                       })}
                     </div>
                   </div>
