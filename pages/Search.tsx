@@ -112,7 +112,10 @@ const Search: React.FC = () => {
                         : <i className="fas fa-store text-slate-400 text-sm"></i>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">
+                        {p.name}
+                        {p.claimStatus === 'claimed' && <i className="fas fa-circle-check text-emerald-500 text-xs ml-1" title="Verified"></i>}
+                      </p>
                       <p className="text-xs text-slate-400 truncate">{p.subcategory || p.category} · {p.town}</p>
                     </div>
                     <i className="fas fa-chevron-right text-slate-300 text-[10px] flex-shrink-0"></i>

@@ -26,6 +26,7 @@ import Recommendations from './pages/Recommendations';
 import QuestionDetail from './pages/QuestionDetail';
 import Auth from './pages/Auth';
 import Spotlights from './pages/Events';
+import Promote from './pages/Promote';
 import BookSpotlight from './pages/BookSpotlight';
 import BookingSuccess from './pages/BookingSuccess';
 import Admin from './pages/Admin';
@@ -313,6 +314,7 @@ const App: React.FC = () => {
               <Route path="/ask/:slug" element={<QuestionDetail user={user} />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/events" element={<Spotlights user={user} />} />
+              <Route path="/promote" element={<Promote user={user} />} />
               <Route path="/book/:type" element={<BookSpotlight user={user} />} />
               <Route path="/book/success" element={<BookingSuccess user={user} onBookingConfirmed={() => setHasBookings(true)} />} />
               <Route path="/my-bookings" element={<MyBookings user={user} />} />
