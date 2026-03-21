@@ -453,10 +453,10 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                     </div>
                     <span className="text-[11px] text-slate-400">{p.town}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
-                    {p.name}
+                  <h3 className="text-sm sm:text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors flex items-start gap-1.5 leading-snug">
+                    <span className="break-words min-w-0">{p.name}</span>
                     {p.claimStatus === 'claimed' && (
-                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0" title="This business has been claimed and verified by its owner"></i>
+                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0 mt-0.5 sm:mt-1" title="This business has been claimed and verified by its owner"></i>
                     )}
                   </h3>
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">

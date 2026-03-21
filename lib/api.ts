@@ -158,6 +158,7 @@ function mapProvider(row: any): Provider {
     claimedBy: row.claimed_by ?? undefined,
     listingTier: (row.listing_tier ?? 'none') as 'none' | 'standard' | 'featured' | 'spotlight',
     tags: row.tags ?? [],
+    churchLeader: row.church_leader ?? undefined,
   };
 }
 
@@ -407,7 +408,7 @@ export async function deleteProvider(id: string): Promise<void> {
 
 export async function updateProvider(
   id: string,
-  input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string; description?: string; tags?: string[]; address?: string; hours?: string; image?: string; listingTier?: 'none' | 'standard' | 'featured' | 'spotlight' }
+  input: { name: string; category: Category; subcategory?: string; phone?: string; town: Town; facebook?: string; website?: string; description?: string; tags?: string[]; address?: string; hours?: string; image?: string; listingTier?: 'none' | 'standard' | 'featured' | 'spotlight'; churchLeader?: string }
 ): Promise<Provider> {
   await requireModOrAdmin();
   const payload: Record<string, unknown> = {};
@@ -424,6 +425,7 @@ export async function updateProvider(
   if ('image' in input) payload.image = input.image ? validateUrl(input.image) : null;
   if (input.listingTier !== undefined) payload.listing_tier = input.listingTier;
   if (input.tags !== undefined) payload.tags = input.tags.map(t => sanitize(t, 50)).slice(0, 20);
+  if ('churchLeader' in input) payload.church_leader = input.churchLeader ? sanitize(input.churchLeader, 200) : null;
 
   const { error } = await supabase
     .from('providers')
@@ -1358,6 +1360,7 @@ export async function updateOwnerListing(
     image?: string;
     tags?: string[];
     town?: string;
+    churchLeader?: string;
   }
 ): Promise<Provider> {
   // Defence-in-depth: verify session and ownership before issuing the UPDATE.
@@ -1389,6 +1392,7 @@ export async function updateOwnerListing(
   if ('image' in input) payload.image = input.image ? validateUrl(input.image) : null;
   if (input.town !== undefined) payload.town = input.town;
   if (input.tags !== undefined) payload.tags = input.tags.map(t => sanitize(t, 50)).slice(0, 20);
+  if ('churchLeader' in input) payload.church_leader = input.churchLeader ? sanitize(input.churchLeader, 200) : null;
 
   const { error } = await supabase
     .from('providers')

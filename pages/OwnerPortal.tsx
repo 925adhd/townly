@@ -129,6 +129,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
   const [eFacebook, setEFacebook] = useState('');
   const [eWebsite, setEWebsite] = useState('');
   const [eTags, setETags] = useState<string[]>([]);
+  const [eChurchLeader, setEChurchLeader] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [addrSuggestions, setAddrSuggestions] = useState<{ display: string; lat: string; lon: string }[]>([]);
   const [addrLoading, setAddrLoading] = useState(false);
@@ -211,6 +212,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
     setEFacebook(stripFbPrefix(p.facebook ?? ''));
     setEWebsite(stripHttps(p.website ?? ''));
     setETags(p.tags ?? []);
+    setEChurchLeader(p.churchLeader ?? '');
     setAlwaysOpen(p.hours?.toLowerCase() === 'open 24 hours');
     if (p.category === 'Churches' && p.hours) {
       setServiceEntries(p.hours.split(', ').map(s => {
@@ -242,6 +244,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
         website: eWebsite ? `https://${eWebsite}` : '',
         tags: eTags,
         town: eOwnerTown,
+        ...(isChurch ? { churchLeader: eChurchLeader } : {}),
       });
       setProvider(updated);
       setFormSuccess('Changes saved.');
@@ -494,6 +497,9 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
             ) : (
               <p className="text-sm text-slate-300 italic border-t border-slate-100 pt-3">No description yet — add one in the Edit tab.</p>
             )}
+            {provider.churchLeader && (
+              <p className="text-sm text-slate-500 mt-1">Led by <span className="text-slate-700">{provider.churchLeader}</span></p>
+            )}
           </div>
 
           {/* Quick links */}
@@ -544,6 +550,20 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
+
+            {isChurch && (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Church Leader</label>
+                <input
+                  type="text"
+                  value={eChurchLeader}
+                  onChange={e => setEChurchLeader(e.target.value)}
+                  placeholder="Pastor Tony Redmon"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1 ml-1">Include title if applicable (Pastor, Father, etc.)</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

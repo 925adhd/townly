@@ -28,6 +28,7 @@ export interface Provider {
   claimedBy?: string;
   listingTier: 'none' | 'standard' | 'featured' | 'spotlight';
   tags?: string[];
+  churchLeader?: string;
 }
 
 export interface ListingClaim {

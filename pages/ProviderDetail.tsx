@@ -422,6 +422,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
 
   const navigate = useNavigate();
   const [showFullHours, setShowFullHours] = useState(false);
+  const [showFullDesc, setShowFullDesc] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
@@ -471,6 +472,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [eAdminNewServiceDay, setEAdminNewServiceDay] = useState('Sun');
   const [eAdminNewServiceTime, setEAdminNewServiceTime] = useState('10am');
   const [eAdminTier, setEAdminTier] = useState<'none' | 'standard' | 'featured' | 'spotlight'>('none');
+  const [eAdminChurchLeader, setEAdminChurchLeader] = useState('');
   const [eAdminImageFile, setEAdminImageFile] = useState<File | null>(null);
   const [eAdminImagePreview, setEAdminImagePreview] = useState<string | null>(null);
   const [eAdminImageRemoved, setEAdminImageRemoved] = useState(false);
@@ -592,6 +594,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
     }
     setEAdminNewServiceName('');
     setEAdminTier(p.listingTier);
+    setEAdminChurchLeader(p.churchLeader || '');
     setEAdminImageFile(null);
     setEAdminImagePreview(p.image || null);
     setEAdminImageRemoved(false);
@@ -626,6 +629,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           : serializeHoursSchedule(eAdminHoursSchedule),
         listingTier: eAdminTier,
         image: imageUrl,
+        ...(provider.category === 'Churches' ? { churchLeader: eAdminChurchLeader } : {}),
       });
       setProvider(updated);
       setEditing(false);
@@ -714,6 +718,199 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       )}
 
       {/* Header Info */}
+      {provider.category === 'Churches' ? (() => {
+        // ── Church-specific card ──────────────────────────────────────────────
+        const dayOrder: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        const dayFull: Record<string, string> = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' };
+        const parseTime = (t: string) => {
+          const m = t.match(/^(\d+)(?::(\d+))?\s*(am|pm)$/i);
+          if (!m) return 0;
+          let h = parseInt(m[1]); const min = parseInt(m[2] || '0');
+          if (m[3].toLowerCase() === 'pm' && h !== 12) h += 12;
+          if (m[3].toLowerCase() === 'am' && h === 12) h = 0;
+          return h * 60 + min;
+        };
+        const parsed = (provider.hours || '').split(', ').filter(Boolean)
+          .map(s => {
+            const match = s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/);
+            return match ? { name: match[1], day: match[2], time: match[3], raw: s } : { name: s, day: '', time: '', raw: s };
+          })
+          .sort((a, b) => {
+            const dA = dayOrder[a.day] ?? 7, dB = dayOrder[b.day] ?? 7;
+            if (dA !== dB) return dA - dB;
+            return parseTime(a.time) - parseTime(b.time);
+          });
+
+        // Next service calculation
+        const now = new Date();
+        const currentDay = now.getDay(); // 0=Sun
+        const currentMin = now.getHours() * 60 + now.getMinutes();
+        const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        let nextService: { name: string; day: string; time: string } | null = null;
+        let minAhead = Infinity;
+        for (const svc of parsed) {
+          if (!svc.day || !svc.time) continue;
+          const svcDay = dayMap[svc.day] ?? -1;
+          if (svcDay < 0) continue;
+          const svcMin = parseTime(svc.time);
+          let ahead = (svcDay - currentDay) * 1440 + (svcMin - currentMin);
+          if (ahead <= 0) ahead += 7 * 1440;
+          if (ahead < minAhead) { minAhead = ahead; nextService = svc; }
+        }
+
+        return (
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            {/* Hero header */}
+            <div className="p-5 md:p-6">
+              <div className="flex flex-row gap-4">
+                <div
+                  className={`w-24 h-24 md:w-28 md:h-28 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100${img ? ' cursor-pointer' : ''}`}
+                  onClick={() => { if (img) setShowPhotoLightbox(true); }}
+                >
+                  {img
+                    ? <img src={img} loading="lazy" className="w-full h-full object-cover" alt="" />
+                    : <i className={`fas ${icon} text-3xl md:text-4xl ${iconColor}`}></i>
+                  }
+                </div>
+                <div className="flex-grow min-w-0">
+                  <h1 className="text-xl md:text-3xl font-bold text-slate-900 leading-tight flex items-start gap-2">
+                    <span>{provider.name}</span>
+                    {provider.claimStatus === 'claimed' && (
+                      <i className="fas fa-circle-check text-emerald-500 text-base mt-1 flex-shrink-0" title="Verified Listing"></i>
+                    )}
+                  </h1>
+                  {provider.subcategory && (
+                    <p className="text-slate-500 text-sm mt-0.5">{provider.subcategory}</p>
+                  )}
+                  {provider.address && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(provider.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline mt-2"
+                    >
+                      <i className="fas fa-location-dot text-blue-400 text-[11px] mt-0.5 flex-shrink-0"></i>
+                      <span>{provider.address}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Description — clamped to 3 lines */}
+              {provider.description && (
+                <div className="mt-4">
+                  <p className={`text-slate-600 text-sm leading-relaxed ${showFullDesc ? '' : 'line-clamp-3'}`}>{provider.description}</p>
+                  {provider.description.length > 120 && (
+                    <button
+                      onClick={() => setShowFullDesc(v => !v)}
+                      className="text-blue-600 hover:text-blue-800 text-xs font-semibold mt-1"
+                    >
+                      {showFullDesc ? 'See less' : 'See more'}
+                    </button>
+                  )}
+                </div>
+              )}
+              {provider.churchLeader && (
+                <p className="text-slate-500 text-sm mt-2">Led by <span className="text-slate-700">{provider.churchLeader}</span></p>
+              )}
+            </div>
+
+            {/* ── Next Service highlight ─────────────────────────────────── */}
+            {nextService && (
+              <div className="mx-5 md:mx-6 mb-4 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-3">
+                <i className="fas fa-clock text-blue-500 text-base flex-shrink-0"></i>
+                <div>
+                  <p className="text-[11px] font-semibold text-blue-500 uppercase tracking-wide">Next Service</p>
+                  <p className="text-sm font-bold text-slate-800">{dayFull[nextService.day] || nextService.day} at {nextService.time}</p>
+                  <p className="text-xs text-slate-500">{nextService.name}</p>
+                </div>
+              </div>
+            )}
+
+            {/* ── Divider ──────────────────────────────────────────────── */}
+            <div className="border-t border-slate-100"></div>
+
+            {/* ── Service Times ────────────────────────────────────────── */}
+            {parsed.length > 0 && parsed[0].day && (
+              <div className="px-5 md:px-6 py-5">
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+                  <i className="fas fa-church text-slate-400 text-sm"></i>
+                  Service Times
+                </h2>
+                <div className="space-y-2">
+                  {parsed.map((svc, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0"></span>
+                      <span className="font-semibold text-slate-800">{svc.name}</span>
+                      <span className="text-slate-400 ml-auto flex-shrink-0">{dayFull[svc.day] || svc.day} {svc.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Divider ──────────────────────────────────────────────── */}
+            <div className="border-t border-slate-100"></div>
+
+            {/* ── Action buttons: Call + Directions ────────────────────── */}
+            <div className="px-5 md:px-6 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {provider.phone && (
+                  <a href={`tel:${provider.phone}`} className="flex items-center justify-center gap-2 px-4 py-3.5 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700 transition-colors">
+                    <i className="fas fa-phone text-sm"></i>
+                    <span className="text-sm">Call <span className="font-normal opacity-90">{provider.phone}</span></span>
+                  </a>
+                )}
+                {provider.address && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(provider.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-4 py-3.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
+                  >
+                    <i className="fas fa-diamond-turn-right"></i>
+                    Directions
+                  </a>
+                )}
+              </div>
+              {/* Secondary links row */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {provider.facebook && (
+                  <a href={provider.facebook.startsWith('http') ? provider.facebook : `https://${provider.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-100">
+                    <i className="fab fa-facebook mr-1.5 text-blue-600"></i>
+                    Facebook
+                  </a>
+                )}
+                {provider.website && (
+                  <a href={provider.website.startsWith('http') ? provider.website : `https://${provider.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-100">
+                    <i className="fas fa-globe mr-1.5 text-slate-400"></i>
+                    Website
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* ── Tags / Faith style ──────────────────────────────────── */}
+            {provider.tags && provider.tags.length > 0 && (
+              <>
+                <div className="border-t border-slate-100"></div>
+                <div className="px-5 md:px-6 py-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="fas fa-hands-praying text-slate-300 text-xs"></i>
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Faith &amp; Worship</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {provider.tags.map((tag: string) => (
+                      <span key={tag} className="text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-100 px-3 py-1 rounded-full">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+          </div>
+        );
+      })() : (
       <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex flex-row gap-4">
           {/* Photo */}
@@ -729,16 +926,13 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
 
           {/* Text block */}
           <div className="flex-grow min-w-0">
-
-            {/* Name — primary anchor */}
             <h1 className="text-xl md:text-3xl font-bold text-slate-900 leading-tight flex items-center gap-2">
               {provider.name}
               {provider.claimStatus === 'claimed' && (
-                <i className="fas fa-circle-check text-emerald-500 text-base" title={provider.category === 'Churches' ? 'Verified Listing' : 'Verified Business'}></i>
+                <i className="fas fa-circle-check text-emerald-500 text-base" title="Verified Business"></i>
               )}
             </h1>
 
-            {/* Subcategory + category pill */}
             <p className="text-slate-500 text-sm mt-0.5">
               {provider.subcategory || provider.category}
             </p>
@@ -748,7 +942,6 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               </div>
             )}
 
-            {/* Tier badges */}
             {(provider.listingTier === 'featured' || provider.listingTier === 'spotlight') && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {provider.listingTier === 'featured' && (
@@ -764,13 +957,11 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           </div>
         </div>
 
-        {/* Description */}
         {provider.description && (
           <p className="text-slate-500 text-sm mt-3 leading-relaxed">{provider.description}</p>
         )}
 
         <div className="mt-3 space-y-2">
-          {/* Address — clickable to Google Maps */}
           {provider.address && (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(provider.address)}`}
@@ -783,57 +974,12 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             </a>
           )}
 
-          {/* Hours / Service Times — today only + expand */}
           {provider.hours && (() => {
-            const isChurchListing = provider.category === 'Churches';
-            // Churches: show each service on its own line
-            if (isChurchListing) {
-              const services = provider.hours.split(', ').filter(Boolean);
-              const dayOrder: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-              const parseTime = (t: string) => {
-                const m = t.match(/^(\d+)(?::(\d+))?\s*(am|pm)$/i);
-                if (!m) return 0;
-                let h = parseInt(m[1]); const min = parseInt(m[2] || '0');
-                if (m[3].toLowerCase() === 'pm' && h !== 12) h += 12;
-                if (m[3].toLowerCase() === 'am' && h === 12) h = 0;
-                return h * 60 + min;
-              };
-              const sorted = services
-                .map(s => ({ raw: s, match: s.match(/^(.+?)\s*[-–]\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(.+)$/) }))
-                .sort((a, b) => {
-                  if (!a.match || !b.match) return 0;
-                  const dA = dayOrder[a.match[2]] ?? 7, dB = dayOrder[b.match[2]] ?? 7;
-                  if (dA !== dB) return dA - dB;
-                  return parseTime(a.match[3]) - parseTime(b.match[3]);
-                });
-              return (
-                <div className="text-xs text-slate-500">
-                  <div className="flex items-start gap-1.5">
-                    <i className="fas fa-church text-slate-400 text-[11px] mt-1 flex-shrink-0"></i>
-                    <div className="space-y-0.5">
-                      <span className="font-semibold text-slate-700 text-[11px] uppercase tracking-wide">Service Hours</span>
-                      {sorted.map((s, i) => {
-                        if (s.match) {
-                          return (
-                            <div key={i}>
-                              <span className="font-semibold text-slate-700">{s.match[1]}</span>
-                              <span className="text-slate-400"> · {s.match[2]} {s.match[3]}</span>
-                            </div>
-                          );
-                        }
-                        return <div key={i}>{s.raw}</div>;
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
             const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
             const todayName = days[new Date().getDay()];
             const lines = provider.hours.split('\n').filter(Boolean);
             const todayLine = lines.find(l => l.toLowerCase().startsWith(todayName.toLowerCase()));
             const todayHours = todayLine ? todayLine.replace(/^[^:]+:\s*/,'') : null;
-            // Single-line or short hours — just show them directly, no expand needed
             if (lines.length <= 1) {
               return (
                 <div className="text-xs text-slate-500 flex items-start gap-1.5">
@@ -864,7 +1010,6 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             );
           })()}
 
-          {/* Action buttons */}
           <div className="flex flex-wrap gap-2 pt-1">
             {provider.phone && (
               <a href={`tel:${provider.phone}`} className="flex items-center px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 text-white rounded-xl font-bold text-xs md:text-sm shadow-md hover:bg-blue-700 transition-colors">
@@ -886,7 +1031,6 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             )}
           </div>
 
-          {/* Tags */}
           {provider.tags && provider.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1">
               {provider.tags.map((tag: string) => (
@@ -894,10 +1038,8 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               ))}
             </div>
           )}
-
-
         </div>
-      </div>
+      </div>)}
 
       {/* Owner Update — below business card */}
       {ownerUpdate && (
@@ -1216,6 +1358,20 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
+
+            {provider.category === 'Churches' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Church Leader</label>
+                <input
+                  type="text"
+                  value={eAdminChurchLeader}
+                  onChange={e => setEAdminChurchLeader(e.target.value)}
+                  placeholder="Pastor Tony Redmon"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1 ml-1">Include title if applicable (Pastor, Father, etc.)</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Listing Image</label>
@@ -1579,8 +1735,8 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
 
       {/* Transparency note — hidden for owners (removal link is inside Owner Dashboard) */}
       {!isOwner && (
-        <div className="py-2 border-t border-slate-100">
-          <p className="text-slate-400 text-xs">
+        <div className="py-3 mt-4">
+          <p className="text-slate-300 text-[11px]">
             Business information is sourced from publicly available data. Owners can claim or update their listing at any time.
           </p>
         </div>
