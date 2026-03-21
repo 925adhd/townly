@@ -360,7 +360,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
       <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <i className="fas fa-store text-4xl text-slate-300"></i>
         <h1 className="text-xl font-bold text-slate-900">No claimed listing</h1>
-        <p className="text-sm text-slate-500">You haven't claimed a business listing yet. Find your business in the directory and claim it to manage it here.</p>
+        <p className="text-sm text-slate-500">You haven't claimed a listing yet. Find your listing in the directory and claim it to manage it here.</p>
         <Link to="/directory" className="inline-block mt-2 bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-emerald-700 transition-colors text-sm">
           Browse Directory
         </Link>
@@ -525,7 +525,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
           <form onSubmit={handleSave} className="space-y-5">
             {/* Photo upload */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{isChurch ? 'Church Photo' : 'Business Photo'}</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{isChurch ? 'Church Photo' : 'Listing Photo'}</label>
               <div className="flex items-center gap-3">
                 {provider.image
                   ? <img src={provider.image} className="w-16 h-16 rounded-xl object-cover border border-slate-200" alt="" />
@@ -546,7 +546,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
                 value={eDesc}
                 onChange={e => setEDesc(e.target.value)}
                 rows={3}
-                placeholder={isChurch ? "Describe your church, denomination, and what visitors can expect..." : "Briefly describe your business and the services you offer..."}
+                placeholder={isChurch ? "Describe your church, denomination, and what visitors can expect..." : "Briefly describe what you offer and the services you provide..."}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
@@ -757,7 +757,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
                 <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
                   <span className="text-xs text-slate-400 bg-slate-100 border-r border-slate-200 px-3 py-3 flex-shrink-0 select-none">facebook.com/</span>
                   <input type="text" value={eFacebook} onChange={e => setEFacebook(stripFbPrefix(e.target.value))}
-                    placeholder={isChurch ? 'yourchurch' : 'yourbusiness'}
+                    placeholder={isChurch ? 'yourchurch' : 'yourpage'}
                     className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-900 outline-none min-w-0"
                   />
                 </div>
@@ -767,7 +767,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
                 <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
                   <span className="text-xs text-slate-400 bg-slate-100 border-r border-slate-200 px-3 py-3 flex-shrink-0 select-none">https://</span>
                   <input type="text" value={eWebsite} onChange={e => setEWebsite(stripHttps(e.target.value))}
-                    placeholder={isChurch ? 'yourchurch.com' : 'yourbusiness.com'}
+                    placeholder={isChurch ? 'yourchurch.com' : 'yoursite.com'}
                     className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-900 outline-none min-w-0"
                   />
                 </div>
@@ -1033,7 +1033,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
                 <i className="fas fa-bolt text-amber-500 text-sm"></i>Top of Category Placement
               </span>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                Want your listing to show up first? You can boost it anytime — your business will appear at the top when locals browse your category.
+                Want your listing to show up first? You can boost it anytime — your listing will appear at the top when locals browse your category.
               </p>
             </div>
             <ul className="space-y-1 text-xs text-slate-600">

@@ -42,8 +42,8 @@ const AddProvider: React.FC<AddProviderProps> = ({ user }) => {
       <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
         <i className="fas fa-store text-orange-500 text-2xl"></i>
       </div>
-      <h2 className="text-xl font-bold text-slate-900 mb-2">Add your business to {tenant.name}</h2>
-      <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to list your business and connect with your community.</p>
+      <h2 className="text-xl font-bold text-slate-900 mb-2">Add a listing to {tenant.name}</h2>
+      <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to add a listing and connect with your community.</p>
       <Link to="/login?signup=true" state={{ from: location.pathname }} className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
         Create Free Account
       </Link>
@@ -61,19 +61,19 @@ const AddProvider: React.FC<AddProviderProps> = ({ user }) => {
       const newProvider = await addProvider({ name, category: cat, subcategory: sub, phone, address, town }, user.id);
       navigate(`/provider/${newProvider.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to add business. Please try again.');
+      setError(err.message || 'Failed to add listing. Please try again.');
       setLoading(false);
     }
   };
 
   return (
     <div className="max-w-xl mx-auto pb-10">
-      <h1 className="text-2xl font-bold mb-2">{cat === 'Churches' ? 'Add a Church or Faith Organization' : 'List a New Business'}</h1>
+      <h1 className="text-2xl font-bold mb-2">{cat === 'Churches' ? 'Add a Church or Faith Organization' : 'Add a New Listing'}</h1>
       <p className="text-slate-500 mb-6">{cat === 'Churches' ? `Help your community find faith communities in ${tenant.name}.` : `Help others find great services in ${tenant.name}.`}</p>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-5 text-slate-900">
         <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{cat === 'Churches' ? 'Church / Organization Name' : 'Business Name'}</label>
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{cat === 'Churches' ? 'Church / Organization Name' : 'Name'}</label>
           <input
             type="text"
             name="business-name"
@@ -154,7 +154,7 @@ const AddProvider: React.FC<AddProviderProps> = ({ user }) => {
           disabled={loading}
           className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
         >
-          {loading ? 'Saving...' : cat === 'Churches' ? 'Add Listing' : 'Add Business'}
+          {loading ? 'Saving...' : 'Add Listing'}
         </button>
       </form>
     </div>

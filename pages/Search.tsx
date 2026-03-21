@@ -82,7 +82,7 @@ const Search: React.FC = () => {
           <p className="text-slate-500 text-sm">No results for "{query}"</p>
           <p className="text-slate-400 text-xs">Try different keywords or browse the sections below.</p>
           <div className="flex flex-wrap justify-center gap-2 pt-3">
-            <Link to="/directory" className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">Browse Businesses</Link>
+            <Link to="/directory" className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">Browse Directory</Link>
             <Link to="/ask" className="text-xs font-semibold text-violet-600 bg-violet-50 px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors">Browse Questions</Link>
             <Link to="/events" className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition-colors">Browse Events</Link>
           </div>
@@ -96,7 +96,7 @@ const Search: React.FC = () => {
             <section>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <i className="fas fa-store text-blue-500 text-xs"></i> Businesses
+                  <i className="fas fa-store text-blue-500 text-xs"></i> Directory
                   <span className="text-slate-400 font-normal normal-case tracking-normal">({bizResults.length})</span>
                 </h2>
                 <Link to={`/directory?q=${encodeURIComponent(query)}`} className="text-xs font-semibold text-orange-500 hover:underline">
@@ -123,7 +123,7 @@ const Search: React.FC = () => {
                 ))}
                 {bizResults.length > 6 && (
                   <Link to={`/directory?q=${encodeURIComponent(query)}`} className="block text-center text-xs font-semibold text-slate-400 hover:text-orange-500 py-1.5">
-                    View all {bizResults.length} businesses
+                    View all {bizResults.length} listings
                   </Link>
                 )}
               </div>

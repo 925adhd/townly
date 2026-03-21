@@ -143,7 +143,7 @@ const CAT_LABELS: Record<string, { heading: string; noun: string; addBtn: string
   'Personal Care':                  { heading: 'Personal Care Providers',         noun: 'providers',    addBtn: 'Add a Provider' },
   'Health & Medical':               { heading: 'Health & Medical',                noun: 'providers',    addBtn: 'Add a Provider' },
   'Professional Services':          { heading: 'Professional Services',           noun: 'providers',    addBtn: 'Add a Provider' },
-  'Housing & Rentals':              { heading: 'Housing & Rentals',               noun: 'businesses',   addBtn: 'Add a Business' },
+  'Housing & Rentals':              { heading: 'Housing & Rentals',               noun: 'listings',     addBtn: 'Add a Listing' },
   'Churches':                       { heading: 'Local Churches',                  noun: 'churches',     addBtn: 'Add a Church' },
   'Schools & Education':            { heading: 'Schools & Education',             noun: 'schools',      addBtn: 'Add a School' },
   'Government & Public Services':   { heading: 'Government & Public Services',    noun: 'listings',     addBtn: 'Add a Listing' },
@@ -152,7 +152,7 @@ const CAT_LABELS: Record<string, { heading: string; noun: string; addBtn: string
 };
 
 function catLabel(category: string, key: 'heading' | 'noun' | 'addBtn'): string {
-  return CAT_LABELS[category]?.[key] ?? { heading: 'Local Businesses', noun: 'businesses', addBtn: 'Add a Business' }[key];
+  return CAT_LABELS[category]?.[key] ?? { heading: 'Local Directory', noun: 'listings', addBtn: 'Add a Listing' }[key];
 }
 
 function hireAgainLabel(category: string): string {
@@ -318,6 +318,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{catLabel(category, 'heading')}</h1>
+          {!category && <p className="text-slate-500 text-sm">Businesses, churches, services, and more in your community.</p>}
           <div className="relative md:static" ref={searchTipRef}>
             <p className="text-slate-500 flex items-center gap-1 whitespace-nowrap text-sm">
               Found {filteredProviders.length} {catLabel(category, 'noun')} matching your criteria
@@ -331,11 +332,11 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
             </p>
             {showSearchTip && (
               <span className="md:hidden absolute right-0 top-full mt-1 z-[200] bg-slate-800 text-white text-xs rounded-xl px-3 py-2 shadow-xl" style={{ width: 'min(256px, calc(100vw - 32px))' }}>
-                Details come from business profiles. Some listings may be missing info until they're claimed.
+                Details come from public sources. Some listings may be missing info until they're claimed.
               </span>
             )}
           </div>
-          <p className="hidden md:block text-xs text-slate-400 italic mt-0.5">Details come from business profiles. Some listings may be missing info until they're claimed.</p>
+          <p className="hidden md:block text-xs text-slate-400 italic mt-0.5">Details come from public sources. Some listings may be missing info until they're claimed.</p>
         </div>
         {user && (
           <div className="flex gap-2">
@@ -356,7 +357,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
             <input
               type="text"
               name="q"
-              placeholder="Search businesses or services..."
+              placeholder="Search the directory..."
               autoComplete="off"
               value={localQuery}
               onChange={e => setLocalQuery(e.target.value)}
@@ -456,7 +457,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
                   <h3 className="text-sm sm:text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors flex items-start gap-1.5 leading-snug">
                     <span className="break-words min-w-0">{p.name}</span>
                     {p.claimStatus === 'claimed' && (
-                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0 mt-0.5 sm:mt-1" title="This business has been claimed and verified by its owner"></i>
+                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0 mt-0.5 sm:mt-1" title="This listing has been claimed and verified by its owner"></i>
                     )}
                   </h3>
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
@@ -560,7 +561,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
         ) : filteredProviders.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
             <div className="text-4xl mb-4 text-slate-200"><i className="fas fa-magnifying-glass"></i></div>
-            <p className="text-slate-500 mb-4">No businesses found in this category yet.</p>
+            <p className="text-slate-500 mb-4">No listings found in this category yet.</p>
             <Link to="/ask" className="text-blue-600 font-bold">Ask the community for a recommendation</Link>
           </div>
         ) : null}
@@ -568,7 +569,7 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
 
       {/* Transparency footer */}
       <p className="text-center text-slate-400 text-xs leading-relaxed pt-2 pb-1">
-        Business information is sourced from publicly available data. Owners can claim or update their listing at any time.
+        Listing information is sourced from publicly available data. Owners can claim or update their listing at any time.
       </p>
     </div>
   );

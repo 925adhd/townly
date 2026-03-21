@@ -190,10 +190,10 @@ const Profile: React.FC<Props> = ({ user, onLogout }) => {
             </div>
           </div>
 
-          {/* ── Your Business ─────────────────────────────────────────── */}
+          {/* ── Your Listing ─────────────────────────────────────────── */}
           {claimed && (
             <div>
-              <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Your Business</h2>
+              <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Your Listing</h2>
               <Link to={`/provider/${claimed.id}`} className="flex items-center gap-4 bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-200 hover:shadow-sm active:scale-[0.98] transition-all">
                 <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
                   {claimed.image

@@ -218,7 +218,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
       <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-sm w-full space-y-3">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900">{provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}</h2>
+            <h2 className="text-base font-bold text-slate-900">Claim This Listing</h2>
             <p className="text-slate-500 text-xs mt-0.5">{provider.name}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
@@ -262,7 +262,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ provider, user, onClose, onSubm
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Business address</label>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Address</label>
             <input
               type="text"
               value={address}
@@ -378,7 +378,7 @@ const UpdateRequestModal: React.FC<UpdateRequestModalProps> = ({ provider, user,
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 rows={4}
-                placeholder={requestType === 'update' ? 'e.g. Phone number changed, business closed, incorrect address...' : 'e.g. Business no longer exists, duplicate listing...'}
+                placeholder={requestType === 'update' ? 'e.g. Phone number changed, permanently closed, incorrect address...' : 'e.g. No longer exists, duplicate listing...'}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
@@ -493,7 +493,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
   const [grantSuccess, setGrantSuccess] = useState('');
 
   if (providerLoading) return <div className="flex items-center justify-center py-20"><div className="text-slate-400 text-sm font-medium">Loading...</div></div>;
-  if (!provider) return <div className="text-center py-12">Business not found.</div>;
+  if (!provider) return <div className="text-center py-12">Listing not found.</div>;
 
   const isAdminOrMod = user?.role === 'admin' || user?.role === 'moderator';
   const isOwner = (import.meta.env.DEV && user?.role === 'admin') || !!(user && provider.claimedBy === user.id);
@@ -557,7 +557,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
           await deleteProvider(provider.id);
           navigate('/directory');
         } catch (err: any) {
-          setDeleteError(err.message || 'Failed to delete business.');
+          setDeleteError(err.message || 'Failed to delete listing.');
           setDeleting(false);
         }
       },
@@ -929,7 +929,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
             <h1 className="text-xl md:text-3xl font-bold text-slate-900 leading-tight flex items-center gap-2">
               {provider.name}
               {provider.claimStatus === 'claimed' && (
-                <i className="fas fa-circle-check text-emerald-500 text-base" title="Verified Business"></i>
+                <i className="fas fa-circle-check text-emerald-500 text-base" title="Verified Listing"></i>
               )}
             </h1>
 
@@ -1057,7 +1057,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
         <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4">
           <p className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
             <i className="fas fa-shield-halved text-slate-400 text-xs"></i>
-            {provider.category === 'Churches' ? 'Do you represent this church?' : 'Own this business?'}
+            {provider.category === 'Churches' ? 'Do you represent this church?' : 'Is this your listing?'}
           </p>
           <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">
             {provider.category === 'Churches'
@@ -1077,12 +1077,12 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                 onClick={() => setShowClaimModal(true)}
                 className="w-full bg-blue-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-sm"
               >
-                {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
+                Claim This Listing
               </button>
             ) : (
               <>
                 <Link to="/login?signup=true" state={{ from: location.pathname }} className="block w-full text-center bg-blue-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors text-sm shadow-sm">
-                  {provider.category === 'Churches' ? 'Claim This Listing' : 'Claim This Business'}
+                  Claim This Listing
                 </Link>
                 <p className="mt-2 text-center text-xs text-slate-400">
                   Already have an account?{' '}
@@ -1141,10 +1141,10 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       {/* Admin Edit Form */}
       {editing && (
         <div className="bg-white p-6 rounded-3xl border border-blue-100 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">{provider.category === 'Churches' ? 'Edit Church Info' : 'Edit Business Info'}</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{provider.category === 'Churches' ? 'Edit Church Info' : 'Edit Listing Info'}</h2>
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{provider.category === 'Churches' ? 'Church Name' : 'Business Name'}</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">{provider.category === 'Churches' ? 'Church Name' : 'Name'}</label>
               <input
                 type="text"
                 name="business-name"
@@ -1224,7 +1224,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               <input
                 type="text"
                 name="facebook"
-                placeholder={provider.category === 'Churches' ? 'yourchurch' : 'yourbusiness'}
+                placeholder={provider.category === 'Churches' ? 'yourchurch' : 'yourpage'}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 value={eFacebook}
                 onChange={e => setEFacebook(stripFbPrefix(e.target.value))}
@@ -1364,7 +1364,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                 value={eAdminDesc}
                 onChange={e => setEAdminDesc(e.target.value)}
                 rows={3}
-                placeholder={provider.category === 'Churches' ? "Describe this church, denomination, and what visitors can expect..." : "Briefly describe this business..."}
+                placeholder={provider.category === 'Churches' ? "Describe this church, denomination, and what visitors can expect..." : "Briefly describe this listing..."}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
@@ -1747,7 +1747,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
       {!isOwner && (
         <div className="py-3 mt-4">
           <p className="text-slate-300 text-[11px]">
-            Business information is sourced from publicly available data. Owners can claim or update their listing at any time.
+            Listing information is sourced from publicly available data. Owners can claim or update their listing at any time.
           </p>
         </div>
       )}
@@ -1786,7 +1786,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
                     {provider.name}
                     {provider.claimStatus === 'claimed' && (
-                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0" title="Verified Business"></i>
+                      <i className="fas fa-circle-check text-emerald-500 text-sm flex-shrink-0" title="Verified Listing"></i>
                     )}
                   </h3>
                   <div className="flex items-center flex-wrap gap-2 text-sm mt-2">
@@ -1831,7 +1831,7 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-4">
             <div>
-              <p className="text-slate-900 font-bold text-base">Assign Business Owner</p>
+              <p className="text-slate-900 font-bold text-base">Assign Listing Owner</p>
               <p className="text-slate-500 text-sm mt-1">Enter the owner's email. If they already have an account, it will be assigned immediately. If not, it will auto-claim when they sign up.</p>
             </div>
             <input

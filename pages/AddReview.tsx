@@ -35,7 +35,7 @@ const AddReview: React.FC<AddReviewProps> = ({ user }) => {
         <i className="fas fa-star text-orange-500 text-2xl"></i>
       </div>
       <h2 className="text-xl font-bold text-slate-900 mb-2">Leave a Review</h2>
-      <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to share your experience and help your neighbors find great local businesses.</p>
+      <p className="text-slate-500 text-sm mb-6 leading-relaxed">Create a free account to share your experience and help your neighbors find great local services.</p>
       <Link to="/login?signup=true" state={{ from: location.pathname + location.search }} className="w-full bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-sm">
         Create Free Account
       </Link>
@@ -45,7 +45,7 @@ const AddReview: React.FC<AddReviewProps> = ({ user }) => {
     </div>
   );
 
-  if (!provider) return <div className="text-center">Business not found.</div>;
+  if (!provider) return <div className="text-center">Listing not found.</div>;
 
   if (provider.category === 'Churches') return (
     <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
@@ -60,9 +60,9 @@ const AddReview: React.FC<AddReviewProps> = ({ user }) => {
   if (isOwner) return (
     <div className="text-center py-20 bg-white rounded-3xl border shadow-sm max-w-md mx-auto">
       <i className="fas fa-store text-slate-400 text-4xl mb-4"></i>
-      <h2 className="text-xl font-bold mb-2">You can't review your own business</h2>
+      <h2 className="text-xl font-bold mb-2">You can't review your own listing</h2>
       <p className="text-slate-500 text-sm mb-6">Owners aren't able to leave reviews for their own listings.</p>
-      <Link to={`/provider/${provider.id}`} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Back to Business</Link>
+      <Link to={`/provider/${provider.id}`} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Back to Listing</Link>
     </div>
   );
 

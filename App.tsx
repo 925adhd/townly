@@ -250,7 +250,7 @@ const App: React.FC = () => {
 
             <nav className="hidden md:flex items-center space-x-6">
               <Link to="/events" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Events</Link>
-              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors" onMouseEnter={prefetchProviders}>Businesses</Link>
+              <Link to="/directory" className="text-slate-600 hover:text-orange-600 font-medium transition-colors" onMouseEnter={prefetchProviders}>Directory</Link>
               <Link to="/lost-found" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Lost & Found</Link>
               <Link to="/ask" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Ask Community</Link>
               {user ? (
@@ -339,7 +339,7 @@ const App: React.FC = () => {
             </Link>
             <Link to="/directory" state={{ scrollTop: true }} className="flex flex-col items-center text-slate-400 hover:text-orange-600" onMouseEnter={prefetchProviders}>
               <i className="fas fa-store text-lg"></i>
-              <span className="text-[10px] mt-1 font-medium">Businesses</span>
+              <span className="text-[10px] mt-1 font-medium">Directory</span>
             </Link>
             <Link to="/events" className="flex flex-col items-center text-slate-400 hover:text-orange-600">
               <i className="fas fa-calendar-alt text-lg"></i>

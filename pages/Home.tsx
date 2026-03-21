@@ -262,7 +262,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
               What's happening in your town?
             </h1>
             <p className="text-white/75 text-sm md:text-lg font-medium leading-relaxed mb-3">
-              Find local events, businesses, and community updates in Grayson County KY
+              Find local events, services, and community updates in Grayson County KY
             </p>
             <p className={`text-xs md:text-sm font-semibold mb-3 flex items-center justify-center gap-2 h-5 ${userCount > 0 ? 'text-white/80' : 'text-transparent'}`}>
               <span className="w-2 h-2 bg-emerald-400 rounded-full inline-block shadow-[0_0_6px_rgba(52,211,153,0.5)]"></span>
@@ -281,7 +281,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                 to="/directory"
                 className="flex items-center gap-1.5 bg-transparent border border-white/40 hover:bg-white/10 hover:shadow-lg hover:scale-[1.02] text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
               >
-                Find Local Businesses
+                Browse the Directory
               </Link>
             </div>
 
@@ -302,7 +302,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                   type="text"
                   name="search"
                   autoComplete="off"
-                  placeholder="Search businesses, events, or ask a question..."
+                  placeholder="Search the directory, events, or ask a question..."
                   className="hidden md:block w-full h-11 pl-10 pr-24 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl focus:bg-white/20 focus:border-orange-400/60 focus:shadow-[0_0_0_2px_rgba(255,106,0,0.20)] text-white outline-none transition-all placeholder:text-white/50 text-sm"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -327,7 +327,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
                           <React.Fragment key={`${r.kind}-${r.id}`}>
                             {r.kind !== prevKind && (
                               <div className="px-3 pt-2.5 pb-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{r.kind === 'Business' ? 'Businesses' : r.kind === 'Question' ? 'Questions' : r.kind === 'Event' ? 'Events' : 'Lost & Found'}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{r.kind === 'Business' ? 'Directory' : r.kind === 'Question' ? 'Questions' : r.kind === 'Event' ? 'Events' : 'Lost & Found'}</span>
                               </div>
                             )}
                             <Link
@@ -472,7 +472,7 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
       {/* Popular Categories */}
       <section>
         <div className="flex items-center justify-between mb-2 px-1">
-          <h2 className="text-base font-bold text-slate-900">Explore by Category</h2>
+          <h2 className="text-base font-bold text-slate-900">Browse the Directory</h2>
           <Link to="/directory" className="text-orange-600 font-bold text-sm hover:underline">View all</Link>
         </div>
         <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
@@ -499,12 +499,12 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
         <div className="relative z-10 max-w-xl">
           <h2 className="text-xl md:text-3xl font-bold text-slate-900 mb-3 md:mb-4">Your Voice Helps This Community</h2>
           <p className="text-slate-500 mb-5 md:mb-8 text-sm md:text-base leading-[1.6]">
-            Know a business worth listing? Add them to the directory.<br />
-            Looking for a local business? Ask the community.
+            Know a place worth listing? Add it to the directory.<br />
+            Looking for a local service? Ask the community.
           </p>
           <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3">
             <Link to="/add-provider" className="w-full md:w-auto text-center bg-blue-800 text-white px-6 py-3 md:px-8 md:py-4 rounded-2xl font-bold shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">
-              Add a Local Business
+              Add a Listing
             </Link>
             <Link to="/ask" className="w-full md:w-auto text-center bg-white text-slate-700 border border-slate-300 px-6 py-3 md:px-8 md:py-4 rounded-2xl font-bold shadow-sm hover:bg-slate-100 transition-all hover:scale-105 active:scale-95">
               Ask the Community
