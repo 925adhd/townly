@@ -2,6 +2,22 @@ import { supabase } from './supabase';
 import { Provider, Review, ReviewReply, LostFoundPost, LostFoundReply, RecommendationRequest, RecommendationResponse, ContentReport, ReportContentType, Category, Town, CostRange, LostFoundType, ListingClaim, CommunityEvent, CommunityAlert, SpotlightBooking, EarlyAccessRequest } from '../types';
 import { getCurrentTenant } from '../tenants';
 
+// ── TTL cache helper ─────────────────────────────────────────────────────────
+
+const DEFAULT_TTL_MS = 5_000; // 5 seconds
+
+interface TtlEntry<T> { data: T; ts: number; }
+
+function ttlGet<T>(entry: TtlEntry<T> | null, ttl = DEFAULT_TTL_MS): T | null {
+  if (!entry) return null;
+  if (Date.now() - entry.ts > ttl) return null;
+  return entry.data;
+}
+
+function ttlSet<T>(data: T): TtlEntry<T> {
+  return { data, ts: Date.now() };
+}
+
 // ── Security helpers ──────────────────────────────────────────────────────────
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -255,14 +271,16 @@ function mapRequest(row: any): RecommendationRequest {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
-let _userCountCache: number | null = null;
+let _userCountCache: TtlEntry<number> | null = null;
 
 export async function fetchUserCount(): Promise<number> {
-  if (_userCountCache !== null) return _userCountCache;
+  const cached = ttlGet(_userCountCache, 5 * 60_000); // 5 min TTL — changes slowly
+  if (cached !== null) return cached;
   const { data, error } = await supabase.rpc('get_user_count');
   if (error) throw error;
-  _userCountCache = data ?? 0;
-  return _userCountCache;
+  const count = data ?? 0;
+  _userCountCache = ttlSet(count);
+  return count;
 }
 
 export function prefetchUserCount(): void {
@@ -270,15 +288,16 @@ export function prefetchUserCount(): void {
 }
 
 export function getCachedUserCount(): number {
-  return _userCountCache ?? 0;
+  return ttlGet(_userCountCache, 5 * 60_000) ?? 0;
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
-let _providersCache: Provider[] | null = null;
+let _providersCache: TtlEntry<Provider[]> | null = null;
 
 export async function fetchProviders(): Promise<Provider[]> {
-  if (_providersCache) return _providersCache;
+  const cached = ttlGet(_providersCache);
+  if (cached) return cached;
   const { data, error } = await supabase
     .from('providers')
     .select('*')
@@ -287,8 +306,9 @@ export async function fetchProviders(): Promise<Provider[]> {
     .order('created_at', { ascending: false })
     .range(0, 4999);
   if (error) throw error;
-  _providersCache = (data ?? []).map(mapProvider);
-  return _providersCache;
+  const providers = (data ?? []).map(mapProvider);
+  _providersCache = ttlSet(providers);
+  return providers;
 }
 
 export function prefetchProviders(): void {
@@ -301,8 +321,9 @@ export function invalidateProvidersCache(): void {
 }
 
 export async function fetchProviderById(id: string): Promise<Provider | null> {
-  if (_providersCache) {
-    const hit = _providersCache.find(p => p.id === id);
+  const cached = ttlGet(_providersCache);
+  if (cached) {
+    const hit = cached.find(p => p.id === id);
     if (hit) return hit;
   }
   const { data, error } = await supabase
@@ -315,10 +336,11 @@ export async function fetchProviderById(id: string): Promise<Provider | null> {
   return data ? mapProvider(data) : null;
 }
 
-const _reviewsCache = new Map<string, Review[]>();
+const _reviewsCache = new Map<string, TtlEntry<Review[]>>();
 
 export async function fetchReviewsByProvider(providerId: string): Promise<Review[]> {
-  if (_reviewsCache.has(providerId)) return _reviewsCache.get(providerId)!;
+  const cached = _reviewsCache.has(providerId) ? ttlGet(_reviewsCache.get(providerId)!) : null;
+  if (cached) return cached;
   const { data, error } = await supabase
     .from('reviews')
     .select('*')
@@ -327,7 +349,7 @@ export async function fetchReviewsByProvider(providerId: string): Promise<Review
     .order('created_at', { ascending: false });
   if (error) throw error;
   const reviews = (data ?? []).map(mapReview);
-  _reviewsCache.set(providerId, reviews);
+  _reviewsCache.set(providerId, ttlSet(reviews));
   return reviews;
 }
 
@@ -2417,10 +2439,11 @@ export async function pollForBooking(sessionId: string): Promise<SpotlightBookin
 }
 
 /** Fetch approved submissions for the current week (public — used to render Events page). */
-let _spotlightCache: SpotlightBooking[] | null = null;
+let _spotlightCache: TtlEntry<SpotlightBooking[]> | null = null;
 
 export async function fetchCurrentWeekSubmissions(): Promise<SpotlightBooking[]> {
-  if (_spotlightCache) return _spotlightCache;
+  const cached = ttlGet(_spotlightCache);
+  if (cached) return cached;
   const tenant = getCurrentTenant();
   // Compute the current week's Sunday in Central Time (America/Chicago)
   // so the cutover always happens at exactly 12:00 AM CT, not the visitor's local time.
@@ -2437,8 +2460,9 @@ export async function fetchCurrentWeekSubmissions(): Promise<SpotlightBooking[]>
     .eq('week_start', weekStart)
     .order('type', { ascending: true }); // 'featured' before 'spotlight' alphabetically; reorder in UI
   if (error) throw new Error(error.message);
-  _spotlightCache = (data ?? []).map(mapSpotlightBooking);
-  return _spotlightCache;
+  const spotlights = (data ?? []).map(mapSpotlightBooking);
+  _spotlightCache = ttlSet(spotlights);
+  return spotlights;
 }
 
 export function prefetchCurrentWeekSubmissions(): void {
@@ -2543,6 +2567,7 @@ export async function updateSpotlightBooking(
 
   const { data, error } = await supabase.from('paid_submissions').update(payload).eq('id', id).select().single();
   if (error) throw error;
+  _spotlightCache = null; // invalidate so Events page shows updated data
   return mapSpotlightBooking(data);
 }
 
