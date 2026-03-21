@@ -57,7 +57,18 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       .catch(console.error)
       .finally(() => setLoadingEvents(false));
     fetchCurrentWeekSubmissions()
-      .then(setWeekSubmissions)
+      .then(subs => {
+        setWeekSubmissions(subs);
+        // Preload the spotlight hero image so it's ready before paint
+        const hero = subs.find(s => s.type === 'spotlight');
+        if (hero?.imageUrl) {
+          const link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'image';
+          link.href = hero.imageUrl;
+          document.head.appendChild(link);
+        }
+      })
       .catch(console.error);
   }, []);
 
@@ -310,8 +321,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   <img
                     src={filteredSpotlight.imageUrl}
                     alt={filteredSpotlight.title}
-                    loading="lazy"
-                    className="w-full max-h-[260px] object-cover object-top"
+                    fetchPriority="high"
+                    decoding="async"
+                    className="w-full max-h-[260px] object-cover object-top bg-amber-100 animate-pulse [&.loaded]:animate-none"
+                    onLoad={e => e.currentTarget.classList.add('loaded')}
                   />
                 </button>
               )}

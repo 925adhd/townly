@@ -29,6 +29,20 @@ function validateImageFile(file: File): void {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) throw new Error('Only JPEG, PNG, WebP, or GIF images are allowed.');
 }
 
+/** Convert an image file to WebP at the given quality (0-1). Returns a new File. */
+async function convertToWebP(file: File, quality = 0.82, maxWidth = 1920): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  const scale = bitmap.width > maxWidth ? maxWidth / bitmap.width : 1;
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = new OffscreenCanvas(w, h);
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  const blob = await canvas.convertToBlob({ type: 'image/webp', quality });
+  return new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' });
+}
+
 /** Trim and hard-cap a string to prevent oversized DB writes. */
 function sanitize(input: string, maxLength: number): string {
   if (typeof input !== 'string') return '';
@@ -97,22 +111,6 @@ function validateUrl(raw: string): string {
   return url.href;
 }
 
-/**
- * Derive the file extension from the MIME type, never from the filename.
- * This prevents extension spoofing (e.g. evil.jpg.php).
- */
-const MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-};
-
-function safeImageExt(file: File): string {
-  const ext = MIME_TO_EXT[file.type];
-  if (!ext) throw new Error('Unsupported image type. Use JPEG, PNG, WebP, or GIF.');
-  return ext;
-}
 
 /**
  * Verify the calling user is authenticated and has the admin role in the
@@ -672,11 +670,11 @@ export async function addLostFoundPost(
 
   if (photoFile) {
     validateImageFile(photoFile);
-    const ext = safeImageExt(photoFile);
-    const path = `${userId}/${Date.now()}.${ext}`;
+    const webp = await convertToWebP(photoFile);
+    const path = `${userId}/${Date.now()}.webp`;
     const { error: uploadError } = await supabase.storage
       .from('lost-found-photos')
-      .upload(path, photoFile, { upsert: false });
+      .upload(path, webp, { upsert: false });
     if (uploadError) throw new Error('Photo upload failed. Please try again.');
 
     const { data: urlData } = supabase.storage
@@ -1230,9 +1228,9 @@ export async function uploadClaimProof(file: File): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('You must be signed in.');
   validateImageFile(file);
-  const ext = safeImageExt(file);
-  const path = `${session.user.id}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('claim-proofs').upload(path, file, { upsert: false });
+  const webp = await convertToWebP(file);
+  const path = `${session.user.id}/${Date.now()}.webp`;
+  const { error } = await supabase.storage.from('claim-proofs').upload(path, webp, { upsert: false });
   if (error) throw new Error('Failed to upload proof image.');
   const { data } = supabase.storage.from('claim-proofs').getPublicUrl(path);
   return data.publicUrl;
@@ -1440,11 +1438,11 @@ export async function uploadOwnerPhoto(providerId: string, userId: string, file:
   const role = session.user.app_metadata?.role;
   if (session.user.id !== userId && role !== 'admin' && role !== 'moderator') throw new Error('Unauthorized.');
   validateImageFile(file);
-  const ext = safeImageExt(file);
-  const path = `${userId}/${providerId}.${ext}`;
+  const webp = await convertToWebP(file);
+  const path = `${userId}/${providerId}.webp`;
   const { error: uploadError } = await supabase.storage
     .from('provider-photos')
-    .upload(path, file, { upsert: true });
+    .upload(path, webp, { upsert: true });
   if (uploadError) throw new Error('Photo upload failed. Please try again.');
   const { data } = supabase.storage.from('provider-photos').getPublicUrl(path);
   return data.publicUrl;
@@ -1453,13 +1451,13 @@ export async function uploadOwnerPhoto(providerId: string, userId: string, file:
 export async function uploadAdminProviderPhoto(providerId: string, file: File): Promise<string> {
   await requireModOrAdmin();
   validateImageFile(file);
-  const ext = safeImageExt(file);
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
-  const path = `admin/${providerId}_${Date.now()}.${ext}`;
+  const webp = await convertToWebP(file);
+  const path = `admin/${providerId}_${Date.now()}.webp`;
   const { error: uploadError } = await supabase.storage
     .from('provider-photos')
-    .upload(path, file, { upsert: true });
+    .upload(path, webp, { upsert: true });
   if (uploadError) throw new Error('Photo upload failed. Please try again.');
   const { data } = supabase.storage.from('provider-photos').getPublicUrl(path);
   return data.publicUrl;
@@ -1795,11 +1793,11 @@ export async function adminCreateLostFoundPost(
   let photoUrl: string | null = null;
   if (photoFile) {
     validateImageFile(photoFile);
-    const ext = safeImageExt(photoFile);
-    const path = `${adminId}/${Date.now()}.${ext}`;
+    const webp = await convertToWebP(photoFile);
+    const path = `${adminId}/${Date.now()}.webp`;
     const { error: uploadError } = await supabase.storage
       .from('lost-found-photos')
-      .upload(path, photoFile, { upsert: false });
+      .upload(path, webp, { upsert: false });
     if (uploadError) throw new Error('Photo upload failed. Please try again.');
     const { data: urlData } = supabase.storage
       .from('lost-found-photos')
@@ -2129,9 +2127,9 @@ export async function uploadSpotlightImage(file: File): Promise<string> {
   validateImageFile(file);
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error('Authentication required.');
-  const ext = safeImageExt(file);
-  const path = `${session.user.id}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('spotlight-images').upload(path, file, { upsert: false });
+  const webp = await convertToWebP(file);
+  const path = `${session.user.id}/${Date.now()}.webp`;
+  const { error } = await supabase.storage.from('spotlight-images').upload(path, webp, { upsert: false });
   if (error) throw new Error(error.message);
   const { data } = supabase.storage.from('spotlight-images').getPublicUrl(path);
   return data.publicUrl;
