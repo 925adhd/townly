@@ -274,7 +274,7 @@ function mapRequest(row: any): RecommendationRequest {
 let _userCountCache: TtlEntry<number> | null = null;
 
 export async function fetchUserCount(): Promise<number> {
-  const cached = ttlGet(_userCountCache, 5 * 60_000); // 5 min TTL — changes slowly
+  const cached = ttlGet(_userCountCache);
   if (cached !== null) return cached;
   const { data, error } = await supabase.rpc('get_user_count');
   if (error) throw error;
@@ -288,7 +288,7 @@ export function prefetchUserCount(): void {
 }
 
 export function getCachedUserCount(): number {
-  return ttlGet(_userCountCache, 5 * 60_000) ?? 0;
+  return ttlGet(_userCountCache) ?? 0;
 }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
