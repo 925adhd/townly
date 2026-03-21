@@ -262,11 +262,30 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   return (
     <div className="space-y-10 pb-6 -mt-2 md:mt-0">
 
-      {/* Header + Search */}
-      <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">Around Town</h1>
-          <p className="text-slate-500 text-sm">Local events, yard sales, announcements, and community updates.</p>
+      {/* Header + CTA + Search */}
+      <div className="pt-2 pb-1 md:pt-4 md:pb-2 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight mb-0.5">
+              What's happening<br /><span className="text-xl text-slate-500 font-semibold">in {tenant.name}</span>
+            </h1>
+          </div>
+          {user ? (
+            <button
+              onClick={() => { setShowForm(true); setSubmitted(false); }}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+            >
+              <i className="fas fa-plus text-xs"></i> Post Something
+            </button>
+          ) : (
+            <Link
+              to="/login?signup=true"
+              state={{ from: location.pathname }}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+            >
+              <i className="fas fa-plus text-xs"></i> Post Something
+            </Link>
+          )}
         </div>
         <div className="relative">
           <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
@@ -274,7 +293,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             type="text"
             value={eventSearch}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEventSearch(e.target.value)}
-            placeholder="Search events…"
+            placeholder="Search posts…"
             className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-sm"
           />
           {eventSearch && (
@@ -289,20 +308,13 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* Current Spotlights — hide entire section when searching with no match */}
-      {(!searchQ || filteredSpotlight) && (
+      {/* Weekly Spotlight — only show when a spotlight exists */}
+      {filteredSpotlight && (
       <div id="spotlight">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-xl font-bold text-orange-500 leading-tight flex items-center gap-2">
-            <i className="fas fa-star"></i> Weekly Spotlight
-          </h2>
-          <Link to="/promote#spotlight" className="text-[11px] text-slate-400 hover:text-orange-500 transition-colors font-medium">Book a Spotlight <i className="fas fa-arrow-right text-[9px] ml-0.5"></i></Link>
-        </div>
-        <p className="text-slate-500 text-sm mb-3">Promote an event, business, or announcement.</p>
+        <h2 className="text-lg font-bold text-orange-500 leading-tight flex items-center gap-2 mb-3">
+          <i className="fas fa-star"></i> Weekly Spotlight
+        </h2>
         <div className="grid gap-4">
-
-          {filteredSpotlight ? (
-            /* ── DB-driven spotlight ── */
             <div
               id={`booking-${filteredSpotlight.id}`}
               className={`rounded-3xl border-2 border-amber-400 overflow-hidden shadow-xl flex flex-col bg-gradient-to-br from-amber-50 to-orange-50/60 ${filteredSpotlight.flyerUrl ? 'cursor-pointer' : ''}`}
@@ -399,31 +411,18 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="rounded-3xl border border-slate-100 bg-white p-10 text-center text-slate-400 shadow-sm">
-              <i className="fas fa-star text-3xl mb-3 block text-slate-200"></i>
-              <p className="font-semibold text-slate-500 text-sm">No spotlight yet this week</p>
-              <p className="text-xs mt-1">Be the first — <Link to="/book/spotlight" className="text-orange-500 hover:underline font-medium">book a spotlight</Link></p>
-            </div>
-          )}
-
         </div>
       </div>
       )}
 
-      {/* Featured Listings — hide when searching with no match */}
-      {(!searchQ || filteredFeatured.length > 0) && (
+      {/* Featured This Week — only show when featured posts exist */}
+      {filteredFeatured.length > 0 && (
       <div>
-        <div className="flex items-center justify-between mb-1 px-1 -mt-4">
-          <h2 className="text-xl font-bold text-slate-900">Featured Listings</h2>
-          <Link to="/promote#featured" className="text-[11px] text-slate-400 hover:text-blue-500 transition-colors font-medium">Get Featured <i className="fas fa-arrow-right text-[9px] ml-0.5"></i></Link>
-        </div>
-        <p className="text-slate-400 text-xs mb-4 px-1">Posts with extra visibility this week.</p>
+        <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <i className="fas fa-star text-blue-500 text-sm"></i> Featured This Week
+        </h2>
         <div className="grid md:grid-cols-2 gap-4">
-
-          {filteredFeatured.length > 0 ? (
-            /* ── DB-driven featured cards ── */
-            filteredFeatured.map((sub: SpotlightBooking) => (
+            {filteredFeatured.map((sub: SpotlightBooking) => (
               <div
                 key={sub.id}
                 id={`booking-${sub.id}`}
@@ -498,47 +497,44 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   </button>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="col-span-2 bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 shadow-sm">
-              <i className="fas fa-bullhorn text-2xl mb-3 block text-slate-200"></i>
-              <p className="font-semibold text-slate-500 text-sm">No featured listings yet this week</p>
-              <p className="text-xs mt-1">Be the first — <Link to="/book/featured" className="text-orange-500 hover:underline font-medium">get featured</Link></p>
-            </div>
-          )}
+            ))}
 
         </div>
       </div>
       )}
 
-      {/* ── Community Events ── */}
+      {/* ── Latest Posts ── */}
       <div id="community">
-        <div className="flex items-center justify-between mb-1 px-1">
-          <h2 className="text-xl font-bold text-slate-900">Community Board</h2>
-          {user ? (
-            <button
-              onClick={() => { setShowForm(true); setSubmitted(false); }}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
-            >
-              <i className="fas fa-plus text-[10px]"></i> Post
-            </button>
-          ) : (
-            <Link
-              to="/login?signup=true"
-              state={{ from: location.pathname }}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-1.5 rounded-xl shadow-sm transition-colors whitespace-nowrap"
-            >
-              <i className="fas fa-plus text-[10px]"></i> Post
-            </Link>
-          )}
-        </div>
-        <p className="text-slate-500 text-xs mb-0.5 px-1">Share local events, yard sales, church gatherings, and community updates.</p>
-        <p className="text-slate-400 text-[11px] mb-3 px-1">❌ No opinions or complaints • 🚨 For emergencies, see <Link to="/alerts" className="underline hover:text-slate-600 font-medium">Alerts</Link></p>
+        <h2 className="text-lg font-bold text-slate-900 mb-3">Latest Posts</h2>
 
         {submitted && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
-            <i className="fas fa-check-circle"></i>
-            Your post is live!
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-4 shadow-sm space-y-3">
+            <div className="flex items-center gap-2 text-emerald-600 text-sm font-semibold">
+              <i className="fas fa-check-circle"></i> Your post is live!
+            </div>
+            <p className="text-slate-600 text-sm font-medium">Want more visibility?</p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={user ? '/book/spotlight' : '/login?signup=true'}
+                state={user ? undefined : { from: location.pathname }}
+                className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+              >
+                <i className="fas fa-star text-[10px]"></i> Boost to Weekly Spotlight
+              </Link>
+              <Link
+                to={user ? '/book/featured' : '/login?signup=true'}
+                state={user ? undefined : { from: location.pathname }}
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+              >
+                <i className="fas fa-bullhorn text-[10px]"></i> Feature This Post
+              </Link>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="text-xs text-slate-400 hover:text-slate-600 font-medium px-3 py-2 transition-colors"
+              >
+                No thanks
+              </button>
+            </div>
           </div>
         )}
 
@@ -547,7 +543,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         ) : filteredEvents.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
             <i className="fas fa-calendar-plus text-2xl mb-3 block text-slate-200"></i>
-            {searchQ ? 'No posts match your search.' : <><div>No posts on the community board yet.</div><div className="mt-1">Be the first to post →</div></>}
+            {searchQ ? 'No posts match your search.' : <><div>No posts yet.</div><div className="mt-1">Be the first to share something!</div></>}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -674,15 +670,6 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             ))}
           </div>
         )}
-        <p className="text-[10px] text-slate-300 text-center mt-3">Posts must follow community guidelines. Irrelevant or harmful content may be removed.</p>
-      </div>
-
-      {/* Promote link */}
-      <div className="text-center mt-6">
-        <Link to="/promote" className="inline-flex items-center gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors">
-          <i className="fas fa-bullhorn text-xs"></i> Want more visibility? Promote your post
-          <i className="fas fa-arrow-right text-xs"></i>
-        </Link>
       </div>
 
       {/* Delete Confirm Modal */}
@@ -723,7 +710,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 pt-6 pb-20 sm:pb-4 overflow-y-auto" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">Post to Community Board</h3>
+              <h3 className="text-lg font-bold text-slate-900">Post Something</h3>
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <i className="fas fa-times"></i>
               </button>
@@ -843,7 +830,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 disabled={submitting}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors disabled:opacity-60 text-sm"
               >
-                {submitting ? 'Posting...' : 'Post to Community Board'}
+                {submitting ? 'Posting...' : 'Post It'}
               </button>
               <p className="text-center text-[11px] text-slate-300">Posts must follow community guidelines. Irrelevant or harmful content may be removed.</p>
             </form>
