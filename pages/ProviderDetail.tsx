@@ -1255,8 +1255,18 @@ const ProviderDetail: React.FC<ProviderDetailProps> = ({ user }) => {
               <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 space-y-2">
                 {eAdminServiceEntries.map((entry, i) => (
                   <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-2.5 py-2">
-                    <span className="text-xs font-semibold text-slate-700 flex-1 min-w-0 truncate">{entry.name}</span>
-                    <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">{entry.day} {entry.time}</span>
+                    <input
+                      type="text"
+                      value={entry.name}
+                      onChange={e => setEAdminServiceEntries(prev => prev.map((s, idx) => idx === i ? { ...s, name: e.target.value } : s))}
+                      className="text-xs font-semibold text-slate-700 flex-1 min-w-0 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-blue-400 outline-none py-0.5"
+                    />
+                    <select value={entry.day} onChange={e => setEAdminServiceEntries(prev => prev.map((s, idx) => idx === i ? { ...s, day: e.target.value } : s))} className="text-[10px] font-bold text-slate-400 bg-transparent border-none outline-none cursor-pointer">
+                      {HOUR_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <select value={entry.time} onChange={e => setEAdminServiceEntries(prev => prev.map((s, idx) => idx === i ? { ...s, time: e.target.value } : s))} className="text-[10px] font-bold text-slate-400 bg-transparent border-none outline-none cursor-pointer">
+                      {HOUR_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
                     <button type="button" onClick={() => setEAdminServiceEntries(prev => prev.filter((_, idx) => idx !== i))} className="text-red-300 hover:text-red-500 text-xs flex-shrink-0"><i className="fas fa-times"></i></button>
                   </div>
                 ))}
