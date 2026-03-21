@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams, Link, useLocation } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Provider, Category, Town } from '../types';
 import CustomSelect from '../components/CustomSelect';
 import { submitReport, fetchProviders, prefetchProviderDetail } from '../lib/api';
@@ -173,7 +173,6 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
   }, []);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const location = useLocation();
 
   const [localQuery, setLocalQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [reportingId, setReportingId] = useState<string | null>(null);
@@ -237,22 +236,17 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
     setSearchParams(next, { replace: true });
   }
 
-  // Restore scroll position and filters when returning from a detail page
+  // Restore scroll position when returning from a detail page (after providers load)
   const didRestore = useRef(false);
   useEffect(() => {
-    if (didRestore.current) return;
+    if (loadingProviders || didRestore.current) return;
     didRestore.current = true;
-    if ((location.state as any)?.scrollTop) {
-      window.scrollTo(0, 0);
-      return;
-    }
-    sessionStorage.removeItem(FILTER_KEY);
     const saved = sessionStorage.getItem(SCROLL_KEY);
     if (saved) {
       sessionStorage.removeItem(SCROLL_KEY);
       requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
     }
-  }, []);
+  }, [loadingProviders]);
 
   const denominations = useMemo(() => {
     const denoms = providers
