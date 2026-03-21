@@ -558,7 +558,7 @@ const OwnerPortal: React.FC<OwnerPortalProps> = ({ user }) => {
                   type="text"
                   value={eChurchLeader}
                   onChange={e => setEChurchLeader(e.target.value)}
-                  placeholder="Pastor Tony Redmon"
+                  placeholder="e.g. Pastor John Smith"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <p className="text-[11px] text-slate-400 mt-1 ml-1">Include title if applicable (Pastor, Father, etc.)</p>
