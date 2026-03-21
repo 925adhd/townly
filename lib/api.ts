@@ -1647,6 +1647,21 @@ export async function submitUpdateRequest(
 
 // ── Community Events ──────────────────────────────────────────────────────────
 
+const LEGACY_POST_TYPE_MAP: Record<string, CommunityEvent['postType']> = {
+  announcement: 'event',
+  free_item: 'event',
+  prayer_request: 'church',
+  church_gathering: 'church',
+  local_update: 'event',
+  other: 'event',
+};
+
+function mapLegacyPostType(raw: string | null): CommunityEvent['postType'] {
+  if (!raw) return 'event';
+  if (raw === 'event' || raw === 'yard_sale' || raw === 'church' || raw === 'community_gathering') return raw;
+  return LEGACY_POST_TYPE_MAP[raw] ?? 'event';
+}
+
 function mapCommunityEvent(row: any): CommunityEvent {
   return {
     id: row.id,
@@ -1658,18 +1673,20 @@ function mapCommunityEvent(row: any): CommunityEvent {
     location: row.location,
     town: row.town,
     photoUrl: row.photo_url ?? undefined,
-    postType: (row.post_type ?? 'event') as CommunityEvent['postType'],
+    postType: mapLegacyPostType(row.post_type),
     status: row.status as 'pending' | 'approved' | 'rejected',
     createdAt: row.created_at,
   };
 }
 
 export async function fetchApprovedCommunityEvents(): Promise<CommunityEvent[]> {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); // YYYY-MM-DD
   const { data, error } = await supabase
     .from('community_events')
     .select('*')
     .eq('status', 'approved')
     .eq('tenant_id', getCurrentTenant().id)
+    .or(`event_date.gte.${today},event_date.is.null`)
     .order('event_date', { ascending: true });
   if (error) throw error;
   return (data ?? []).map(mapCommunityEvent);

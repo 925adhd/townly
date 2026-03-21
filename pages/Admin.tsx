@@ -326,20 +326,16 @@ const Admin: React.FC<AdminProps> = ({ user, communityAlerts, setCommunityAlerts
 
 
   const POST_TYPE_LABELS: Record<CommunityPostType, string> = {
-    event: 'Community Event',
-    announcement: 'Announcement',
-    yard_sale: 'Yard Sale',
-    free_item: 'Free Item',
-    prayer_request: 'Prayer Request',
-    other: 'Post',
+    event: 'Event',
+    yard_sale: 'Personal Yard Sale',
+    church: 'Church Event',
+    community_gathering: 'Community Gathering',
   };
   const POST_TYPE_COLORS: Record<CommunityPostType, string> = {
     event: 'bg-blue-50 text-blue-600 border-blue-100',
-    announcement: 'bg-amber-50 text-amber-700 border-amber-100',
     yard_sale: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    free_item: 'bg-green-50 text-green-600 border-green-200',
-    prayer_request: 'bg-violet-50 text-violet-700 border-violet-100',
-    other: 'bg-slate-50 text-slate-600 border-slate-200',
+    church: 'bg-violet-50 text-violet-700 border-violet-100',
+    community_gathering: 'bg-amber-50 text-amber-700 border-amber-100',
   };
 
   const handleAdminCreateEvent = async () => {

@@ -123,7 +123,7 @@ export interface RecommendationResponse {
   recommendedProviderId?: string | null;
 }
 
-export type CommunityPostType = 'event' | 'announcement' | 'yard_sale' | 'free_item' | 'prayer_request' | 'other';
+export type CommunityPostType = 'event' | 'yard_sale' | 'church' | 'community_gathering';
 
 export interface CommunityEvent {
   id: string;

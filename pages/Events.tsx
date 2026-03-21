@@ -43,7 +43,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   const [eTitle, setETitle] = useState('');
   const [eDesc, setEDesc] = useState('');
   const [eDate, setEDate] = useState('');
-  const [eNoDate, setENoDate] = useState(false);
+  const [eTime, setETime] = useState('');
   const [eLocation, setELocation] = useState('');
   const [eTown, setETown] = useState(tenant.towns[0] ?? '');
   const [ePostType, setEPostType] = useState<CommunityPostType>('event');
@@ -198,12 +198,12 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const finalDate = eNoDate ? '' : eDate;
-      const newEvent = await submitCommunityEvent(eTitle, eDesc, finalDate, eLocation, eTown, ePostType);
+      const fullDesc = eTime ? `${eTime} — ${eDesc}` : eDesc;
+      const newEvent = await submitCommunityEvent(eTitle, fullDesc, eDate, eLocation, eTown, ePostType);
       setEvents(prev => [...prev, newEvent].sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()));
       setSubmitted(true);
       setShowForm(false);
-      setETitle(''); setEDesc(''); setEDate(''); setENoDate(false); setELocation(''); setETown(tenant.towns[0] ?? ''); setEPostType('event');
+      setETitle(''); setEDesc(''); setEDate(''); setETime(''); setELocation(''); setETown(tenant.towns[0] ?? ''); setEPostType('event');
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to submit. Please try again.');
     } finally {
@@ -217,21 +217,17 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
   }
 
   const POST_TYPE_LABELS: Record<CommunityPostType, string> = {
-    event: 'Community Event',
-    announcement: 'Announcement',
-    yard_sale: 'Yard Sale',
-    free_item: 'Free Item',
-    prayer_request: 'Prayer Request',
-    other: 'Post',
+    event: 'Event',
+    yard_sale: 'Personal Yard Sale',
+    church: 'Church Event',
+    community_gathering: 'Community Gathering',
   };
 
   const POST_TYPE_COLORS: Record<CommunityPostType, string> = {
     event: 'bg-blue-50 text-blue-600 border-blue-100',
-    announcement: 'bg-amber-50 text-amber-700 border-amber-100',
     yard_sale: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    free_item: 'bg-green-50 text-green-600 border-green-200 shadow-md shadow-green-200',
-    prayer_request: 'bg-violet-50 text-violet-700 border-violet-100',
-    other: 'bg-slate-50 text-slate-600 border-slate-200',
+    church: 'bg-violet-50 text-violet-700 border-violet-100',
+    community_gathering: 'bg-amber-50 text-amber-700 border-amber-100',
   };
 
   function tagColor(tag: string): string {
@@ -518,7 +514,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
       {/* ── Community Events ── */}
       <div id="community">
         <div className="flex items-center justify-between mb-1 px-1">
-          <h2 className="text-xl font-bold text-slate-900">Events & Announcements</h2>
+          <h2 className="text-xl font-bold text-slate-900">Community Board</h2>
           {user ? (
             <button
               onClick={() => { setShowForm(true); setSubmitted(false); }}
@@ -536,7 +532,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
             </Link>
           )}
         </div>
-        <p className="text-slate-400 text-xs mb-3 px-1">Free · Share events, yard sales, announcements, and local news. For questions, use <Link to="/ask" className="underline hover:text-slate-600">Ask the Community</Link>.</p>
+        <p className="text-slate-500 text-xs mb-0.5 px-1">Share local events, yard sales, church gatherings, and community updates.</p>
+        <p className="text-slate-400 text-[11px] mb-3 px-1">❌ No opinions or complaints • 🚨 For emergencies, see <Link to="/alerts" className="underline hover:text-slate-600 font-medium">Alerts</Link></p>
 
         {submitted && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-2xl mb-4 flex items-center gap-2">
@@ -559,8 +556,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 {/* Top row: badge + date + flag */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex-shrink-0 ${POST_TYPE_COLORS[ev.postType ?? 'event']}`}>
-                      {POST_TYPE_LABELS[ev.postType ?? 'event']}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex-shrink-0 ${POST_TYPE_COLORS[ev.postType as CommunityPostType] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                      {POST_TYPE_LABELS[ev.postType as CommunityPostType] ?? 'Local Update'}
                     </span>
                     {ev.eventDate && <span className="text-slate-400 text-xs truncate">{formatEventDate(ev.eventDate)}</span>}
                   </div>
@@ -632,7 +629,8 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-1">
+                  <p className="text-[9px] text-slate-300 border-t border-slate-50 pt-1.5">Posts must follow community guidelines. Irrelevant or harmful content may be removed.</p>
+                  <div className="flex items-center justify-between">
                     <p className="text-[10px] text-slate-400">Posted by {ev.userName}</p>
                     <div className="flex items-center gap-3">
                       <button
@@ -791,21 +789,24 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
 
       {/* Submit Event Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pb-20 sm:pb-4" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 overflow-y-auto max-h-[80vh] sm:max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 pt-6 pb-20 sm:pb-4 overflow-y-auto" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">Post to Events & Announcements</h3>
+              <h3 className="text-lg font-bold text-slate-900">Post to Community Board</h3>
               <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            <div className="bg-amber-50 border border-amber-100 text-amber-800 text-xs px-3 py-2.5 rounded-xl leading-relaxed space-y-0.5">
-              <p>No buying, selling, or business ads • no gossip</p>
-              <p>Businesses can promote with a <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Post</Link> or <Link to={user ? '/book/spotlight' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Spotlight</Link>.</p>
+            <div className="bg-slate-50 border border-slate-200 text-slate-600 text-xs px-3 py-2.5 rounded-xl leading-relaxed space-y-1">
+              <p className="font-semibold text-slate-700">Before posting:</p>
+              <p>✔ Is this helpful to the community?</p>
+              <p>✔ Is it a real event, yard sale, or gathering?</p>
+              <p className="text-red-500">❌ No opinions, complaints, or rants</p>
+              <p className="text-amber-700">🏪 Businesses must use <Link to={user ? '/book/featured' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Featured Posts</Link> or <Link to={user ? '/book/spotlight' : '/login?signup=true'} className="font-semibold underline" onClick={() => setShowForm(false)}>Spotlight</Link> for promotions.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">What kind of post is this?</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">What are you posting? <span className="text-red-400">*</span></label>
                 <div className="flex flex-wrap gap-2">
                   {(Object.entries(POST_TYPE_LABELS) as [CommunityPostType, string][]).map(([value, label]) => (
                     <button
@@ -818,13 +819,19 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                     </button>
                   ))}
                 </div>
+                {ePostType === 'yard_sale' && (
+                  <p className="text-[11px] text-amber-600 mt-1.5">For personal household sales only. Businesses must use Featured or Spotlight.</p>
+                )}
+                {ePostType === 'church' && (
+                  <p className="text-[11px] text-violet-500 mt-1.5">For church services, revivals, Bible studies, and religious gatherings.</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Post Title *</label>
                 <input
                   required
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Yard Sale, Church Dinner, Town Meeting"
+                  placeholder={ePostType === 'yard_sale' ? 'e.g. Multi-Family Yard Sale' : ePostType === 'church' ? 'e.g. Sunday Service at First Baptist' : ePostType === 'community_gathering' ? 'e.g. Town Meeting, Benefit Dinner' : 'e.g. Fish Fry, Car Show, Festival'}
                   value={eTitle}
                   onChange={e => setETitle(e.target.value)}
                 />
@@ -832,10 +839,10 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date <span className="text-red-400">*</span></label>
                     <button
                       type="button"
-                      onClick={() => { setENoDate(false); setEDate(new Date().toISOString().split('T')[0]); }}
+                      onClick={() => setEDate(new Date().toISOString().split('T')[0])}
                       className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide"
                     >
                       Today
@@ -843,15 +850,33 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   </div>
                   <input
                     type="date"
-                    disabled={eNoDate}
-                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none ${eNoDate ? 'opacity-40' : ''}`}
-                    value={eNoDate ? '' : eDate}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={eDate}
                     onChange={e => setEDate(e.target.value)}
                   />
-                  <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer">
-                    <input type="checkbox" checked={eNoDate} onChange={e => { setENoDate(e.target.checked); if (e.target.checked) setEDate(''); }} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" />
-                    <span className="text-[11px] text-slate-400">No specific date</span>
-                  </label>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Time <span className="text-red-400">*</span></label>
+                  <input
+                    type="time"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={eTime}
+                    onChange={e => setETime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location <span className="text-red-400">*</span></label>
+                  <input
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder={ePostType === 'yard_sale' ? 'e.g. 123 Main St' : ePostType === 'church' ? 'e.g. First Baptist Church' : 'e.g. Courthouse Square'}
+                    value={eLocation}
+                    onChange={e => setELocation(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Town</label>
@@ -865,15 +890,6 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Location <span className="font-normal normal-case text-slate-300">(optional)</span></label>
-                <input
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. Courthouse Square, City Park, Main St"
-                  value={eLocation}
-                  onChange={e => setELocation(e.target.value)}
-                />
-              </div>
-              <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Description *</label>
                   <span className={`text-xs ${eDesc.length > 950 ? 'text-red-400' : 'text-slate-300'}`}>{eDesc.length}/1000</span>
@@ -883,7 +899,7 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                   rows={5}
                   maxLength={1000}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                  placeholder="What's happening? Share details the community should know. You can include hours, schedules, contact info, etc."
+                  placeholder={ePostType === 'yard_sale' ? 'What kinds of items? Multiple days?' : ePostType === 'church' ? 'Service times, what to expect, who to contact, etc.' : ePostType === 'community_gathering' ? 'What\'s the gathering about? Who should come?' : 'What\'s happening? Share details the community should know.'}
                   value={eDesc}
                   onChange={e => setEDesc(e.target.value)}
                 />
@@ -896,9 +912,9 @@ const Spotlights: React.FC<SpotlightsProps> = ({ user }) => {
                 disabled={submitting}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-sm transition-colors disabled:opacity-60 text-sm"
               >
-                {submitting ? 'Posting...' : 'Post to Board'}
+                {submitting ? 'Posting...' : 'Post to Community Board'}
               </button>
-              <p className="text-center text-[11px] text-slate-300">Posts appear instantly and may be shared by neighbors.</p>
+              <p className="text-center text-[11px] text-slate-300">Posts must follow community guidelines. Irrelevant or harmful content may be removed.</p>
             </form>
           </div>
         </div>
