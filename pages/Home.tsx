@@ -524,6 +524,9 @@ const Home: React.FC<HomeProps> = ({ lostFound, communityAlerts, nwsAlerts }) =>
         <Link to="/terms" className="hover:underline">Terms of Service</Link>
       </p>
       <p className="pt-1">&copy; {new Date().getFullYear()} Townly. All rights reserved.</p>
+      <p className="pt-0.5">
+        Website by <a href="https://studio925.design" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline font-medium">Studio 925</a>
+      </p>
     </div>
 
     </div>

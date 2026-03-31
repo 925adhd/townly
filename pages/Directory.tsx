@@ -573,6 +573,9 @@ const Directory: React.FC<DirectoryProps> = ({ user }) => {
       <p className="text-center text-slate-400 text-xs leading-relaxed pt-2 pb-1">
         Listing information is sourced from publicly available data. Owners can claim or update their listing at any time.
       </p>
+      <p className="text-center text-slate-400 text-xs pb-1">
+        Website by <a href="https://studio925.design" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline font-medium">Studio 925</a>
+      </p>
     </div>
   );
 };
